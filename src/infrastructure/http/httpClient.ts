@@ -1,0 +1,108 @@
+import axios, { AxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from "axios";
+import { env } from "@/infrastructure/config/env";
+import { tokenStorage } from "@/infrastructure/storage/tokenStorage";
+
+/** Formato de respuesta uniforme que expone la API (core/responses.py) */
+export interface ApiEnvelope<T> {
+  success: boolean;
+  message: string;
+  data?: T;
+  errors?: Record<string, string[] | string> | string;
+}
+
+export class ApiError extends Error {
+  status: number;
+  errors?: Record<string, string[] | string> | string;
+
+  constructor(message: string, status: number, errors?: Record<string, string[] | string> | string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.errors = errors;
+  }
+}
+
+let isRefreshing = false;
+let pendingQueue: Array<(token: string | null) => void> = [];
+
+function resolveQueue(token: string | null) {
+  pendingQueue.forEach((cb) => cb(token));
+  pendingQueue = [];
+}
+
+export const httpClient: AxiosInstance = axios.create({
+  baseURL: env.apiUrl,
+  timeout: 20000,
+});
+
+httpClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  const token = tokenStorage.getAccess();
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+httpClient.interceptors.response.use(
+  (response) => response,
+  async (error: AxiosError<ApiEnvelope<unknown>>) => {
+    const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
+    const status = error.response?.status;
+    const isAuthEndpoint = originalRequest?.url?.includes("/auth/login") || originalRequest?.url?.includes("/auth/refresh");
+
+    if (status === 401 && originalRequest && !originalRequest._retry && !isAuthEndpoint) {
+      const refreshToken = tokenStorage.getRefresh();
+      if (!refreshToken) {
+        tokenStorage.clear();
+        return Promise.reject(normalizeError(error));
+      }
+
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          pendingQueue.push((newToken) => {
+            if (!newToken) return reject(normalizeError(error));
+            originalRequest._retry = true;
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            resolve(httpClient(originalRequest));
+          });
+        });
+      }
+
+      isRefreshing = true;
+      try {
+        const { data } = await axios.post<ApiEnvelope<{ access: string }>>(
+          `${env.apiUrl}/auth/refresh/`,
+          { refresh: refreshToken }
+        );
+        const newAccess = data.data?.access;
+        if (!newAccess) throw new Error("No se pudo renovar la sesión");
+        tokenStorage.set(newAccess);
+        resolveQueue(newAccess);
+        originalRequest._retry = true;
+        originalRequest.headers.Authorization = `Bearer ${newAccess}`;
+        return httpClient(originalRequest);
+      } catch (refreshError) {
+        resolveQueue(null);
+        tokenStorage.clear();
+        window.dispatchEvent(new CustomEvent("auth:session-expired"));
+        return Promise.reject(normalizeError(error));
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
+    return Promise.reject(normalizeError(error));
+  }
+);
+
+function normalizeError(error: AxiosError<ApiEnvelope<unknown>>): ApiError {
+  const status = error.response?.status ?? 0;
+  const envelope = error.response?.data;
+  const message = envelope?.message || error.message || "Ocurrió un error inesperado.";
+  return new ApiError(message, status, envelope?.errors);
+}
+
+/** Desempaqueta el sobre {success, message, data} devolviendo directamente `data`. */
+export function unwrap<T>(envelope: ApiEnvelope<T>): T {
+  return envelope.data as T;
+}
