@@ -169,6 +169,54 @@ export default function CheckoutPage() {
             </select>
           </section>
 
+          {/* ── DATOS BANCARIOS DE PAGO ── */}
+          <section className="rounded-2xl border border-sky-500/25 bg-gradient-to-br from-sky-500/5 to-indigo-500/5 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500 text-white font-bold text-lg shadow-sm">
+                🏦
+              </div>
+              <div>
+                <h2 className="font-display text-xl text-primary">Pago por Transferencia Bancaria</h2>
+                <p className="text-xs text-sky-600 dark:text-sky-400 font-semibold">Banco Pichincha Ecuador</p>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 rounded-xl bg-white dark:bg-slate-900 p-4 border border-theme text-sm shadow-sm">
+              <div>
+                <span className="text-[11px] text-muted-t font-semibold uppercase tracking-wider block">Banco</span>
+                <span className="font-bold text-primary">Banco Pichincha</span>
+              </div>
+              <div>
+                <span className="text-[11px] text-muted-t font-semibold uppercase tracking-wider block">N° de Cuenta</span>
+                <span className="font-mono font-bold text-sky-600 dark:text-sky-400 text-base">2213521473</span>
+              </div>
+              <div className="sm:col-span-2">
+                <span className="text-[11px] text-muted-t font-semibold uppercase tracking-wider block">Titular de la cuenta</span>
+                <span className="font-bold text-primary">Danny Alexander Guaman Pillajo</span>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-xl bg-amber-500/10 border border-amber-500/25 p-4 text-xs text-amber-900 dark:text-amber-200 space-y-1.5 leading-relaxed">
+              <p className="font-bold text-sm text-amber-800 dark:text-amber-100 flex items-center gap-1.5">
+                📌 Pasos para confirmar tu pedido:
+              </p>
+              <p>1. Realiza la transferencia del monto total a la cuenta del <strong>Banco Pichincha</strong> arriba indicada.</p>
+              <p>2. Si fuiste atendido por un vendedor, envíale el comprobante de pago directamente.</p>
+              <p>
+                3. Si compraste directamente sin vendedor, envía tu comprobante/voucher al WhatsApp{" "}
+                <a
+                  href="https://wa.me/593999001471?text=Hola,%20adjunto%20mi%20comprobante%20de%20pago"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-bold text-sky-600 dark:text-sky-400 underline"
+                >
+                  +593999001471
+                </a>{" "}
+                para ponernos en contacto de inmediato y despachar tus zapatillas.
+              </p>
+            </div>
+          </section>
+
           <section>
             <h2 className="mb-4 font-display text-xl">Notas (opcional)</h2>
             <textarea

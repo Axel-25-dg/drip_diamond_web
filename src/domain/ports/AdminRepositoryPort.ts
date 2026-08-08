@@ -4,11 +4,13 @@ import type { User, PaymentProof, EmailCampaign, AdminStats, CommissionReport } 
 import type {
   CreateProductDTO,
   CreateVariantDTO,
+  UpdateVariantDTO,
   CreateBrandDTO,
   UpdateBrandDTO,
   CreateCategoryDTO,
   UpdateCategoryDTO,
   CreateTallaDTO,
+  UpdateTallaDTO,
   VerifyPaymentDTO,
   ShipOrderDTO,
   CreateCampaignDTO,
@@ -17,7 +19,6 @@ import type {
 } from "@/application/dtos/admin.dto";
 
 export interface AdminRepositoryPort {
-  // Image Upload
   uploadImage(
     file: File,
     appLabel?: string,
@@ -25,10 +26,12 @@ export interface AdminRepositoryPort {
     objectId?: number
   ): Promise<{ id: number; url: string }>;
 
-  // Product Catalog
   createProduct(payload: CreateProductDTO): Promise<Product>;
   updateProduct(id: number, payload: Partial<CreateProductDTO>): Promise<Product>;
+  deleteProduct(id: number): Promise<void>;
   createVariant(payload: CreateVariantDTO): Promise<void>;
+  updateVariant(id: number, payload: UpdateVariantDTO): Promise<void>;
+  deleteVariant(id: number): Promise<void>;
   createBrand(payload: CreateBrandDTO): Promise<Brand>;
   updateBrand(id: number, payload: UpdateBrandDTO): Promise<Brand>;
   deleteBrand(id: number): Promise<void>;
@@ -38,6 +41,8 @@ export interface AdminRepositoryPort {
   deleteCategory(id: number): Promise<void>;
   getCategories(): Promise<Category[]>;
   createTalla(payload: CreateTallaDTO): Promise<Talla>;
+  updateTalla(id: number, payload: UpdateTallaDTO): Promise<Talla>;
+  deleteTalla(id: number): Promise<void>;
   getTallas(): Promise<Talla[]>;
 
   // User Management

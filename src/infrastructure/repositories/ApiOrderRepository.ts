@@ -1,68 +1,70 @@
-import { httpClient, unwrap, type ApiEnvelope } from "@/infrastructure/http/httpClient";
+import { httpClient } from "@/infrastructure/http/httpClient";
 import type { OrderRepositoryPort } from "@/domain/ports/OrderRepositoryPort";
 import type { CreateOrderPayload, Order, ShippingZone } from "@/domain/entities/Order";
 import type { Seller } from "@/domain/entities/User";
-import type { OrderDTO, ShippingZoneDTO } from "@/application/dtos/order.dto";
-import type { PaginatedDTO } from "@/application/dtos/catalog.dto";
-import type { SellerDTO } from "@/application/dtos/auth.dto";
 import { toOrder, toShippingZone } from "@/infrastructure/adapters/order.adapter";
 import { toSeller } from "@/infrastructure/adapters/auth.adapter";
+
+function safeUnwrap<T>(data: any): T {
+  if (data && "success" in data && "data" in data) return data.data as T;
+  return data as T;
+}
+
+function toList<T>(payload: any): T[] {
+  if (Array.isArray(payload)) return payload as T[];
+  if (payload?.results) return payload.results as T[];
+  return [] as T[];
+}
 
 export class ApiOrderRepository implements OrderRepositoryPort {
   async createOrder(payload: CreateOrderPayload): Promise<Order> {
     const body: Record<string, any> = {
+      vendedor: payload.vendedorId ?? null,
       vendedor_id: payload.vendedorId ?? null,
       tipo_entrega: payload.tipoEntrega ?? "DOMICILIO",
       direccion_envio: payload.direccionEnvio,
       referencia_adicional: payload.referenciaAdicional ?? payload.notas ?? "",
       ciudad: payload.ciudad,
+      provincia: payload.provincia || "Pichincha",
+      telefono_contacto: payload.telefonoContacto || "",
     };
 
-    if (payload.provincia) body.provincia = payload.provincia;
-    if (payload.telefonoContacto) body.telefono_contacto = payload.telefonoContacto;
-    if (payload.notas && !payload.referenciaAdicional) body.referencia_adicional = payload.notas;
-
-    const { data } = await httpClient.post<ApiEnvelope<OrderDTO>>("/pedidos/", body);
-    return toOrder(unwrap(data));
+    const { data } = await httpClient.post<any>("/pedidos/", body);
+    return toOrder(safeUnwrap(data));
   }
 
   async getOrders(): Promise<Order[]> {
-    const { data } = await httpClient.get<ApiEnvelope<OrderDTO[] | PaginatedDTO<OrderDTO>>>("/pedidos/");
-    const payload = unwrap(data);
-    const list = Array.isArray(payload) ? payload : payload.results;
-    return list.map(toOrder);
+    const { data } = await httpClient.get<any>("/pedidos/");
+    return toList<any>(safeUnwrap(data)).map(toOrder);
   }
 
   async getOrderById(id: number): Promise<Order> {
-    const { data } = await httpClient.get<ApiEnvelope<OrderDTO>>(`/pedidos/${id}/`);
-    return toOrder(unwrap(data));
+    const { data } = await httpClient.get<any>(`/pedidos/${id}/`);
+    return toOrder(safeUnwrap(data));
   }
 
   async uploadComprobante(pedidoId: number, archivo: File): Promise<Order> {
     const formData = new FormData();
     formData.append("comprobante", archivo);
-    const { data } = await httpClient.post<ApiEnvelope<OrderDTO>>(
-      `/pedidos/${pedidoId}/subir-comprobante/`,
-      formData
-    );
-    return toOrder(unwrap(data));
+    const { data } = await httpClient.post<any>(`/pedidos/${pedidoId}/subir-comprobante/`, formData);
+    return toOrder(safeUnwrap(data));
   }
 
   async getActiveSellers(): Promise<Seller[]> {
-    const { data } = await httpClient.get<ApiEnvelope<SellerDTO[] | PaginatedDTO<SellerDTO>>>(
-      "/usuarios/vendedores/activos/"
-    );
-    const payload = unwrap(data);
-    const list = Array.isArray(payload) ? payload : payload.results;
-    return list.map(toSeller);
+    try {
+      const { data } = await httpClient.get<any>("/usuarios/vendedores/activos/");
+      return toList<any>(safeUnwrap(data)).map(toSeller);
+    } catch {
+      return [];
+    }
   }
 
   async getShippingZones(): Promise<ShippingZone[]> {
-    const { data } = await httpClient.get<ApiEnvelope<ShippingZoneDTO[] | PaginatedDTO<ShippingZoneDTO>>>(
-      "/costos-envio/"
-    );
-    const payload = unwrap(data);
-    const list = Array.isArray(payload) ? payload : payload.results;
-    return list.map(toShippingZone);
+    try {
+      const { data } = await httpClient.get<any>("/costos-envio/");
+      return toList<any>(safeUnwrap(data)).map(toShippingZone);
+    } catch {
+      return [];
+    }
   }
 }

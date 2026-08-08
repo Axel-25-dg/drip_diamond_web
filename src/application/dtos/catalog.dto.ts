@@ -2,7 +2,9 @@ export interface ProductVariantDTO {
   id: number;
   talla: number | { id: number; valor: string };
   talla_valor?: string;
-  color: string;
+  color?: string | null;
+  sku?: string | null;
+  peso_kg?: number | string | null;
   stock: number;
 }
 
@@ -52,12 +54,14 @@ export interface PaginatedDTO<T> {
 export interface BrandDTO {
   id: number;
   nombre: string;
+  descripcion?: string | null;
   logo_url?: string | null;
 }
 
 export interface CategoryDTO {
   id: number;
   nombre: string;
+  descripcion?: string | null;
   subcategoria?: string | null;
   imagen_url?: string | null;
 }

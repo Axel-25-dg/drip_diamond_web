@@ -43,14 +43,21 @@ export function orderStatusTone(status: OrderStatus) {
   return STATUS_TONES[status] ?? "neutral";
 }
 
-export function resolveMediaUrl(path: string | null | undefined): string | null {
+export function resolveMediaUrl(path: any): string | null {
   if (!path) return null;
+  let raw: string | null = null;
+  if (typeof path === "string") {
+    raw = path;
+  } else if (typeof path === "object") {
+    raw = path.url ?? path.imagen ?? path.archivo ?? path.path ?? null;
+  }
+  if (!raw) return null;
 
-  const value = String(path).trim();
-  if (!value || value === "null" || value === "undefined") return null;
+  const value = String(raw).trim();
+  if (!value || value === "null" || value === "undefined" || value === "[object Object]") return null;
   if (/^https?:\/\//i.test(value) || value.startsWith("data:")) return value;
 
-  const base = (import.meta.env.VITE_API_URL as string) || "http://localhost:8000/api";
+  const base = (import.meta.env.VITE_API_URL as string) || "http://127.0.0.1:8000/api";
   const origin = base.replace(/\/api\/?$/, "");
 
   if (value.startsWith("/media/") || value.startsWith("media/") || value.startsWith("uploads/")) {

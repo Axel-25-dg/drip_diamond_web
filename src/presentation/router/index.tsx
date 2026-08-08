@@ -21,12 +21,17 @@ import AdminProductsPage from "@/presentation/pages/admin/AdminProductsPage";
 import AdminProductFormPage from "@/presentation/pages/admin/AdminProductFormPage";
 import AdminUsersPage from "@/presentation/pages/admin/AdminUsersPage";
 import AdminCampaignsPage from "@/presentation/pages/admin/AdminCampaignsPage";
+import AdminBrandsPage from "@/presentation/pages/admin/AdminBrandsPage";
+import AdminCategoriesPage from "@/presentation/pages/admin/AdminCategoriesPage";
+import AdminTallasPage from "@/presentation/pages/admin/AdminTallasPage";
 
 // Contador Dashboard
 import ContadorDashboardPage from "@/presentation/pages/contador/ContadorDashboardPage";
 
 // Vendedor Dashboard
 import VendedorDashboardPage from "@/presentation/pages/vendedor/VendedorDashboardPage";
+
+import FavoritesPage from "@/presentation/pages/FavoritesPage";
 
 export const router = createBrowserRouter([
   {
@@ -35,6 +40,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <HomePage /> },
       { path: "catalogo", element: <CatalogPage /> },
+      { path: "favoritos", element: <FavoritesPage /> },
       { path: "producto/:id", element: <ProductDetailPage /> },
       { path: "carrito", element: <CartPage /> },
       { path: "login", element: <LoginPage /> },
@@ -62,6 +68,9 @@ export const router = createBrowserRouter([
           { path: "admin/productos/editar/:id", element: <AdminProductFormPage /> },
           { path: "admin/usuarios", element: <AdminUsersPage /> },
           { path: "admin/campanas", element: <AdminCampaignsPage /> },
+          { path: "admin/marcas", element: <AdminBrandsPage /> },
+          { path: "admin/categorias", element: <AdminCategoriesPage /> },
+          { path: "admin/tallas", element: <AdminTallasPage /> },
         ],
       },
 

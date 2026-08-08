@@ -141,39 +141,136 @@ export default function AdminCampaignsPage() {
 
   return (
     <div className="container-app py-10">
-      <Link to="/admin" className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-slate-900">
-        <ArrowLeft className="h-3.5 w-3.5" /> Dashboard
-      </Link>
+      {/* BREADCRUMB */}
+      <div className="flex items-center gap-3 mb-6">
+        <Link
+          to="/admin"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-t hover:text-primary transition-colors duration-200"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Dashboard
+        </Link>
+        <span className="text-muted-t/40">/</span>
+        <span className="text-xs font-semibold uppercase tracking-wider text-secondary">Campañas</span>
+        <Badge tone="gold" className="ml-1">Email Marketing</Badge>
+      </div>
 
-      <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-4xl text-slate-900 sm:text-5xl">
-            Campañas de <span className="text-accent">Email Masivo</span>
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Diseña y despacha promociones a segmentos reales de clientes, vendedores y contadores.
-          </p>
+      {/* HERO HEADER */}
+      <div
+        className="p-[1px] rounded-[28px] overflow-hidden animate-fade-in"
+        style={{
+          background: "linear-gradient(135deg, rgba(14,165,233,0.55) 0%, rgba(99,102,241,0.55) 45%, rgba(234,179,8,0.55) 100%)",
+        }}
+      >
+        <div className="relative rounded-[27px] bg-[var(--color-surf)] overflow-hidden">
+          {/* Grid pattern */}
+          <div
+            className="absolute inset-0 opacity-[0.035] pointer-events-none"
+            style={{
+              backgroundImage:
+                "linear-gradient(var(--color-ink) 1px, transparent 1px), linear-gradient(90deg, var(--color-ink) 1px, transparent 1px)",
+              backgroundSize: "42px 42px",
+            }}
+          />
+          {/* Radial glows */}
+          <div
+            className="absolute -top-24 -left-20 w-[380px] h-[380px] rounded-full pointer-events-none opacity-40"
+            style={{
+              background:
+                "radial-gradient(circle, rgba(14,165,233,0.35) 0%, rgba(14,165,233,0) 70%)",
+              filter: "blur(6px)",
+            }}
+          />
+          <div
+            className="absolute -bottom-28 -right-16 w-[420px] h-[420px] rounded-full pointer-events-none opacity-40"
+            style={{
+              background:
+                "radial-gradient(circle, rgba(234,179,8,0.3) 0%, rgba(234,179,8,0) 70%)",
+              filter: "blur(8px)",
+            }}
+          />
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] rounded-full pointer-events-none opacity-25"
+            style={{
+              background:
+                "radial-gradient(circle, rgba(99,102,241,0.45) 0%, rgba(99,102,241,0) 70%)",
+              filter: "blur(10px)",
+            }}
+          />
+
+          <div className="relative p-8 sm:p-10 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-10 h-10 rounded-[12px] flex items-center justify-center"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, rgba(14,165,233,0.18) 0%, rgba(99,102,241,0.18) 100%)",
+                  }}
+                >
+                  <Mail className="h-5 w-5 text-[var(--color-brand)]" />
+                </div>
+              </div>
+              <h1 className="font-display text-4xl sm:text-5xl leading-[1.08]">
+                <span
+                  className="bg-clip-text text-transparent"
+                  style={{
+                    backgroundImage:
+                      "linear-gradient(180deg, var(--color-ink) 0%, var(--color-ink-muted) 100%)",
+                  }}
+                >
+                  Campañas de{" "}
+                </span>
+                <span
+                  className="bg-clip-text text-transparent"
+                  style={{
+                    backgroundImage:
+                      "linear-gradient(135deg, var(--color-brand) 0%, #6366f1 50%, #eab308 100%)",
+                  }}
+                >
+                  Email Masivo
+                </span>
+              </h1>
+              <p className="text-secondary max-w-xl leading-relaxed">
+                Diseña y despacha promociones a segmentos reales de clientes, vendedores y contadores.
+              </p>
+            </div>
+
+            <Button
+              variant="secondary"
+              size="lg"
+              onClick={() => setShowModal(true)}
+              className="glow-brand-sm whitespace-nowrap"
+            >
+              <Plus className="h-4 w-4" /> Nueva campaña
+            </Button>
+          </div>
         </div>
-
-        <Button variant="secondary" size="lg" onClick={() => setShowModal(true)} className="shadow-md shadow-sky-500/20">
-          <Plus className="h-4 w-4" /> Nueva campaña
-        </Button>
       </div>
 
       {/* CAMPAIGN LIST */}
-      <div className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="mt-8 rounded-[22px] border border-[var(--color-border-subtle)] bg-[var(--color-surf)] shadow-card animate-fade-in">
         {isLoading ? (
-          <div className="p-12 text-center text-slate-400">Cargando campañas...</div>
+          <div className="p-16 text-center text-muted-t">Cargando campañas...</div>
         ) : campaigns.length === 0 ? (
-          <div className="p-12 text-center text-slate-400">
-            <Mail className="mx-auto h-12 w-12 text-slate-300" />
-            <p className="mt-3 font-display text-xl text-slate-700">No hay campañas registradas</p>
-            <p className="text-xs">Crea una nueva campaña para notificar ofertas a tus clientes.</p>
+          <div className="p-16 text-center">
+            <div
+              className="mx-auto w-20 h-20 rounded-[20px] flex items-center justify-center mb-5"
+              style={{
+                background:
+                  "linear-gradient(135deg, rgba(14,165,233,0.12) 0%, rgba(99,102,241,0.12) 100%)",
+              }}
+            >
+              <Mail className="h-10 w-10 text-muted-t/70" />
+            </div>
+            <p className="font-display text-2xl text-primary">No hay campañas registradas</p>
+            <p className="mt-2 text-sm text-muted-t">
+              Crea una nueva campaña para notificar ofertas a tus clientes.
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-slate-600">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-500">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-[var(--color-border-subtle)] bg-[var(--color-bg)]/50 text-xs font-bold uppercase tracking-wider text-muted-t">
                 <tr>
                   <th className="px-6 py-4">Título / Asunto</th>
                   <th className="px-6 py-4">Segmento Receptores</th>
@@ -182,30 +279,37 @@ export default function AdminCampaignsPage() {
                   <th className="px-6 py-4 text-right">Acción</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-[var(--color-border-subtle)]">
                 {campaigns.map((c) => (
-                  <tr key={c.id} className="hover:bg-slate-50/50">
-                    <td className="px-6 py-4">
-                      <p className="font-semibold text-slate-900">{c.titulo}</p>
-                      <p className="text-xs text-slate-500 font-mono">Asunto: {c.asunto}</p>
+                  <tr key={c.id} className="row-hover transition-colors duration-200">
+                    <td className="px-6 py-5">
+                      <p className="font-semibold text-primary">{c.titulo}</p>
+                      <p className="text-xs text-muted-t font-mono mt-0.5">Asunto: {c.asunto}</p>
                     </td>
-                    <td className="px-6 py-4 font-bold text-xs text-slate-700">
+                    <td className="px-6 py-5">
                       <Badge tone="info">{SEGMENT_LABELS[c.segmento] ?? c.segmento}</Badge>
                     </td>
-                    <td className="px-6 py-4 text-xs font-mono">
-                      <span className="text-emerald-600 font-bold">✓ {c.totalEnviados ?? 0} Enviados</span>
-                      {c.totalFallidos ? (
-                        <span className="ml-2 text-rose-500 font-bold">✕ {c.totalFallidos} Fallidos</span>
-                      ) : null}
+                    <td className="px-6 py-5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="chip chip-success">
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          {c.totalEnviados ?? 0} Enviados
+                        </span>
+                        {c.totalFallidos ? (
+                          <span className="chip chip-danger">
+                            ✕ {c.totalFallidos} Fallidos
+                          </span>
+                        ) : null}
+                      </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-5">
                       {c.estado === "ENVIADO" ? (
                         <Badge tone="success">ENVIADO</Badge>
                       ) : (
                         <Badge tone="warning">BORRADOR</Badge>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-5 text-right">
                       <Button
                         variant="secondary"
                         size="sm"
@@ -225,76 +329,140 @@ export default function AdminCampaignsPage() {
 
       {/* CREATE CAMPAIGN MODAL */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <h3 className="font-display text-2xl text-slate-900">Nueva Campaña Email Masivo</h3>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 font-bold">
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateCampaign} className="mt-4 space-y-4">
-              <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Título Interno *</label>
-                <input
-                  required
-                  value={titulo}
-                  onChange={(e) => setTitulo(e.target.value)}
-                  placeholder="Promoción Flash de Agosto"
-                  className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-4 text-sm outline-none focus:border-sky-500"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Asunto del Correo *</label>
-                <input
-                  required
-                  value={asunto}
-                  onChange={(e) => setAsunto(e.target.value)}
-                  placeholder="🔥 30% OFF en Zapatillas Nike seleccionadas"
-                  className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-4 text-sm outline-none focus:border-sky-500"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Segmento de Usuarios *</label>
-                <select
-                  value={segmento}
-                  onChange={(e) => setSegmento(e.target.value as any)}
-                  className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-4 text-sm outline-none focus:border-sky-500 font-semibold"
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-ink)]/70 p-4 backdrop-blur-md animate-fade-in">
+          <div
+            className="w-full max-w-2xl p-[1px] animate-scale-in"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(14,165,233,0.6) 0%, rgba(99,102,241,0.6) 35%, rgba(234,179,8,0.6) 70%, rgba(14,165,233,0.6) 100%)",
+              borderRadius: "22px",
+            }}
+          >
+            <div className="rounded-[21px] bg-[var(--color-surf)] p-7 sm:p-8">
+              <div className="flex items-start justify-between pb-5 border-b border-[var(--color-border-subtle)]">
+                <div>
+                  <h3 className="font-display text-2xl text-primary">
+                    Nueva Campaña Email Masivo
+                  </h3>
+                  <p className="text-sm text-secondary mt-1">
+                    Configura el contenido y segmento de destino.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="text-muted-t hover:text-primary transition-colors duration-200 font-bold text-xl leading-none p-1 rounded-lg hover:bg-[var(--color-bg)]"
                 >
-                  <option value="TODOS_LOS_CLIENTES">Todos los clientes registrados</option>
-                  <option value="CLIENTES_CON_COMPRAS">Clientes con compras previas</option>
-                  <option value="CLIENTES_SIN_COMPRAS">Clientes sin compras aún</option>
-                  <option value="VENDEDORES">Vendedores</option>
-                  <option value="CONTADORES">Contadores</option>
-                </select>
+                  ✕
+                </button>
               </div>
 
-              <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Contenido HTML / Mensaje *</label>
-                <textarea
-                  required
-                  rows={10}
-                  value={contenidoHtml}
-                  onChange={(e) => setContenidoHtml(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-200 p-4 text-sm font-mono outline-none focus:border-sky-500"
-                />
-                <p className="mt-2 text-xs text-slate-500">
-                  Usa estas variables en el HTML: <code className="rounded bg-slate-100 px-1 py-0.5">{`{{titulo}}`}</code>, <code className="rounded bg-slate-100 px-1 py-0.5">{`{{mensaje}}`}</code>, <code className="rounded bg-slate-100 px-1 py-0.5">{`{{imagen_principal}}`}</code>, <code className="rounded bg-slate-100 px-1 py-0.5">{`{{url_boton}}`}</code>, <code className="rounded bg-slate-100 px-1 py-0.5">{`{{texto_boton}}`}</code>.
-                </p>
-              </div>
+              <form onSubmit={handleCreateCampaign} className="mt-6 space-y-5">
+                <div className="animate-slide-up" style={{ animationDelay: "50ms" }}>
+                  <label className="text-xs font-bold uppercase tracking-wider text-secondary">
+                    Título Interno *
+                  </label>
+                  <input
+                    required
+                    value={titulo}
+                    onChange={(e) => setTitulo(e.target.value)}
+                    placeholder="Promoción Flash de Agosto"
+                    className="input-premium mt-1.5 h-[50px] rounded-[14px] border-[1.5px] px-4 text-sm outline-none transition-all duration-200 focus:border-[var(--color-brand)] focus:shadow-[0_0_0_4px_rgba(14,165,233,0.12)]"
+                    style={{
+                      borderColor: "var(--input-border)",
+                      backgroundColor: "var(--input-bg)",
+                      color: "var(--color-primary)",
+                    }}
+                  />
+                </div>
 
-              <div className="mt-6 flex justify-end gap-2 pt-2">
-                <Button type="button" variant="ghost" onClick={() => setShowModal(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit" variant="secondary" isLoading={isSubmitting}>
-                  Guardar Borrador de Campaña
-                </Button>
-              </div>
-            </form>
+                <div className="animate-slide-up" style={{ animationDelay: "100ms" }}>
+                  <label className="text-xs font-bold uppercase tracking-wider text-secondary">
+                    Asunto del Correo *
+                  </label>
+                  <input
+                    required
+                    value={asunto}
+                    onChange={(e) => setAsunto(e.target.value)}
+                    placeholder="🔥 30% OFF en Zapatillas Nike seleccionadas"
+                    className="input-premium mt-1.5 h-[50px] rounded-[14px] border-[1.5px] px-4 text-sm outline-none transition-all duration-200 focus:border-[var(--color-brand)] focus:shadow-[0_0_0_4px_rgba(14,165,233,0.12)]"
+                    style={{
+                      borderColor: "var(--input-border)",
+                      backgroundColor: "var(--input-bg)",
+                      color: "var(--color-primary)",
+                    }}
+                  />
+                </div>
+
+                <div className="animate-slide-up" style={{ animationDelay: "150ms" }}>
+                  <label className="text-xs font-bold uppercase tracking-wider text-secondary">
+                    Segmento de Usuarios *
+                  </label>
+                  <select
+                    value={segmento}
+                    onChange={(e) => setSegmento(e.target.value as any)}
+                    className="input-premium mt-1.5 h-[50px] rounded-[14px] border-[1.5px] px-4 text-sm font-semibold outline-none transition-all duration-200 focus:border-[var(--color-brand)] focus:shadow-[0_0_0_4px_rgba(14,165,233,0.12)]"
+                    style={{
+                      borderColor: "var(--input-border)",
+                      backgroundColor: "var(--input-bg)",
+                      color: "var(--color-primary)",
+                    }}
+                  >
+                    <option value="TODOS_LOS_CLIENTES">Todos los clientes registrados</option>
+                    <option value="CLIENTES_CON_COMPRAS">Clientes con compras previas</option>
+                    <option value="CLIENTES_SIN_COMPRAS">Clientes sin compras aún</option>
+                    <option value="VENDEDORES">Vendedores</option>
+                    <option value="CONTADORES">Contadores</option>
+                  </select>
+                </div>
+
+                <div className="animate-slide-up" style={{ animationDelay: "200ms" }}>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold uppercase tracking-wider text-secondary">
+                      Contenido HTML / Mensaje *
+                    </label>
+                    <Badge tone="info" className="text-[10px]">
+                      Variables dinámicas disponibles
+                    </Badge>
+                  </div>
+                  <textarea
+                    required
+                    rows={10}
+                    value={contenidoHtml}
+                    onChange={(e) => setContenidoHtml(e.target.value)}
+                    className="input-premium mt-1.5 w-full rounded-[14px] border-[1.5px] p-4 text-sm font-mono outline-none transition-all duration-200 focus:border-[var(--color-brand)] focus:shadow-[0_0_0_4px_rgba(14,165,233,0.12)] resize-y min-h-[220px]"
+                    style={{
+                      borderColor: "var(--input-border)",
+                      backgroundColor: "var(--input-bg)",
+                      color: "var(--color-primary)",
+                    }}
+                  />
+                  <p className="mt-3 text-xs text-muted-t flex flex-wrap items-center gap-1.5">
+                    Usa estas variables en el HTML:
+                    <span className="chip inline-flex">{`{{titulo}}`}</span>
+                    <span className="chip inline-flex">{`{{mensaje}}`}</span>
+                    <span className="chip inline-flex">{`{{imagen_principal}}`}</span>
+                    <span className="chip inline-flex">{`{{url_boton}}`}</span>
+                    <span className="chip inline-flex">{`{{texto_boton}}`}</span>
+                  </p>
+                </div>
+
+                <div
+                  className="mt-7 flex justify-end gap-3 pt-4 border-t border-[var(--color-border-subtle)] animate-slide-up"
+                  style={{ animationDelay: "250ms" }}
+                >
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setShowModal(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button type="submit" variant="secondary" isLoading={isSubmitting}>
+                    Guardar Borrador de Campaña
+                  </Button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}

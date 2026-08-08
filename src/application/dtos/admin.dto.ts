@@ -1,13 +1,20 @@
+export interface VarianteInputDTO {
+  talla: number;
+  stock: number;
+  peso_kg?: number | string;
+  sku?: string;
+}
+
 export interface CreateProductDTO {
   nombre: string;
   modelo: string;
-  descripcion: string;
+  descripcion?: string;
   calidad: "ORIGINAL" | "PRIMERA_CLASE" | "SEGUNDA_CLASE";
-  precioBase: number;
-  precioOferta?: number | null;
-  marcaId: number;
-  categoriaId: number;
+  precio_base: number | string;
+  marca_id: number;
+  categoria_id: number;
   activo?: boolean;
+  variantes_input?: VarianteInputDTO[];
 }
 
 export interface CreateVariantDTO {
@@ -18,17 +25,41 @@ export interface CreateVariantDTO {
   pesoKg?: number;
 }
 
+export interface UpdateVariantDTO {
+  stock?: number;
+  sku?: string;
+  pesoKg?: number | string;
+}
+
 export interface CreateBrandDTO {
   nombre: string;
   descripcion?: string;
+  logo?: File;
+}
+
+export interface UpdateBrandDTO {
+  nombre?: string;
+  descripcion?: string;
+  logo?: File;
 }
 
 export interface CreateCategoryDTO {
   nombre: string;
   descripcion?: string;
+  imagen?: File;
+}
+
+export interface UpdateCategoryDTO {
+  nombre?: string;
+  descripcion?: string;
+  imagen?: File;
 }
 
 export interface CreateTallaDTO {
+  valor: string;
+}
+
+export interface UpdateTallaDTO {
   valor: string;
 }
 
@@ -64,14 +95,4 @@ export interface UpdateUserDTO {
   apellido?: string;
   telefono?: string;
   rol?: "ADMINISTRADOR" | "CONTADOR" | "VENDEDOR" | "CLIENTE";
-}
-
-export interface UpdateBrandDTO {
-  nombre?: string;
-  descripcion?: string;
-}
-
-export interface UpdateCategoryDTO {
-  nombre?: string;
-  descripcion?: string;
 }

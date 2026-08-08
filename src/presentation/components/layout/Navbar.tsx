@@ -2,18 +2,18 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Search, ShoppingBag, User, X, Menu, ChevronRight,
-  Gem, LayoutDashboard, BarChart3, Briefcase, Sun, Moon, Bell,
+  Gem, LayoutDashboard, BarChart3, Briefcase, Sun, Moon, Bell, Heart,
 } from "lucide-react";
 import { useCases } from "@/infrastructure/factories/useCases.factory";
 import { useAuthStore } from "@/presentation/store/authStore";
 import { useCartStore } from "@/presentation/store/cartStore";
 import { useThemeStore } from "@/presentation/store/themeStore";
+import { useFavoritesStore } from "@/presentation/store/favoritesStore";
 import { cn } from "@/presentation/utils/cn";
 
 const LINKS = [
   { to: "/catalogo", label: "Catálogo" },
-  { to: "/catalogo?categoria=running", label: "Running" },
-  { to: "/catalogo?categoria=casual", label: "Casual" },
+  { to: "/favoritos", label: "Favoritos" },
   { to: "/catalogo?ordering=-reciente", label: "Nuevos" },
 ];
 
@@ -21,6 +21,7 @@ export function Navbar() {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuthStore();
   const { cart, openDrawer } = useCartStore();
+  const { favorites } = useFavoritesStore();
   const { theme, toggleTheme } = useThemeStore();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -190,30 +191,7 @@ export function Navbar() {
             <Search className="h-4 w-4" />
           </button>
 
-          {/* Theme toggle */}
-          <button
-            onClick={toggleTheme}
-            aria-label={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
-            className="relative flex h-9 w-[52px] items-center rounded-full border transition-all duration-300 p-1"
-            style={{
-              background: isDark ? "rgba(56,189,248,0.12)" : "#f1f5f9",
-              borderColor: isDark ? "rgba(56,189,248,0.2)" : "#e2e8f0",
-            }}
-          >
-            <div
-              className="flex h-7 w-7 items-center justify-center rounded-full transition-all duration-300 shadow-sm"
-              style={{
-                background: isDark ? "#38bdf8" : "#0a0c12",
-                transform: isDark ? "translateX(20px)" : "translateX(0px)",
-              }}
-            >
-              {isDark ? (
-                <Sun className="h-3.5 w-3.5 text-slate-900" />
-              ) : (
-                <Moon className="h-3.5 w-3.5 text-white" />
-              )}
-            </div>
-          </button>
+
 
           {isAuthenticated && (
             <div className="relative">
@@ -282,6 +260,21 @@ export function Navbar() {
                 style={{ color: "var(--text-secondary)" }}
               >
                 {user?.nombre}
+              </span>
+            )}
+          </Link>
+
+          {/* Favorites */}
+          <Link
+            to="/favoritos"
+            className="relative flex h-9 w-9 items-center justify-center rounded-lg transition-all hover:bg-black/5 dark:hover:bg-white/8"
+            style={{ color: "var(--text-secondary)" }}
+            aria-label="Favoritos"
+          >
+            <Heart className={`h-4 w-4 ${favorites.length > 0 ? "fill-rose-500 text-rose-500" : ""}`} />
+            {favorites.length > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
+                {favorites.length}
               </span>
             )}
           </Link>

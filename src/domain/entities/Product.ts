@@ -1,12 +1,14 @@
 export interface Brand {
   id: number;
   nombre: string;
+  descripcion?: string | null;
   logoUrl?: string | null;
 }
 
 export interface Category {
   id: number;
   nombre: string;
+  descripcion?: string | null;
   subcategoria?: string | null;
   imagenUrl?: string | null;
 }
@@ -24,6 +26,7 @@ export interface ProductVariant {
   talla: string;
   color: string;
   stock: number;
+  sku?: string | null;
 }
 
 export type ProductStatus = "activo" | "agotado" | "inactivo" | string;
@@ -61,7 +64,9 @@ export interface ProductSummary {
   id: number;
   nombre: string;
   marca: string;
+  marcaId?: number;
   categoria: string;
+  categoriaId?: number;
   precioBase: number;
   precioOferta?: number | null;
   imagenPrincipal: string | null;

@@ -5,20 +5,28 @@ import type { User, PaymentProof, EmailCampaign, AdminStats, CommissionReport } 
 import type {
   CreateProductDTO,
   CreateVariantDTO,
+  UpdateVariantDTO,
   CreateBrandDTO,
   UpdateBrandDTO,
   CreateCategoryDTO,
   UpdateCategoryDTO,
   CreateTallaDTO,
+  UpdateTallaDTO,
   VerifyPaymentDTO,
   ShipOrderDTO,
   CreateCampaignDTO,
   CreateUserDTO,
   UpdateUserDTO,
 } from "@/application/dtos/admin.dto";
-import { httpClient, unwrap, type ApiEnvelope } from "../http/httpClient";
+import { httpClient, type ApiEnvelope } from "../http/httpClient";
 import { toProduct, toBrand, toCategory } from "../adapters/catalog.adapter";
 import { toOrder } from "../adapters/order.adapter";
+
+/** Desempaqueta tanto {success, data} como respuesta directa */
+function safeUnwrap<T>(data: any): T {
+  if (data && "success" in data && "data" in data) return data.data as T;
+  return data as T;
+}
 
 export class ApiAdminRepository implements AdminRepositoryPort {
   async uploadImage(
@@ -37,28 +45,39 @@ export class ApiAdminRepository implements AdminRepositoryPort {
     formData.append("model", model);
     formData.append("object_id", String(objectId));
 
-    const { data } = await httpClient.post<ApiEnvelope<{ id: number; url: string; nombre_archivo?: string }>>(
-      "/imagenes/subir/",
-      formData
-    );
-    const res = unwrap(data);
+    const { data } = await httpClient.post<any>("/imagenes/subir/", formData);
+    const res = safeUnwrap<{ id: number; url: string }>(data);
     return { id: res.id, url: res.url };
   }
 
   async createProduct(payload: CreateProductDTO): Promise<Product> {
+    // Payload oficial: campos snake_case. El `codigo` lo genera el backend automáticamente.
+    const precioBaseStr =
+      typeof payload.precio_base === "number"
+        ? payload.precio_base.toFixed(2)
+        : String(payload.precio_base);
     const body: Record<string, any> = {
       nombre: payload.nombre,
-      modelo: payload.modelo,
-      descripcion: payload.descripcion,
-      calidad: payload.calidad,
-      precio_base: String(payload.precioBase),
-      marca_id: payload.marcaId,
-      categoria_id: payload.categoriaId,
+      modelo: payload.modelo || payload.nombre,
+      descripcion: payload.descripcion ?? "",
+      calidad: payload.calidad || "ORIGINAL",
+      precio_base: precioBaseStr,
+      marca_id: payload.marca_id,
+      categoria_id: payload.categoria_id,
       activo: payload.activo ?? true,
     };
+    if (payload.variantes_input && payload.variantes_input.length > 0) {
+      body.variantes_input = payload.variantes_input.map((v, idx) => ({
+        talla: v.talla,
+        talla_id: v.talla,
+        stock: Number(v.stock),
+        peso_kg: v.peso_kg != null ? Number(v.peso_kg) : 0.85,
+        sku: v.sku?.trim() || `SKU-${Date.now()}-${v.talla}-${idx}-${Math.floor(Math.random() * 10000)}`,
+      }));
+    }
 
-    const { data } = await httpClient.post<ApiEnvelope<any>>("/productos/", body);
-    return toProduct(unwrap(data));
+    const { data } = await httpClient.post<any>("/productos/", body);
+    return toProduct(safeUnwrap(data));
   }
 
   async updateProduct(id: number, payload: Partial<CreateProductDTO>): Promise<Product> {
@@ -67,34 +86,74 @@ export class ApiAdminRepository implements AdminRepositoryPort {
     if (payload.modelo !== undefined) body.modelo = payload.modelo;
     if (payload.descripcion !== undefined) body.descripcion = payload.descripcion;
     if (payload.calidad !== undefined) body.calidad = payload.calidad;
-    if (payload.precioBase !== undefined) body.precio_base = String(payload.precioBase);
-    if (payload.marcaId !== undefined) body.marca_id = payload.marcaId;
-    if (payload.categoriaId !== undefined) body.categoria_id = payload.categoriaId;
+    if (payload.precio_base !== undefined) {
+      body.precio_base =
+        typeof payload.precio_base === "number"
+          ? payload.precio_base.toFixed(2)
+          : String(payload.precio_base);
+    }
+    if (payload.marca_id !== undefined) body.marca_id = payload.marca_id;
+    if (payload.categoria_id !== undefined) body.categoria_id = payload.categoria_id;
     if (payload.activo !== undefined) body.activo = payload.activo;
+    if (payload.variantes_input !== undefined) {
+      body.variantes_input = payload.variantes_input.map((v, idx) => ({
+        talla: v.talla,
+        talla_id: v.talla,
+        stock: Number(v.stock),
+        peso_kg: v.peso_kg != null ? Number(v.peso_kg) : 0.85,
+        sku: v.sku?.trim() || `SKU-${id}-${v.talla}-${idx}-${Date.now()}`,
+      }));
+    }
 
-    const { data } = await httpClient.patch<ApiEnvelope<any>>(`/productos/${id}/`, body);
-    return toProduct(unwrap(data));
+    const { data } = await httpClient.patch<any>(`/productos/${id}/`, body);
+    return toProduct(safeUnwrap(data));
+  }
+
+  async deleteProduct(id: number): Promise<void> {
+    await httpClient.delete(`/productos/${id}/`);
   }
 
   async createVariant(payload: CreateVariantDTO): Promise<void> {
+    const autoSku = payload.sku?.trim() || `SKU-${payload.productoId}-${payload.tallaId}-${Date.now()}`;
     const body = {
       producto: payload.productoId,
       talla: payload.tallaId,
+      talla_id: payload.tallaId,
       stock: payload.stock,
-      sku: payload.sku || undefined,
+      sku: autoSku,
       peso_kg: payload.pesoKg ? String(payload.pesoKg) : "0.85",
     };
-    await httpClient.post<ApiEnvelope<any>>("/variantes/", body);
+    await httpClient.post<any>("/variantes/", body);
+  }
+
+  async updateVariant(id: number, payload: UpdateVariantDTO): Promise<void> {
+    const body: Record<string, any> = {};
+    if (payload.stock !== undefined) body.stock = Number(payload.stock);
+    if (payload.sku !== undefined) body.sku = payload.sku.trim() || `SKU-VAR-${id}-${Date.now()}`;
+    if (payload.pesoKg !== undefined) body.peso_kg = String(payload.pesoKg);
+    await httpClient.patch<any>(`/variantes/${id}/`, body);
+  }
+
+  async deleteVariant(id: number): Promise<void> {
+    await httpClient.delete(`/variantes/${id}/`);
   }
 
   async createBrand(payload: CreateBrandDTO): Promise<Brand> {
-    const { data } = await httpClient.post<ApiEnvelope<any>>("/marcas/", payload);
-    return toBrand(unwrap(data));
+    const fd = new FormData();
+    fd.append("nombre", payload.nombre);
+    fd.append("descripcion", payload.descripcion ?? "");
+    if (payload.logo) fd.append("logo", payload.logo);
+    const { data } = await httpClient.post<any>("/marcas/", fd);
+    return toBrand(safeUnwrap(data));
   }
 
   async updateBrand(id: number, payload: UpdateBrandDTO): Promise<Brand> {
-    const { data } = await httpClient.patch<ApiEnvelope<any>>(`/marcas/${id}/`, payload);
-    return toBrand(unwrap(data));
+    const fd = new FormData();
+    if (payload.nombre !== undefined) fd.append("nombre", payload.nombre);
+    if (payload.descripcion !== undefined) fd.append("descripcion", payload.descripcion ?? "");
+    if (payload.logo) fd.append("logo", payload.logo);
+    const { data } = await httpClient.patch<any>(`/marcas/${id}/`, fd);
+    return toBrand(safeUnwrap(data));
   }
 
   async deleteBrand(id: number): Promise<void> {
@@ -102,20 +161,33 @@ export class ApiAdminRepository implements AdminRepositoryPort {
   }
 
   async getBrands(): Promise<Brand[]> {
-    const { data } = await httpClient.get<ApiEnvelope<any>>("/marcas/");
-    const payload = unwrap(data);
-    const list = Array.isArray(payload) ? payload : payload?.results || [];
-    return list.map(toBrand);
+    const { data } = await httpClient.get<any>("/marcas/");
+    const payload = safeUnwrap<any>(data);
+    const list: any[] = Array.isArray(payload) ? payload : payload?.results ?? [];
+    return list.map((b: any) => ({
+      id: b.id,
+      nombre: b.nombre,
+      descripcion: b.descripcion ?? null,
+      logoUrl: b.logo_url ?? b.logoUrl ?? null,
+    }));
   }
 
   async createCategory(payload: CreateCategoryDTO): Promise<Category> {
-    const { data } = await httpClient.post<ApiEnvelope<any>>("/categorias/", payload);
-    return toCategory(unwrap(data));
+    const fd = new FormData();
+    fd.append("nombre", payload.nombre);
+    fd.append("descripcion", payload.descripcion ?? "");
+    if (payload.imagen) fd.append("imagen", payload.imagen);
+    const { data } = await httpClient.post<any>("/categorias/", fd);
+    return toCategory(safeUnwrap(data));
   }
 
   async updateCategory(id: number, payload: UpdateCategoryDTO): Promise<Category> {
-    const { data } = await httpClient.patch<ApiEnvelope<any>>(`/categorias/${id}/`, payload);
-    return toCategory(unwrap(data));
+    const fd = new FormData();
+    if (payload.nombre !== undefined) fd.append("nombre", payload.nombre);
+    if (payload.descripcion !== undefined) fd.append("descripcion", payload.descripcion ?? "");
+    if (payload.imagen) fd.append("imagen", payload.imagen);
+    const { data } = await httpClient.patch<any>(`/categorias/${id}/`, fd);
+    return toCategory(safeUnwrap(data));
   }
 
   async deleteCategory(id: number): Promise<void> {
@@ -123,60 +195,61 @@ export class ApiAdminRepository implements AdminRepositoryPort {
   }
 
   async getCategories(): Promise<Category[]> {
-    const { data } = await httpClient.get<ApiEnvelope<any>>("/categorias/");
-    const payload = unwrap(data);
-    const list = Array.isArray(payload) ? payload : payload?.results || [];
-    return list.map(toCategory);
+    const { data } = await httpClient.get<any>("/categorias/");
+    const payload = safeUnwrap<any>(data);
+    const list: any[] = Array.isArray(payload) ? payload : payload?.results ?? [];
+    return list.map((c: any) => ({
+      id: c.id,
+      nombre: c.nombre,
+      descripcion: c.descripcion ?? null,
+      subcategoria: c.subcategoria ?? null,
+      imagenUrl: c.imagen_url ?? null,
+    }));
   }
 
   async createTalla(payload: CreateTallaDTO): Promise<Talla> {
-    const { data } = await httpClient.post<ApiEnvelope<any>>("/tallas/", payload);
-    const item = unwrap(data);
+    const { data } = await httpClient.post<any>("/tallas/", payload);
+    const item = safeUnwrap<any>(data);
     return { id: item.id, valor: String(item.valor) };
   }
 
+  async updateTalla(id: number, payload: UpdateTallaDTO): Promise<Talla> {
+    const { data } = await httpClient.patch<any>(`/tallas/${id}/`, payload);
+    const item = safeUnwrap<any>(data);
+    return { id: item.id ?? id, valor: String(item.valor ?? payload.valor) };
+  }
+
+  async deleteTalla(id: number): Promise<void> {
+    await httpClient.delete(`/tallas/${id}/`);
+  }
+
   async getTallas(): Promise<Talla[]> {
-    const { data } = await httpClient.get<ApiEnvelope<any>>("/tallas/");
-    const payload = unwrap(data);
-    const items = Array.isArray(payload) ? payload : payload?.results || [];
+    const { data } = await httpClient.get<any>("/tallas/");
+    const payload = safeUnwrap<any>(data);
+    const items: any[] = Array.isArray(payload) ? payload : payload?.results ?? [];
     return items.map((t: any) => ({ id: t.id, valor: String(t.valor) }));
   }
 
   async getUsers(rol?: string): Promise<User[]> {
-    const candidates = [
-      rol ? `/usuarios/?rol=${encodeURIComponent(rol)}` : "/usuarios/",
-      "/usuarios/",
-      "/usuarios/?page=1",
-    ];
-
-    let lastError: unknown = null;
-
-    for (const url of candidates) {
-      try {
-        const { data } = await httpClient.get<ApiEnvelope<any>>(url);
-        const payload = unwrap(data);
-        const items = Array.isArray(payload) ? payload : payload?.results || [];
-
-        const mapped = items.map((u: any) => ({
-          id: u.id,
-          nombre: u.nombre || u.primer_nombre || "",
-          apellido: u.apellido || u.primer_apellido || "",
-          correo: u.correo || u.email || "",
-          telefono: u.telefono || "",
-          rol: u.rol || "CLIENTE",
-          username: u.username,
-          fotoPerfilUrl: u.foto_perfil_url,
-          creadoEn: u.creado_en,
-        }));
-
-        if (mapped.length > 0) return mapped;
-      } catch (error) {
-        lastError = error;
-      }
+    const url = rol ? `/usuarios/?rol=${encodeURIComponent(rol)}` : "/usuarios/";
+    try {
+      const { data } = await httpClient.get<any>(url);
+      const payload = safeUnwrap<any>(data);
+      const items: any[] = Array.isArray(payload) ? payload : payload?.results ?? [];
+      return items.map((u: any) => ({
+        id: u.id,
+        nombre: u.nombre || u.primer_nombre || "",
+        apellido: u.apellido || u.primer_apellido || "",
+        correo: u.correo || u.email || "",
+        telefono: u.telefono || "",
+        rol: u.rol || "CLIENTE",
+        username: u.username,
+        fotoPerfilUrl: u.foto_perfil_url,
+        creadoEn: u.creado_en,
+      }));
+    } catch {
+      return [];
     }
-
-    if (lastError) throw lastError;
-    return [];
   }
 
   async createUser(payload: CreateUserDTO): Promise<User> {
@@ -185,75 +258,28 @@ export class ApiAdminRepository implements AdminRepositoryPort {
     if (payload.rol === "VENDEDOR") {
       try {
         const body = {
-          username,
-          email: payload.correo,
-          password: payload.password,
-          primer_nombre: payload.nombre,
-          primer_apellido: payload.apellido,
-          telefono: payload.telefono,
-          banco: "Banco Pichincha",
-          tipo_cuenta: "Ahorros",
-          numero_cuenta: "2200112233",
+          username, email: payload.correo, password: payload.password,
+          primer_nombre: payload.nombre, primer_apellido: payload.apellido,
+          telefono: payload.telefono, banco: "Banco Pichincha",
+          tipo_cuenta: "Ahorros", numero_cuenta: "2200112233",
         };
-        const { data } = await httpClient.post<ApiEnvelope<any>>("/usuarios/vendedores/crear/", body);
-        const u = unwrap(data);
-        return {
-          id: u.id || Date.now(),
-          nombre: u.primer_nombre || payload.nombre,
-          apellido: u.primer_apellido || payload.apellido,
-          correo: u.email || payload.correo,
-          telefono: u.telefono || payload.telefono,
-          rol: "VENDEDOR",
-          username: u.username || username,
-        };
-      } catch {
-        // Fallback to standard endpoint if endpoint is default DRF
-      }
+        const { data } = await httpClient.post<any>("/usuarios/vendedores/crear/", body);
+        const u = safeUnwrap<any>(data);
+        return { id: u.id || Date.now(), nombre: u.primer_nombre || payload.nombre, apellido: u.primer_apellido || payload.apellido, correo: u.email || payload.correo, telefono: u.telefono || payload.telefono, rol: "VENDEDOR", username: u.username || username };
+      } catch { /* fallback */ }
     } else if (payload.rol === "CONTADOR") {
       try {
-        const body = {
-          username,
-          email: payload.correo,
-          password: payload.password,
-          primer_nombre: payload.nombre,
-          primer_apellido: payload.apellido,
-          telefono: payload.telefono,
-        };
-        const { data } = await httpClient.post<ApiEnvelope<any>>("/usuarios/contadores/crear/", body);
-        const u = unwrap(data);
-        return {
-          id: u.id || Date.now(),
-          nombre: u.primer_nombre || payload.nombre,
-          apellido: u.primer_apellido || payload.apellido,
-          correo: u.email || payload.correo,
-          telefono: u.telefono || payload.telefono,
-          rol: "CONTADOR",
-          username: u.username || username,
-        };
-      } catch {
-        // Fallback
-      }
+        const body = { username, email: payload.correo, password: payload.password, primer_nombre: payload.nombre, primer_apellido: payload.apellido, telefono: payload.telefono };
+        const { data } = await httpClient.post<any>("/usuarios/contadores/crear/", body);
+        const u = safeUnwrap<any>(data);
+        return { id: u.id || Date.now(), nombre: u.primer_nombre || payload.nombre, apellido: u.primer_apellido || payload.apellido, correo: u.email || payload.correo, telefono: u.telefono || payload.telefono, rol: "CONTADOR", username: u.username || username };
+      } catch { /* fallback */ }
     }
 
-    const standardBody = {
-      nombre: payload.nombre,
-      apellido: payload.apellido,
-      correo: payload.correo,
-      telefono: payload.telefono,
-      password: payload.password,
-      rol: payload.rol,
-    };
-    const { data } = await httpClient.post<ApiEnvelope<any>>("/usuarios/", standardBody);
-    const u = unwrap(data);
-    return {
-      id: u.id,
-      nombre: u.nombre || payload.nombre,
-      apellido: u.apellido || payload.apellido,
-      correo: u.correo || payload.correo,
-      telefono: u.telefono || payload.telefono,
-      rol: u.rol || payload.rol,
-      username: u.username,
-    };
+    const standardBody = { nombre: payload.nombre, apellido: payload.apellido, correo: payload.correo, telefono: payload.telefono, password: payload.password, rol: payload.rol };
+    const { data } = await httpClient.post<any>("/usuarios/", standardBody);
+    const u = safeUnwrap<any>(data);
+    return { id: u.id, nombre: u.nombre || payload.nombre, apellido: u.apellido || payload.apellido, correo: u.correo || payload.correo, telefono: u.telefono || payload.telefono, rol: u.rol || payload.rol, username: u.username };
   }
 
   async updateUser(id: number, payload: UpdateUserDTO): Promise<User> {
@@ -262,17 +288,9 @@ export class ApiAdminRepository implements AdminRepositoryPort {
     if (payload.apellido !== undefined) body.apellido = payload.apellido;
     if (payload.telefono !== undefined) body.telefono = payload.telefono;
     if (payload.rol !== undefined) body.rol = payload.rol;
-    const { data } = await httpClient.patch<ApiEnvelope<any>>(`/usuarios/${id}/`, body);
-    const u = unwrap(data);
-    return {
-      id: u.id || id,
-      nombre: u.nombre || payload.nombre || "",
-      apellido: u.apellido || payload.apellido || "",
-      correo: u.correo || u.email || "",
-      telefono: u.telefono || payload.telefono || "",
-      rol: u.rol || payload.rol || "CLIENTE",
-      username: u.username,
-    };
+    const { data } = await httpClient.patch<any>(`/usuarios/${id}/`, body);
+    const u = safeUnwrap<any>(data);
+    return { id: u.id || id, nombre: u.nombre || payload.nombre || "", apellido: u.apellido || payload.apellido || "", correo: u.correo || u.email || "", telefono: u.telefono || payload.telefono || "", rol: u.rol || payload.rol || "CLIENTE", username: u.username };
   }
 
   async deleteUser(id: number): Promise<void> {
@@ -280,9 +298,9 @@ export class ApiAdminRepository implements AdminRepositoryPort {
   }
 
   async getPendingPayments(): Promise<PaymentProof[]> {
-    const { data } = await httpClient.get<ApiEnvelope<any>>("/pedidos/comprobantes/pendientes/");
-    const payload = unwrap(data);
-    const items = Array.isArray(payload) ? payload : payload?.results || [];
+    const { data } = await httpClient.get<any>("/pedidos/comprobantes/pendientes/");
+    const payload = safeUnwrap<any>(data);
+    const items: any[] = Array.isArray(payload) ? payload : payload?.results ?? [];
     return items.map((c: any) => ({
       id: c.id,
       pedidoId: c.pedido_id || c.pedido?.id || c.pedido || 0,
@@ -299,66 +317,57 @@ export class ApiAdminRepository implements AdminRepositoryPort {
   }
 
   async verifyPayment(payload: VerifyPaymentDTO): Promise<void> {
-    await httpClient.patch<ApiEnvelope<any>>(`/pedidos/comprobantes/${payload.comprobanteId}/verificar/`, {
+    await httpClient.patch<any>(`/pedidos/comprobantes/${payload.comprobanteId}/verificar/`, {
       estado: payload.estado,
       observacion: payload.observacion || "",
     });
   }
 
   async shipOrder(payload: ShipOrderDTO): Promise<Order> {
-    const { data } = await httpClient.post<ApiEnvelope<any>>(`/pedidos/${payload.pedidoId}/marcar_enviado/`, {
+    const { data } = await httpClient.post<any>(`/pedidos/${payload.pedidoId}/marcar_enviado/`, {
       numero_guia: payload.numeroGuia,
     });
-    return toOrder(unwrap(data));
+    return toOrder(safeUnwrap(data));
   }
 
   async deliverOrder(pedidoId: number): Promise<Order> {
-    const { data } = await httpClient.post<ApiEnvelope<any>>(`/pedidos/${pedidoId}/marcar_entregado/`);
-    return toOrder(unwrap(data));
+    const { data } = await httpClient.post<any>(`/pedidos/${pedidoId}/marcar_entregado/`);
+    return toOrder(safeUnwrap(data));
   }
 
   async getAdminStats(): Promise<AdminStats> {
-    const [pedidosRes, productosRes] = await Promise.all([
-      httpClient.get<ApiEnvelope<any[]>>("/pedidos/"),
-      httpClient.get<ApiEnvelope<any[]>>("/productos/"),
-    ]);
-
-    const pedidosList = unwrap(pedidosRes.data);
-    const productosList = unwrap(productosRes.data);
-    const pedidosArr = Array.isArray(pedidosList) ? pedidosList : (pedidosList as any)?.results || [];
-    const productosArr = Array.isArray(productosList) ? productosList : (productosList as any)?.results || [];
-
-    const totalVentas = pedidosArr
-      .filter((p: any) => p.estado === "ENTREGADO" || p.estado === "ENVIADO" || p.estado === "PAGO_APROBADO")
-      .reduce((sum: number, p: any) => sum + Number(p.total || p.monto_total || 0), 0);
-
-    const pendientes = pedidosArr.filter(
-      (p: any) => p.estado === "PENDIENTE_DE_PAGO" || p.estado === "COMPROBANTE_ENVIADO"
-    ).length;
-
-    return {
-      totalVentas,
-      totalPedidos: pedidosArr.length,
-      pedidosPendientes: pendientes,
-      productosActivos: productosArr.length,
-      totalClientes: 0,
-      totalVendedores: 0,
-    };
+    try {
+      const [pedidosRes, productosRes] = await Promise.all([
+        httpClient.get<any>("/pedidos/"),
+        httpClient.get<any>("/productos/"),
+      ]);
+      const pedidosList = safeUnwrap<any>(pedidosRes.data);
+      const productosList = safeUnwrap<any>(productosRes.data);
+      const pedidosArr: any[] = Array.isArray(pedidosList) ? pedidosList : pedidosList?.results ?? [];
+      const productosArr: any[] = Array.isArray(productosList) ? productosList : productosList?.results ?? [];
+      const totalVentas = pedidosArr
+        .filter((p: any) => ["ENTREGADO", "ENVIADO", "PAGO_APROBADO"].includes(p.estado))
+        .reduce((sum: number, p: any) => sum + Number(p.total || p.monto_total || 0), 0);
+      const pendientes = pedidosArr.filter((p: any) => ["PENDIENTE_DE_PAGO", "COMPROBANTE_ENVIADO"].includes(p.estado)).length;
+      return { totalVentas, totalPedidos: pedidosArr.length, pedidosPendientes: pendientes, productosActivos: productosArr.length, totalClientes: 0, totalVendedores: 0 };
+    } catch {
+      return { totalVentas: 0, totalPedidos: 0, pedidosPendientes: 0, productosActivos: 0, totalClientes: 0, totalVendedores: 0 };
+    }
   }
 
   async getSellerOrders(vendedorId?: number): Promise<Order[]> {
     const url = vendedorId ? `/pedidos/?vendedor_id=${vendedorId}` : "/pedidos/";
-    const { data } = await httpClient.get<ApiEnvelope<any>>(url);
-    const raw = unwrap(data);
-    const list = Array.isArray(raw) ? raw : raw?.results || [];
+    const { data } = await httpClient.get<any>(url);
+    const raw = safeUnwrap<any>(data);
+    const list: any[] = Array.isArray(raw) ? raw : raw?.results ?? [];
     return list.map(toOrder);
   }
 
   async getCommissionReport(): Promise<CommissionReport[]> {
     try {
-      const { data } = await httpClient.get<ApiEnvelope<any>>("/comisiones/");
-      const raw = unwrap(data);
-      const items = Array.isArray(raw) ? raw : raw?.results || [];
+      const { data } = await httpClient.get<any>("/comisiones/");
+      const raw = safeUnwrap<any>(data);
+      const items: any[] = Array.isArray(raw) ? raw : raw?.results ?? [];
       return items.map((item: any) => ({
         vendedorId: item.vendedor_id || item.vendedor || 0,
         vendedorNombre: item.vendedor_nombre || "Vendedor",
@@ -372,20 +381,25 @@ export class ApiAdminRepository implements AdminRepositoryPort {
   }
 
   async getCampaigns(): Promise<EmailCampaign[]> {
-    const { data } = await httpClient.get<ApiEnvelope<any>>("/campanas/");
-    const raw = unwrap(data);
-    const items = Array.isArray(raw) ? raw : raw?.results || [];
-    return items.map((c: any) => ({
-      id: c.id,
-      titulo: c.titulo,
-      asunto: c.asunto,
-      contenidoHtml: c.contenido_html,
-      segmento: c.segmento,
-      totalEnviados: c.total_enviados || 0,
-      totalFallidos: c.total_fallidos || 0,
-      estado: c.estado || "BORRADOR",
-      creadoEn: c.creado_en || new Date().toISOString(),
-    }));
+    try {
+      const { data } = await httpClient.get<any>("/campanas/");
+      // handle both envelope {success, data:[...]} and raw array/paginated
+      const raw = data?.data ?? data;
+      const items = Array.isArray(raw) ? raw : raw?.results || [];
+      return items.map((c: any) => ({
+        id: c.id,
+        titulo: c.titulo,
+        asunto: c.asunto,
+        contenidoHtml: c.contenido_html || c.contenidoHtml || "",
+        segmento: c.segmento,
+        totalEnviados: c.total_enviados ?? c.totalEnviados ?? 0,
+        totalFallidos: c.total_fallidos ?? c.totalFallidos ?? 0,
+        estado: c.estado || "BORRADOR",
+        creadoEn: c.creado_en || c.creadoEn || new Date().toISOString(),
+      }));
+    } catch {
+      return [];
+    }
   }
 
   async createCampaign(payload: CreateCampaignDTO): Promise<EmailCampaign> {
@@ -395,27 +409,36 @@ export class ApiAdminRepository implements AdminRepositoryPort {
       contenido_html: payload.contenidoHtml,
       segmento: payload.segmento,
     };
-    const { data } = await httpClient.post<ApiEnvelope<any>>("/campanas/", body);
-    const c = unwrap(data);
+    const { data } = await httpClient.post<any>("/campanas/", body);
+    const c = data?.data ?? data;
     return {
       id: c.id,
       titulo: c.titulo,
       asunto: c.asunto,
-      contenidoHtml: c.contenido_html,
+      contenidoHtml: c.contenido_html || c.contenidoHtml || "",
       segmento: c.segmento,
-      totalEnviados: c.total_enviados || 0,
-      totalFallidos: c.total_fallidos || 0,
+      totalEnviados: c.total_enviados ?? 0,
+      totalFallidos: c.total_fallidos ?? 0,
       estado: c.estado || "BORRADOR",
       creadoEn: c.creado_en || new Date().toISOString(),
     };
   }
 
   async sendCampaign(campaignId: number): Promise<{ totalEnviados: number; totalFallidos: number }> {
-    const { data } = await httpClient.post<ApiEnvelope<any>>(`/campanas/${campaignId}/enviar/`);
-    const res = unwrap(data);
-    return {
-      totalEnviados: Number(res?.total_enviados || 0),
-      totalFallidos: Number(res?.total_fallidos || 0),
-    };
+    try {
+      const { data } = await httpClient.post<any>(`/campanas/${campaignId}/enviar/`);
+      const res = data?.data ?? data;
+      return {
+        totalEnviados: Number(res?.total_enviados ?? res?.totalEnviados ?? 0),
+        totalFallidos: Number(res?.total_fallidos ?? res?.totalFallidos ?? 0),
+      };
+    } catch (err: any) {
+      // If backend returns 200 with plain message, treat as success
+      const msg = err?.message || "";
+      if (err?.status === 200 || msg.toLowerCase().includes("enviado")) {
+        return { totalEnviados: 0, totalFallidos: 0 };
+      }
+      throw err;
+    }
   }
 }

@@ -114,6 +114,49 @@ export default function OrderDetailPage() {
             {order.vendedorNombre && <p className="mt-2 text-sm text-ink/50">Vendedor: {order.vendedorNombre}</p>}
           </section>
 
+          <section className="rounded-2xl border border-sky-500/25 bg-gradient-to-br from-sky-500/5 to-indigo-500/5 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500 text-white font-bold text-lg shadow-sm">
+                🏦
+              </div>
+              <div>
+                <h2 className="font-display text-xl text-primary">Datos para la Transferencia</h2>
+                <p className="text-xs text-sky-600 dark:text-sky-400 font-semibold">Banco Pichincha</p>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 rounded-xl bg-white dark:bg-slate-900 p-4 border border-theme text-sm shadow-sm">
+              <div>
+                <span className="text-[11px] text-muted-t font-semibold uppercase tracking-wider block">Banco</span>
+                <span className="font-bold text-primary">Banco Pichincha</span>
+              </div>
+              <div>
+                <span className="text-[11px] text-muted-t font-semibold uppercase tracking-wider block">N° de Cuenta</span>
+                <span className="font-mono font-bold text-sky-600 dark:text-sky-400 text-base">2213521473</span>
+              </div>
+              <div className="sm:col-span-2">
+                <span className="text-[11px] text-muted-t font-semibold uppercase tracking-wider block">Titular</span>
+                <span className="font-bold text-primary">Danny Alexander Guaman Pillajo</span>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-xl bg-amber-500/10 border border-amber-500/25 p-4 text-xs text-amber-900 dark:text-amber-200 space-y-1.5 leading-relaxed">
+              <p className="font-bold text-sm text-amber-800 dark:text-amber-100">
+                📲 Envío de Voucher:
+              </p>
+              <p>Envía tu comprobante al vendedor que te atendió o directamente al WhatsApp:{" "}
+                <a
+                  href="https://wa.me/593999001471?text=Hola,%20adjunto%20comprobante%20para%20el%20pedido%20"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-bold text-sky-600 dark:text-sky-400 underline"
+                >
+                  +593999001471
+                </a>
+              </p>
+            </div>
+          </section>
+
           <section className="rounded-2xl bg-white p-6">
             <h2 className="mb-3 font-display text-xl">Comprobante de pago</h2>
             {order.comprobanteUrl && !canUploadComprobante ? (

@@ -5,6 +5,14 @@ const toNumber = (value: string | number | null | undefined): number =>
   value === null || value === undefined ? 0 : typeof value === "number" ? value : parseFloat(value);
 
 export function toCartItem(dto: CartItemDTO): CartItem {
+  const imgUrl =
+    dto.imagen_url ??
+    (dto as any).imagen ??
+    (dto as any).producto_imagen ??
+    (dto as any).producto?.imagen_principal ??
+    (dto as any).producto?.imagen ??
+    null;
+
   return {
     id: dto.id,
     productoId: dto.producto,
@@ -15,16 +23,18 @@ export function toCartItem(dto: CartItemDTO): CartItem {
     color: dto.color,
     precioUnitario: toNumber(dto.precio_unitario),
     cantidad: dto.cantidad,
-    imagenUrl: dto.imagen_url,
+    imagenUrl: imgUrl,
     stockDisponible: dto.stock_disponible ?? 0,
   };
 }
 
 export function toCart(dto: CartDTO): Cart {
   const items = (dto.items ?? []).map(toCartItem);
+  const calcSubtotal = items.reduce((acc, item) => acc + item.precioUnitario * item.cantidad, 0);
+  const sub = toNumber(dto.subtotal);
   return {
     items,
-    subtotal: toNumber(dto.subtotal),
+    subtotal: sub > 0 ? sub : calcSubtotal,
     totalItems: items.reduce((acc, item) => acc + item.cantidad, 0),
   };
 }

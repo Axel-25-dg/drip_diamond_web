@@ -2,11 +2,13 @@ import type { AdminRepositoryPort } from "@/domain/ports/AdminRepositoryPort";
 import type {
   CreateProductDTO,
   CreateVariantDTO,
+  UpdateVariantDTO,
   CreateBrandDTO,
   UpdateBrandDTO,
   CreateCategoryDTO,
   UpdateCategoryDTO,
   CreateTallaDTO,
+  UpdateTallaDTO,
   VerifyPaymentDTO,
   ShipOrderDTO,
   CreateCampaignDTO,
@@ -35,10 +37,31 @@ export class UpdateProductUseCase {
   }
 }
 
+export class DeleteProductUseCase {
+  constructor(private repo: AdminRepositoryPort) {}
+  execute(id: number) {
+    return this.repo.deleteProduct(id);
+  }
+}
+
 export class CreateVariantUseCase {
   constructor(private repo: AdminRepositoryPort) {}
   execute(payload: CreateVariantDTO) {
     return this.repo.createVariant(payload);
+  }
+}
+
+export class UpdateVariantUseCase {
+  constructor(private repo: AdminRepositoryPort) {}
+  execute(id: number, payload: UpdateVariantDTO) {
+    return this.repo.updateVariant(id, payload);
+  }
+}
+
+export class DeleteVariantUseCase {
+  constructor(private repo: AdminRepositoryPort) {}
+  execute(id: number) {
+    return this.repo.deleteVariant(id);
   }
 }
 
@@ -102,6 +125,20 @@ export class CreateTallaUseCase {
   constructor(private repo: AdminRepositoryPort) {}
   execute(payload: CreateTallaDTO) {
     return this.repo.createTalla(payload);
+  }
+}
+
+export class UpdateTallaUseCase {
+  constructor(private repo: AdminRepositoryPort) {}
+  execute(id: number, payload: UpdateTallaDTO) {
+    return this.repo.updateTalla(id, payload);
+  }
+}
+
+export class DeleteTallaUseCase {
+  constructor(private repo: AdminRepositoryPort) {}
+  execute(id: number) {
+    return this.repo.deleteTalla(id);
   }
 }
 

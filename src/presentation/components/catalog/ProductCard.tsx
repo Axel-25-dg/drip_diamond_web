@@ -3,11 +3,26 @@ import { Eye, Heart, Zap } from "lucide-react";
 import type { ProductSummary } from "@/domain/entities/Product";
 import { PriceTag } from "@/presentation/components/ui/PriceTag";
 import { resolveMediaUrl } from "@/presentation/utils/format";
+import { useFavoritesStore } from "@/presentation/store/favoritesStore";
+import { toast } from "sonner";
 
 export function ProductCard({ product }: { product: ProductSummary }) {
   const isOffer = product.precioOferta != null && product.precioOferta < product.precioBase;
-  const isSoldOut = product.estado === "agotado";
+  const isSoldOut = product.estado === "agotado" && (!product.tallasDisponibles || product.tallasDisponibles.length === 0);
   const img = resolveMediaUrl(product.imagenPrincipal);
+  const { isFavorite, toggleFavorite } = useFavoritesStore();
+  const favorited = isFavorite(product.id);
+
+  const handleFavoriteClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const added = toggleFavorite(product);
+    if (added) {
+      toast.success(`"${product.nombre}" agregada a favoritos ❤️`);
+    } else {
+      toast.info(`"${product.nombre}" eliminada de favoritos`);
+    }
+  };
 
   return (
     <Link
@@ -50,11 +65,13 @@ export function ProductCard({ product }: { product: ProductSummary }) {
             Ver producto
           </div>
           <button
-            onClick={(e) => e.preventDefault()}
-            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white/95 text-slate-900 shadow-md transition-colors hover:text-red-500 dark:bg-slate-900/90 dark:text-white"
+            onClick={handleFavoriteClick}
+            className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white/95 shadow-md transition-colors dark:bg-slate-900/90 ${
+              favorited ? "text-rose-500" : "text-slate-900 hover:text-rose-500 dark:text-white"
+            }`}
             aria-label="Favorito"
           >
-            <Heart className="h-3.5 w-3.5" />
+            <Heart className={`h-3.5 w-3.5 ${favorited ? "fill-rose-500 text-rose-500" : ""}`} />
           </button>
         </div>
       </div>

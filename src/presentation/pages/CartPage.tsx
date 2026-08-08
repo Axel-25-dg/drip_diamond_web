@@ -13,14 +13,16 @@ export default function CartPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchCart().catch(() => toast.error("No se pudo cargar tu carrito."));
+    fetchCart().catch((err: any) =>
+      toast.error(err?.message || "No se pudo cargar tu carrito.")
+    );
   }, []);
 
   const handleRemove = async (itemId: number) => {
     try {
       await removeItem(itemId);
-    } catch {
-      toast.error("No se pudo quitar el producto.");
+    } catch (err: any) {
+      toast.error(err?.message || "No se pudo quitar el producto.");
     }
   };
 
@@ -54,8 +56,12 @@ export default function CartPage() {
           {cart.items.map((item) => (
             <li key={item.id} className="flex gap-4 py-5">
               <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-xl bg-black/5 sm:h-28 sm:w-28">
-                {resolveMediaUrl(item.imagenUrl) && (
+                {resolveMediaUrl(item.imagenUrl) ? (
                   <img src={resolveMediaUrl(item.imagenUrl)!} alt={item.nombre} className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center font-display text-xl font-black text-slate-400">
+                    DD
+                  </div>
                 )}
               </div>
               <div className="flex flex-1 flex-col">

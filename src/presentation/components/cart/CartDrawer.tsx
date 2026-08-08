@@ -18,8 +18,8 @@ export function CartDrawer() {
   const handleRemove = async (itemId: number) => {
     try {
       await removeItem(itemId);
-    } catch {
-      toast.error("No se pudo quitar el producto del carrito.");
+    } catch (err: any) {
+      toast.error(err?.message || "No se pudo quitar el producto del carrito.");
     }
   };
 
@@ -62,8 +62,12 @@ export function CartDrawer() {
                 {cart?.items.map((item) => (
                   <li key={item.id} className="flex gap-3">
                     <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl bg-black/5">
-                      {resolveMediaUrl(item.imagenUrl) && (
+                      {resolveMediaUrl(item.imagenUrl) ? (
                         <img src={resolveMediaUrl(item.imagenUrl)!} alt={item.nombre} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center font-display text-base font-black text-slate-400">
+                          DD
+                        </div>
                       )}
                     </div>
                     <div className="flex flex-1 flex-col">
