@@ -33,6 +33,8 @@ export class ApiAuthRepository implements AuthRepositoryPort {
       apellido: payload.apellido,
       correo: payload.correo,
       telefono: payload.telefono,
+      direccion: payload.direccion,
+      ciudad: payload.ciudad,
       password: payload.password,
       username,
     });
@@ -59,7 +61,18 @@ export class ApiAuthRepository implements AuthRepositoryPort {
     if (payload.apellido !== undefined) body.apellido = payload.apellido;
     if (payload.telefono !== undefined) body.telefono = payload.telefono;
     if (payload.fotoPerfilUrl !== undefined) body.foto_perfil_url = payload.fotoPerfilUrl;
+    if (payload.direccion !== undefined) body.direccion = payload.direccion;
+    if (payload.ciudad !== undefined) body.ciudad = payload.ciudad;
     const { data } = await httpClient.patch<any>("/usuarios/me/", body);
+    const result = safeUnwrap<any>(data);
+    const userDTO = result?.usuario || result?.user || result;
+    return toUser(userDTO);
+  }
+
+  async uploadAvatar(file: File): Promise<User> {
+    const formData = new FormData();
+    formData.append("foto_perfil", file);
+    const { data } = await httpClient.patch<any>("/usuarios/me/", formData);
     const result = safeUnwrap<any>(data);
     const userDTO = result?.usuario || result?.user || result;
     return toUser(userDTO);

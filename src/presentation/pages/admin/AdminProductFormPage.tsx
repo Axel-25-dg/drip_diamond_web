@@ -6,7 +6,7 @@ import type { VarianteInputDTO } from "@/application/dtos/admin.dto";
 import { Button } from "@/presentation/components/ui/Button";
 import { Badge } from "@/presentation/components/ui/Badge";
 import { toast } from "sonner";
-import { ArrowLeft, Upload, Package, Edit3, AlertTriangle, Ruler, Trash2, Save, Image as ImageIcon, Layers } from "lucide-react";
+import { ArrowLeft, Upload, Package, Edit3, AlertTriangle, Ruler, Trash2, Save, Image as ImageIcon, Layers, CheckCircle2 } from "lucide-react";
 
 type CalidadKey = "ORIGINAL" | "PRIMERA_CLASE" | "SEGUNDA_CLASE";
 
@@ -30,6 +30,18 @@ function emptyTallaData(): SelectedTallaData {
 }
 
 type SelectionMap = Record<number, SelectedTallaData>;
+
+function resolveVariantTallaId(tallas: Talla[], variant: ProductVariant): number | undefined {
+  if (variant.tallaId) {
+    const directMatch = tallas.find((t) => t.id === variant.tallaId);
+    if (directMatch) return directMatch.id;
+  }
+
+  const normalized = String(variant.talla ?? "").trim().toLowerCase();
+  if (!normalized) return undefined;
+
+  return tallas.find((t) => String(t.valor).trim().toLowerCase() === normalized)?.id;
+}
 
 export default function AdminProductFormPage() {
   const navigate = useNavigate();
@@ -111,17 +123,18 @@ export default function AdminProductFormPage() {
           const existing: ProductVariant[] = product.variantes ?? [];
           const evMap: Record<number, number> = {};
           existing.forEach((v) => {
-            evMap[v.tallaId] = v.id;
-            if (initSelection[v.tallaId] != null) {
-              initSelection[v.tallaId] = {
-                included: true,
-                stock: String(v.stock ?? 9999),
-                pesoKg: "0.85",
-                sku: v.sku ?? "",
-                variantId: v.id,
-                isNew: false,
-              };
-            }
+            const matchedTallaId = resolveVariantTallaId(tallasRes, v);
+            if (matchedTallaId == null || initSelection[matchedTallaId] == null) return;
+
+            evMap[matchedTallaId] = v.id;
+            initSelection[matchedTallaId] = {
+              included: true,
+              stock: String(v.stock ?? 9999),
+              pesoKg: v.pesoKg != null ? String(v.pesoKg) : "0.85",
+              sku: v.sku ?? "",
+              variantId: v.id,
+              isNew: false,
+            };
           });
           setExistingVariantsMap(evMap);
         }
@@ -603,13 +616,13 @@ export default function AdminProductFormPage() {
         <>
           {/* ── Stepper pills ── */}
           <div className="mt-8 flex flex-wrap items-center gap-3 animate-slide-up delay-150">
-            <div
+              <div
               className={`step-pill ${
                 step === 1 ? "active" : step > 1 ? "done" : ""
               }`}
             >
               <span className="step-num">
-                {step > 1 ? "✓" : "1"}
+                {step > 1 ? <CheckCircle2 className="h-4 w-4" /> : "1"}
               </span>
               <span
                 className={`text-xs font-bold uppercase tracking-wider ${
@@ -707,8 +720,8 @@ export default function AdminProductFormPage() {
                     />
                   </label>
                   {selectedFile && (
-                    <p className="mt-3 text-xs text-[#065f46] chip chip-success inline-flex">
-                      ✓ {selectedFile.name}
+                    <p className="mt-3 text-xs text-[#065f46] chip chip-success inline-flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4" /> {selectedFile.name}
                     </p>
                   )}
                   <p className="mt-5 text-xs text-muted-t max-w-xs">
@@ -944,8 +957,8 @@ export default function AdminProductFormPage() {
                         >
                           Producto Activo
                           {activo ? (
-                            <span className="ml-2 chip chip-success">
-                              ✓ Visible en catálogo
+                            <span className="ml-2 chip chip-success inline-flex items-center gap-2">
+                              <CheckCircle2 className="h-4 w-4" /> Visible en catálogo
                             </span>
                           ) : (
                             <span className="ml-2 chip chip-danger">

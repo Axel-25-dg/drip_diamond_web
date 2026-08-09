@@ -13,6 +13,7 @@ export interface AuthRepositoryPort {
   refreshToken(refreshToken: string): Promise<{ access: string }>;
   getProfile(): Promise<User>;
   updateProfile(payload: UpdateProfilePayload): Promise<User>;
+  uploadAvatar(file: File): Promise<User>;
   requestPasswordReset(correo: string): Promise<void>;
   verifyOtp(correo: string, codigo: string): Promise<{ resetToken: string }>;
   confirmPasswordReset(resetToken: string, nuevaPassword: string): Promise<void>;

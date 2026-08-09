@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Package } from "lucide-react";
+import { Package, UploadCloud } from "lucide-react";
 import { useCases } from "@/infrastructure/factories/useCases.factory";
 import type { Order } from "@/domain/entities/Order";
 import { Spinner } from "@/presentation/components/ui/Spinner";
@@ -47,19 +47,32 @@ export default function OrdersPage() {
         <ul className="mt-8 flex flex-col gap-4">
           {orders.map((order) => (
             <li key={order.id}>
-              <Link
-                to={`/pedidos/${order.id}`}
-                className="flex flex-col gap-3 rounded-2xl bg-white p-5 transition-shadow hover:shadow-md sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div>
-                  <p className="font-semibold">Pedido {order.numero}</p>
-                  <p className="text-xs text-ink/50">{formatDate(order.creadoEn)}</p>
+              <div className="flex items-center gap-4 rounded-2xl bg-white p-4 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-sky-50 text-sky-600 font-bold shadow-sm">
+                    {order.numero}
+                  </div>
+                  <div>
+                    <p className="font-semibold">Pedido {order.numero}</p>
+                    <p className="text-xs text-ink/50">{formatDate(order.creadoEn)}</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <Badge tone={orderStatusTone(order.estado)}>{orderStatusLabel(order.estado)}</Badge>
-                  <span className="font-bold">{formatCurrency(order.total)}</span>
+
+                <div className="ml-auto flex items-center gap-4">
+                  <Badge tone={orderStatusTone(order.estado)} className="px-3 py-1.5 rounded-full">{orderStatusLabel(order.estado)}</Badge>
+                  <div className="text-right">
+                    <div className="font-bold">{formatCurrency(order.total)}</div>
+                    {(order.estado === "PENDIENTE_DE_PAGO" || order.estado === "PAGO_RECHAZADO") && (
+                      <Link to={`/pedidos/${order.id}`}>
+                        <button className="mt-2 inline-flex items-center gap-2 rounded-full bg-sky-600 px-3 py-1 text-sm font-semibold text-white">
+                          <UploadCloud className="h-4 w-4" />
+                          Enviar comprobante
+                        </button>
+                      </Link>
+                    )}
+                  </div>
                 </div>
-              </Link>
+              </div>
             </li>
           ))}
         </ul>

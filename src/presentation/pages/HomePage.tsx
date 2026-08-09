@@ -41,7 +41,7 @@ export default function HomePage() {
         className="relative overflow-hidden"
         style={{ background: "#ffffff", borderBottom: "1px solid #e2e8f0" }}
       >
-        <div className="container-app relative z-10 grid items-center gap-8 py-10 lg:grid-cols-[1fr_440px] lg:py-14">
+        <div className="container-app relative z-10 grid items-center gap-6 py-8 lg:grid-cols-[1.05fr_360px] lg:py-10">
           {/* LEFT */}
           <div className="space-y-5">
             {/* Badge */}
@@ -58,10 +58,10 @@ export default function HomePage() {
             {/* Headline */}
             <div>
               <h1 className="font-display leading-[0.9]">
-                <span className="block text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900">PISA</span>
-                <span className="block text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900">FUERTE.</span>
+                <span className="block text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900">PISA</span>
+                <span className="block text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900">FUERTE.</span>
                 <span
-                  className="block text-4xl sm:text-5xl lg:text-6xl font-black mt-1"
+                  className="block text-3xl sm:text-4xl lg:text-5xl font-black mt-1"
                   style={{
                     background: "linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%)",
                     WebkitBackgroundClip: "text",
@@ -72,7 +72,7 @@ export default function HomePage() {
                   DIAMOND
                 </span>
                 <span
-                  className="block text-4xl sm:text-5xl lg:text-6xl font-black"
+                  className="block text-3xl sm:text-4xl lg:text-5xl font-black"
                   style={{
                     background: "linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%)",
                     WebkitBackgroundClip: "text",
@@ -103,7 +103,7 @@ export default function HomePage() {
                   className="px-5 py-3 text-center"
                   style={{ borderLeft: i > 0 ? "1px solid #e2e8f0" : "none" }}
                 >
-                  <p className="font-display text-xl font-black text-sky-600">{stat.value}</p>
+                  <p className="font-display text-lg font-black text-sky-600">{stat.value}</p>
                   <p className="text-[11px] text-slate-400 mt-0.5">{stat.label}</p>
                 </div>
               ))}
@@ -128,48 +128,22 @@ export default function HomePage() {
           </div>
 
           {/* RIGHT — sneaker image */}
-          <div className="relative mx-auto w-full max-w-[420px]">
+          <div className="relative mx-auto flex w-full max-w-[360px] items-center justify-center">
             <div
-              className="absolute inset-0 rounded-3xl"
-              style={{ background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)" }}
+              className="absolute inset-4 rounded-[2rem] blur-3xl"
+              style={{ background: "radial-gradient(circle, rgba(14,165,233,0.22) 0%, rgba(255,255,255,0) 70%)" }}
             />
-            <img
-              src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=80"
-              alt="Zapatilla Drip Diamond"
-              className="relative z-10 w-full rounded-3xl object-cover drop-shadow-2xl"
-              style={{ aspectRatio: "4/3" }}
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).src =
-                  "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&auto=format&fit=crop&q=80";
-              }}
-            />
-            {/* Floating badge */}
-            <div
-              className="absolute bottom-4 left-4 right-4 z-20 rounded-2xl p-4"
-              style={{
-                background: "rgba(255,255,255,0.92)",
-                backdropFilter: "blur(16px)",
-                border: "1px solid rgba(255,255,255,0.6)",
-                boxShadow: "0 8px 32px rgba(0,0,0,0.10)",
-              }}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-sky-500">Nuevo Ingreso</p>
-                  <p className="font-display text-base font-bold text-slate-900 mt-0.5">Air Max 90 — Black Diamond</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-lg font-black text-sky-600 font-display">$189.00</p>
-                  <Link to="/catalogo">
-                    <button
-                      className="mt-1 rounded-lg px-3 py-1 text-[11px] font-bold text-white"
-                      style={{ background: "#0ea5e9" }}
-                    >
-                      Ver →
-                    </button>
-                  </Link>
-                </div>
-              </div>
+            <div className="relative w-full rounded-[2rem] border border-slate-200 bg-white/80 p-3 shadow-[0_20px_70px_-20px_rgba(15,23,42,0.25)] backdrop-blur">
+              <img
+                src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=80"
+                alt="Zapatilla Drip Diamond"
+                className="hero-sneaker-float relative z-10 w-full rounded-[1.5rem] object-cover"
+                style={{ aspectRatio: "4/3" }}
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src =
+                    "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?auto=format&fit=crop&w=900&q=80";
+                }}
+              />
             </div>
           </div>
         </div>

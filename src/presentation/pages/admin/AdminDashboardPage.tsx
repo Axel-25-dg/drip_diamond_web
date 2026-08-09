@@ -165,6 +165,15 @@ export default function AdminDashboardPage() {
 
         <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           <AdminModuleCard
+            to="/admin/pedidos"
+            title="Gestión de Pedidos"
+            description="Avanza los pedidos por cada etapa: Preparando → Enviado (con guía) → Entregado. Comisión automática al vendedor."
+            icon={<ShoppingBag className="h-8 w-8" />}
+            badge="Flujo de despacho"
+            tone="purple"
+            delay="75ms"
+          />
+          <AdminModuleCard
             to="/admin/productos"
             title="Gestión de Catálogo"
             description="Crear y editar zapatillas, calidad, marcas, categorías y stock de variantes con control granular."
@@ -179,8 +188,8 @@ export default function AdminDashboardPage() {
             description="Registrar nuevos Vendedores o Contadores y administrar permisos de acceso fino."
             icon={<Users className="h-8 w-8" />}
             badge="Personal & Clientes"
-            tone="purple"
-            delay="75ms"
+            tone="brand"
+            delay="150ms"
           />
           <AdminModuleCard
             to="/admin/campanas"
@@ -189,7 +198,7 @@ export default function AdminDashboardPage() {
             icon={<Mail className="h-8 w-8" />}
             badge="Marketing Masivo"
             tone="gold"
-            delay="150ms"
+            delay="225ms"
           />
           <AdminModuleCard
             to="/admin/marcas"
@@ -198,7 +207,7 @@ export default function AdminDashboardPage() {
             icon={<Tag className="h-8 w-8" />}
             badge="Catálogo"
             tone="rose"
-            delay="225ms"
+            delay="300ms"
           />
           <AdminModuleCard
             to="/admin/categorias"
@@ -207,7 +216,7 @@ export default function AdminDashboardPage() {
             icon={<Layers className="h-8 w-8" />}
             badge="Catálogo"
             tone="teal"
-            delay="300ms"
+            delay="375ms"
           />
           <AdminModuleCard
             to="/admin/tallas"
@@ -216,7 +225,7 @@ export default function AdminDashboardPage() {
             icon={<Ruler className="h-8 w-8" />}
             badge="Catálogo"
             tone="violet"
-            delay="375ms"
+            delay="450ms"
           />
           <AdminModuleCard
             to="/contador"
@@ -225,7 +234,7 @@ export default function AdminDashboardPage() {
             icon={<Clock className="h-8 w-8" />}
             badge="Acceso Directo Contador"
             tone="green"
-            delay="450ms"
+            delay="525ms"
           />
           <AdminModuleCard
             to="/vendedor"
@@ -234,7 +243,7 @@ export default function AdminDashboardPage() {
             icon={<DollarSign className="h-8 w-8" />}
             badge="Acceso Directo Vendedor"
             tone="indigo"
-            delay="525ms"
+            delay="600ms"
           />
         </div>
       </div>
@@ -379,67 +388,67 @@ function MetricCard({
 
 const MODULE_TONES = {
   brand: {
-    iconBg: "linear-gradient(135deg, rgba(14,165,233,0.15), rgba(99,102,241,0.10))",
-    iconBorder: "rgba(14,165,233,0.28)",
+    iconBg: "linear-gradient(135deg, rgba(14,165,233,0.12), rgba(56,189,248,0.06))",
+    iconBorder: "rgba(14,165,233,0.18)",
     iconColor: "#0284c7",
-    hoverBorder: "rgba(14,165,233,0.40)",
-    hoverGlow: "rgba(14,165,233,0.35)",
+    hoverBorder: "rgba(14,165,233,0.28)",
+    hoverGlow: "rgba(14,165,233,0.18)",
     chipTone: "accent" as const,
   },
   purple: {
-    iconBg: "linear-gradient(135deg, rgba(139,92,246,0.15), rgba(124,58,237,0.10))",
-    iconBorder: "rgba(139,92,246,0.28)",
-    iconColor: "#7c3aed",
-    hoverBorder: "rgba(139,92,246,0.40)",
-    hoverGlow: "rgba(139,92,246,0.35)",
+    iconBg: "linear-gradient(135deg, rgba(14,165,233,0.12), rgba(56,189,248,0.06))",
+    iconBorder: "rgba(14,165,233,0.18)",
+    iconColor: "#0284c7",
+    hoverBorder: "rgba(14,165,233,0.28)",
+    hoverGlow: "rgba(14,165,233,0.18)",
     chipTone: "accent" as const,
   },
   green: {
-    iconBg: "linear-gradient(135deg, rgba(16,185,129,0.15), rgba(5,150,105,0.10))",
-    iconBorder: "rgba(16,185,129,0.28)",
-    iconColor: "#059669",
-    hoverBorder: "rgba(16,185,129,0.40)",
-    hoverGlow: "rgba(16,185,129,0.35)",
-    chipTone: "success" as const,
+    iconBg: "linear-gradient(135deg, rgba(14,165,233,0.12), rgba(56,189,248,0.06))",
+    iconBorder: "rgba(14,165,233,0.18)",
+    iconColor: "#0284c7",
+    hoverBorder: "rgba(14,165,233,0.28)",
+    hoverGlow: "rgba(14,165,233,0.18)",
+    chipTone: "accent" as const,
   },
   gold: {
-    iconBg: "linear-gradient(135deg, rgba(244,207,87,0.20), rgba(212,175,55,0.12))",
-    iconBorder: "rgba(212,175,55,0.32)",
-    iconColor: "#9d7b1b",
-    hoverBorder: "rgba(212,175,55,0.45)",
-    hoverGlow: "rgba(212,175,55,0.40)",
-    chipTone: "gold" as const,
+    iconBg: "linear-gradient(135deg, rgba(14,165,233,0.12), rgba(56,189,248,0.06))",
+    iconBorder: "rgba(14,165,233,0.18)",
+    iconColor: "#0284c7",
+    hoverBorder: "rgba(14,165,233,0.28)",
+    hoverGlow: "rgba(14,165,233,0.18)",
+    chipTone: "accent" as const,
   },
   rose: {
-    iconBg: "linear-gradient(135deg, rgba(251,113,133,0.15), rgba(244,63,94,0.10))",
-    iconBorder: "rgba(244,63,94,0.28)",
-    iconColor: "#e11d48",
-    hoverBorder: "rgba(244,63,94,0.40)",
-    hoverGlow: "rgba(244,63,94,0.35)",
-    chipTone: "danger" as const,
+    iconBg: "linear-gradient(135deg, rgba(14,165,233,0.12), rgba(56,189,248,0.06))",
+    iconBorder: "rgba(14,165,233,0.18)",
+    iconColor: "#0284c7",
+    hoverBorder: "rgba(14,165,233,0.28)",
+    hoverGlow: "rgba(14,165,233,0.18)",
+    chipTone: "accent" as const,
   },
   teal: {
-    iconBg: "linear-gradient(135deg, rgba(20,184,166,0.15), rgba(13,148,136,0.10))",
-    iconBorder: "rgba(13,148,136,0.28)",
-    iconColor: "#0f766e",
-    hoverBorder: "rgba(13,148,136,0.40)",
-    hoverGlow: "rgba(13,148,136,0.35)",
-    chipTone: "success" as const,
+    iconBg: "linear-gradient(135deg, rgba(14,165,233,0.12), rgba(56,189,248,0.06))",
+    iconBorder: "rgba(14,165,233,0.18)",
+    iconColor: "#0284c7",
+    hoverBorder: "rgba(14,165,233,0.28)",
+    hoverGlow: "rgba(14,165,233,0.18)",
+    chipTone: "accent" as const,
   },
   violet: {
-    iconBg: "linear-gradient(135deg, rgba(139,92,246,0.15), rgba(109,40,217,0.10))",
-    iconBorder: "rgba(109,40,217,0.28)",
-    iconColor: "#6d28d9",
-    hoverBorder: "rgba(109,40,217,0.40)",
-    hoverGlow: "rgba(109,40,217,0.35)",
+    iconBg: "linear-gradient(135deg, rgba(14,165,233,0.12), rgba(56,189,248,0.06))",
+    iconBorder: "rgba(14,165,233,0.18)",
+    iconColor: "#0284c7",
+    hoverBorder: "rgba(14,165,233,0.28)",
+    hoverGlow: "rgba(14,165,233,0.18)",
     chipTone: "accent" as const,
   },
   indigo: {
-    iconBg: "linear-gradient(135deg, rgba(99,102,241,0.15), rgba(79,70,229,0.10))",
-    iconBorder: "rgba(79,70,229,0.28)",
-    iconColor: "#4f46e5",
-    hoverBorder: "rgba(79,70,229,0.40)",
-    hoverGlow: "rgba(79,70,229,0.35)",
+    iconBg: "linear-gradient(135deg, rgba(14,165,233,0.12), rgba(56,189,248,0.06))",
+    iconBorder: "rgba(14,165,233,0.18)",
+    iconColor: "#0284c7",
+    hoverBorder: "rgba(14,165,233,0.28)",
+    hoverGlow: "rgba(14,165,233,0.18)",
     chipTone: "accent" as const,
   },
 } as const;

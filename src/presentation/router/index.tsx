@@ -24,9 +24,11 @@ import AdminCampaignsPage from "@/presentation/pages/admin/AdminCampaignsPage";
 import AdminBrandsPage from "@/presentation/pages/admin/AdminBrandsPage";
 import AdminCategoriesPage from "@/presentation/pages/admin/AdminCategoriesPage";
 import AdminTallasPage from "@/presentation/pages/admin/AdminTallasPage";
+import AdminOrdersPage from "@/presentation/pages/admin/AdminOrdersPage";
 
 // Contador Dashboard
 import ContadorDashboardPage from "@/presentation/pages/contador/ContadorDashboardPage";
+import ContadorLiquidacionesPage from "@/presentation/pages/contador/ContadorLiquidacionesPage";
 
 // Vendedor Dashboard
 import VendedorDashboardPage from "@/presentation/pages/vendedor/VendedorDashboardPage";
@@ -63,6 +65,7 @@ export const router = createBrowserRouter([
         element: <ProtectedRoute allowedRoles={["administrador"]} />,
         children: [
           { path: "admin", element: <AdminDashboardPage /> },
+          { path: "admin/pedidos", element: <AdminOrdersPage /> },
           { path: "admin/productos", element: <AdminProductsPage /> },
           { path: "admin/productos/nuevo", element: <AdminProductFormPage /> },
           { path: "admin/productos/editar/:id", element: <AdminProductFormPage /> },
@@ -79,6 +82,7 @@ export const router = createBrowserRouter([
         element: <ProtectedRoute allowedRoles={["contador", "administrador"]} />,
         children: [
           { path: "contador", element: <ContadorDashboardPage /> },
+          { path: "contador/liquidaciones", element: <ContadorLiquidacionesPage /> },
         ],
       },
 
@@ -93,4 +97,8 @@ export const router = createBrowserRouter([
       { path: "*", element: <NotFoundPage /> },
     ],
   },
-]);
+], {
+  future: {
+    v7_startTransition: true,
+  } as any,
+});

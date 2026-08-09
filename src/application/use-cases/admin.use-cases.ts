@@ -205,6 +205,20 @@ export class DeliverOrderUseCase {
   }
 }
 
+export class PrepareOrderUseCase {
+  constructor(private repo: AdminRepositoryPort) {}
+  execute(pedidoId: number) {
+    return this.repo.prepareOrder(pedidoId);
+  }
+}
+
+export class UpdateOrderStatusUseCase {
+  constructor(private repo: AdminRepositoryPort) {}
+  execute(pedidoId: number, estado: string, extra?: Record<string, any>) {
+    return this.repo.updateOrderStatus(pedidoId, estado, extra);
+  }
+}
+
 export class GetAdminStatsUseCase {
   constructor(private repo: AdminRepositoryPort) {}
   execute() {
@@ -223,6 +237,64 @@ export class GetCommissionReportUseCase {
   constructor(private repo: AdminRepositoryPort) {}
   execute() {
     return this.repo.getCommissionReport();
+  }
+}
+
+export class GetSellerCommissionSummaryUseCase {
+  constructor(private repo: AdminRepositoryPort) {}
+  execute() {
+    return this.repo.getSellerCommissionSummary();
+  }
+}
+
+export class GetLiquidacionesUseCase {
+  constructor(private repo: AdminRepositoryPort) {}
+  execute(vendedorId?: number) {
+    return this.repo.getLiquidaciones(vendedorId);
+  }
+}
+
+export class GetComisionesPendientesUseCase {
+  constructor(private repo: AdminRepositoryPort) {}
+  execute(vendedorId?: number) {
+    return this.repo.getComisionesPendientes(vendedorId);
+  }
+}
+
+export class MarcarComisionLiquidadaUseCase {
+  constructor(private repo: AdminRepositoryPort) {}
+  execute(comisionId: number) {
+    // Repo should implement marcarComisionLiquidada
+    // Returns the updated comision item or minimal result
+    // If backend does not support this, the call will fail and UI will show error.
+    // This thin wrapper keeps use-case layer consistent.
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    return (this.repo as any).marcarComisionLiquidada(comisionId);
+  }
+}
+
+export class AssignSellerToOrderUseCase {
+  constructor(private repo: AdminRepositoryPort) {}
+  execute(orderId: number, vendedorId: number) {
+    // Repo should implement assignSellerToOrder
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    return (this.repo as any).assignSellerToOrder(orderId, vendedorId);
+  }
+}
+
+export class GenerarLiquidacionUseCase {
+  constructor(private repo: AdminRepositoryPort) {}
+  execute(vendedorId: number, anio: number, mes: number) {
+    return this.repo.generarLiquidacion(vendedorId, anio, mes);
+  }
+}
+
+export class MarcarLiquidacionPagadaUseCase {
+  constructor(private repo: AdminRepositoryPort) {}
+  execute(liquidacionId: number, comprobante: File) {
+    return this.repo.marcarLiquidacionPagada(liquidacionId, comprobante);
   }
 }
 

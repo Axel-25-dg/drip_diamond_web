@@ -30,6 +30,8 @@ export function toUser(dto: any): User {
           comisionesAcumuladas: dto.perfil_vendedor.comisiones_acumuladas,
         }
       : null,
+    direccion: dto.direccion || dto.address || null,
+    ciudad: dto.ciudad || dto.city || null,
   };
 }
 

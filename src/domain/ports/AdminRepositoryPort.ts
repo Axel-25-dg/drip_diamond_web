@@ -18,13 +18,34 @@ import type {
   UpdateUserDTO,
 } from "@/application/dtos/admin.dto";
 
+export interface ComisionItem {
+  id: number;
+  pedidoId: number;
+  vendedorId: number;
+  cantidadPares: number;
+  montoPorPar: number;
+  monto: number;
+  estado: "PENDIENTE" | "LIQUIDADA";
+  generadaEn: string;
+}
+
+export interface Liquidacion {
+  id: number;
+  vendedorId: number;
+  vendedorNombre?: string;
+  periodoAnio: number;
+  periodoMes: number;
+  totalPares: number;
+  totalComisiones: number;
+  pagada: boolean;
+  fechaPago?: string | null;
+  comprobanteUrl?: string | null;
+  comisiones?: ComisionItem[];
+  creadaEn: string;
+}
+
 export interface AdminRepositoryPort {
-  uploadImage(
-    file: File,
-    appLabel?: string,
-    model?: string,
-    objectId?: number
-  ): Promise<{ id: number; url: string }>;
+  uploadImage(file: File, appLabel?: string, model?: string, objectId?: number): Promise<{ id: number; url: string }>;
 
   createProduct(payload: CreateProductDTO): Promise<Product>;
   updateProduct(id: number, payload: Partial<CreateProductDTO>): Promise<Product>;
@@ -56,11 +77,26 @@ export interface AdminRepositoryPort {
   verifyPayment(payload: VerifyPaymentDTO): Promise<void>;
   shipOrder(payload: ShipOrderDTO): Promise<Order>;
   deliverOrder(pedidoId: number): Promise<Order>;
+  prepareOrder(pedidoId: number): Promise<Order>;
+  updateOrderStatus(pedidoId: number, estado: string, extra?: Record<string, any>): Promise<Order>;
 
   // Dashboard Stats & Commissions
   getAdminStats(): Promise<AdminStats>;
   getSellerOrders(vendedorId?: number): Promise<Order[]>;
   getCommissionReport(): Promise<CommissionReport[]>;
+  getSellerCommissionSummary(): Promise<{
+    totalComisiones: number;
+    comisionesPendientes: number;
+    comisionesPagadas: number;
+    ventasEntregadas: number;
+    ventasAsignadas: number;
+  } | null>;
+
+  // Liquidaciones mensuales
+  getLiquidaciones(vendedorId?: number): Promise<Liquidacion[]>;
+  getComisionesPendientes(vendedorId?: number): Promise<ComisionItem[]>;
+  generarLiquidacion(vendedorId: number, anio: number, mes: number): Promise<Liquidacion>;
+  marcarLiquidacionPagada(liquidacionId: number, comprobante: File): Promise<Liquidacion>;
 
   // Email Campaigns
   getCampaigns(): Promise<EmailCampaign[]>;

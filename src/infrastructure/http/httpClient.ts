@@ -24,6 +24,16 @@ export class ApiError extends Error {
 
 let isRefreshing = false;
 let pendingQueue: Array<(token: string | null) => void> = [];
+const retryCounts = new WeakMap<InternalAxiosRequestConfig, number>();
+const inFlightRequests = new Map<string, Promise<unknown>>();
+
+function buildRequestKey(config: InternalAxiosRequestConfig) {
+  const method = (config.method || "get").toLowerCase();
+  const url = config.url || "";
+  const params = config.params ? JSON.stringify(config.params) : "";
+  const data = config.data ? (typeof config.data === "string" ? config.data : JSON.stringify(config.data)) : "";
+  return `${method}:${url}:${params}:${data}`;
+}
 
 function resolveQueue(token: string | null) {
   pendingQueue.forEach((cb) => cb(token));
@@ -40,15 +50,41 @@ httpClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  if ((config.method || "get").toLowerCase() === "get") {
+    const key = buildRequestKey(config);
+    const existing = inFlightRequests.get(key);
+    if (existing) {
+      return Promise.reject({ __deduped: true, promise: existing } as any);
+    }
+  }
+
   return config;
 });
 
 httpClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const config = response.config as InternalAxiosRequestConfig;
+    if ((config.method || "get").toLowerCase() === "get") {
+      const key = buildRequestKey(config);
+      inFlightRequests.delete(key);
+    }
+    return response;
+  },
   async (error: AxiosError<ApiEnvelope<unknown>>) => {
     const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
     const status = error.response?.status;
     const isAuthEndpoint = originalRequest?.url?.includes("/auth/login") || originalRequest?.url?.includes("/auth/refresh");
+
+    if (status === 429 && originalRequest) {
+      const attempt = (retryCounts.get(originalRequest) ?? 0) + 1;
+      if (attempt <= 2) {
+        retryCounts.set(originalRequest, attempt);
+        const delay = 300 * attempt;
+        await new Promise((resolve) => window.setTimeout(resolve, delay));
+        return httpClient(originalRequest);
+      }
+    }
 
     if (status === 401 && originalRequest && !originalRequest._retry && !isAuthEndpoint) {
       const refreshToken = tokenStorage.getRefresh();

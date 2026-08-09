@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Search, CreditCard, MessageSquare } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { useCases } from "@/infrastructure/factories/useCases.factory";
@@ -27,6 +28,7 @@ export default function CheckoutPage() {
   const { cart, fetchCart } = useCartStore();
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [zones, setZones] = useState<ShippingZone[]>([]);
+  const [sellerSearch, setSellerSearch] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -34,6 +36,7 @@ export default function CheckoutPage() {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<CheckoutForm>({
     defaultValues: {
@@ -45,11 +48,33 @@ export default function CheckoutPage() {
     },
   });
 
+  const location = useLocation();
+  const query = new URLSearchParams(location.search);
+  const refParam = query.get("ref");
+
   useEffect(() => {
     Promise.all([useCases.getActiveSellers.execute(), useCases.getShippingZones.execute(), fetchCart()])
       .then(([s, z]) => {
         setSellers(s);
         setZones(z);
+        // Auto-select seller from ref param if present
+        if (refParam && s.length > 0) {
+          const m = refParam.match(/(\d+)$/);
+          let selId: number | null = null;
+          if (m) selId = Number(m[1]);
+          // try find by id or by code-containing string
+          const found = selId
+            ? s.find((x) => x.id === selId)
+            : s.find(
+                (x) =>
+                  `${x.id}` === refParam ||
+                  `${x.nombre} ${x.apellido}`.toLowerCase().includes(refParam.toLowerCase()) ||
+                  x.correo?.toLowerCase().includes(refParam.toLowerCase())
+              );
+          if (found) {
+            setValue("vendedorId", String(found.id));
+          }
+        }
       })
       .catch(() => toast.error("No se pudo cargar la información de checkout."))
       .finally(() => setIsLoading(false));
@@ -67,6 +92,14 @@ export default function CheckoutPage() {
 
   const subtotal = cart?.subtotal ?? 0;
   const total = subtotal + (shippingCost ?? 0);
+  const filteredSellers = useMemo(() => {
+    const query = sellerSearch.trim().toLowerCase();
+    if (!query) return sellers;
+    return sellers.filter((seller) => {
+      const values = [seller.nombre, seller.apellido, seller.correo].filter(Boolean).join(" ").toLowerCase();
+      return values.includes(query);
+    });
+  }, [sellerSearch, sellers]);
 
   const onSubmit = async (form: CheckoutForm) => {
     if (!cart || cart.items.length === 0) {
@@ -156,64 +189,77 @@ export default function CheckoutPage() {
             <p className="mb-3 text-sm text-ink/60">
               Si alguien te atendió, selecciónalo — así recibe su comisión. Si no, elige "Ningún vendedor".
             </p>
-            <select
-              {...register("vendedorId")}
-              className="h-12 w-full max-w-sm rounded-xl border-2 border-ink/15 bg-white px-4 text-sm outline-none focus:border-ink"
-            >
-              <option value="">Ningún vendedor</option>
-              {sellers.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.nombre} {s.apellido}
-                </option>
-              ))}
-            </select>
+            <div className="max-w-xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  value={sellerSearch}
+                  onChange={(e) => setSellerSearch(e.target.value)}
+                  placeholder="Buscar vendedor por nombre o correo"
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm outline-none focus:border-sky-500"
+                />
+              </div>
+
+              <select
+                {...register("vendedorId")}
+                className="mt-3 h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-sky-500"
+              >
+                <option value="">Ningún vendedor</option>
+                {filteredSellers.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.nombre} {s.apellido} {s.correo ? `• ${s.correo}` : ""}
+                  </option>
+                ))}
+              </select>
+
+              {sellerSearch && filteredSellers.length === 0 && (
+                <p className="mt-2 text-xs text-slate-500">
+                  {sellers.length === 0 ? "No hay vendedores disponibles en este momento." : "No se encontraron vendedores con ese texto."}
+                </p>
+              )}
+
+              {!sellerSearch && sellers.length === 0 && (
+                <p className="mt-2 text-xs text-slate-500">No hay vendedores disponibles en este momento.</p>
+              )}
+            </div>
           </section>
 
           {/* ── DATOS BANCARIOS DE PAGO ── */}
-          <section className="rounded-2xl border border-sky-500/25 bg-gradient-to-br from-sky-500/5 to-indigo-500/5 p-6">
+          <section className="rounded-3xl border border-sky-200 bg-white p-6 shadow-sm">
             <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500 text-white font-bold text-lg shadow-sm">
-                🏦
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 text-lg shadow-sm">
+                <CreditCard className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="font-display text-xl text-primary">Pago por Transferencia Bancaria</h2>
-                <p className="text-xs text-sky-600 dark:text-sky-400 font-semibold">Banco Pichincha Ecuador</p>
+                <h2 className="font-display text-xl text-ink">Pago por Transferencia Bancaria</h2>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">Banco Pichincha Ecuador</p>
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 rounded-xl bg-white dark:bg-slate-900 p-4 border border-theme text-sm shadow-sm">
+            <div className="grid gap-3 sm:grid-cols-2 rounded-2xl bg-slate-50 p-4 text-sm">
               <div>
-                <span className="text-[11px] text-muted-t font-semibold uppercase tracking-wider block">Banco</span>
-                <span className="font-bold text-primary">Banco Pichincha</span>
+                <span className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-ink/60">Banco</span>
+                <span className="mt-1 block font-semibold text-ink">Banco Pichincha</span>
               </div>
               <div>
-                <span className="text-[11px] text-muted-t font-semibold uppercase tracking-wider block">N° de Cuenta</span>
-                <span className="font-mono font-bold text-sky-600 dark:text-sky-400 text-base">2213521473</span>
+                <span className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-ink/60">N° de Cuenta</span>
+                <span className="mt-1 block font-mono font-bold text-sky-600">2213521473</span>
               </div>
               <div className="sm:col-span-2">
-                <span className="text-[11px] text-muted-t font-semibold uppercase tracking-wider block">Titular de la cuenta</span>
-                <span className="font-bold text-primary">Danny Alexander Guaman Pillajo</span>
+                <span className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-ink/60">Titular de la cuenta</span>
+                <span className="mt-1 block font-semibold text-ink">Danny Alexander Guaman Pillajo</span>
               </div>
             </div>
 
-            <div className="mt-4 rounded-xl bg-amber-500/10 border border-amber-500/25 p-4 text-xs text-amber-900 dark:text-amber-200 space-y-1.5 leading-relaxed">
-              <p className="font-bold text-sm text-amber-800 dark:text-amber-100 flex items-center gap-1.5">
-                📌 Pasos para confirmar tu pedido:
+            <div className="mt-4 rounded-xl border border-sky-100 bg-sky-50 p-4 text-sm leading-relaxed">
+              <p className="flex items-center gap-2 font-bold text-ink">
+                <MessageSquare className="h-4 w-4 text-sky-600" /> Pasos para confirmar tu pedido:
               </p>
-              <p>1. Realiza la transferencia del monto total a la cuenta del <strong>Banco Pichincha</strong> arriba indicada.</p>
-              <p>2. Si fuiste atendido por un vendedor, envíale el comprobante de pago directamente.</p>
-              <p>
-                3. Si compraste directamente sin vendedor, envía tu comprobante/voucher al WhatsApp{" "}
-                <a
-                  href="https://wa.me/593999001471?text=Hola,%20adjunto%20mi%20comprobante%20de%20pago"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-bold text-sky-600 dark:text-sky-400 underline"
-                >
-                  +593999001471
-                </a>{" "}
-                para ponernos en contacto de inmediato y despachar tus zapatillas.
-              </p>
+              <ol className="mt-2 list-inside list-decimal space-y-1 text-ink/70">
+                <li>Realiza la transferencia del monto total a la cuenta indicada.</li>
+                <li>Sube el comprobante en la sección <strong>Mis pedidos</strong> y, adicionalmente, si fuiste atendido por un vendedor, envíale también el comprobante para su registro.</li>
+                <li>Si no fuiste atendido por ningún vendedor, sube el comprobante en <strong>Mis pedidos</strong> y, si lo deseas, envíalo por WhatsApp a <a href="https://wa.me/593999001471?text=Hola,%20adjunto%20mi%20comprobante%20de%20pago" target="_blank" rel="noreferrer" className="font-semibold text-sky-600 underline">+593999001471</a>.</li>
+              </ol>
             </div>
           </section>
 

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { User } from "@/domain/entities/User";
+import type { RegisterPayload, User } from "@/domain/entities/User";
 import { tokenStorage } from "@/infrastructure/storage/tokenStorage";
 import { useCases } from "@/infrastructure/factories/useCases.factory";
 
@@ -9,7 +9,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (correo: string, password: string) => Promise<void>;
-  register: (payload: { nombre: string; apellido: string; correo: string; telefono: string; password: string }) => Promise<void>;
+  register: (payload: RegisterPayload) => Promise<void>;
   logout: () => Promise<void>;
   hydrateProfile: () => Promise<void>;
   setUser: (user: User | null) => void;

@@ -4,9 +4,10 @@ import { useCases } from "@/infrastructure/factories/useCases.factory";
 import { useAuthStore } from "@/presentation/store/authStore";
 import type { Order } from "@/domain/entities/Order";
 import type { CommissionReport } from "@/domain/entities/User";
+import type { Liquidacion } from "@/domain/ports/AdminRepositoryPort";
 import { Button } from "@/presentation/components/ui/Button";
 import { Badge } from "@/presentation/components/ui/Badge";
-import { formatCurrency } from "@/presentation/utils/format";
+import { formatAddressForDisplay, formatCurrency, resolveMediaUrl } from "@/presentation/utils/format";
 import { toast } from "sonner";
 import {
   DollarSign,
@@ -18,34 +19,50 @@ import {
   Plus,
   MessageCircle,
   Search,
-  ExternalLink,
   Target,
-  ArrowRight,
-  ShieldCheck,
   Share2,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  Clock,
 } from "lucide-react";
 
 export default function VendedorDashboardPage() {
   const { user } = useAuthStore();
   const [orders, setOrders] = useState<Order[]>([]);
   const [commissions, setCommissions] = useState<CommissionReport[]>([]);
+  const [liquidaciones, setLiquidaciones] = useState<Liquidacion[]>([]);
+  const [commissionSummary, setCommissionSummary] = useState<{
+    totalComisiones: number;
+    comisionesPendientes: number;
+    comisionesPagadas: number;
+    ventasEntregadas: number;
+    ventasAsignadas: number;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("TODOS");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [expandedLiq, setExpandedLiq] = useState<number | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const [oRes, cRes] = await Promise.all([
+        const [oRes, cRes, summaryRes, liqRes] = await Promise.all([
           useCases.getSellerOrders.execute(user?.id),
           useCases.getCommissionReport.execute(),
+          useCases.getSellerCommissionSummary.execute(),
+          useCases.getLiquidaciones.execute(user?.id),
         ]);
         setOrders(oRes);
         setCommissions(cRes);
+        setCommissionSummary(summaryRes);
+        setLiquidaciones(liqRes);
       } catch {
         setOrders([]);
         setCommissions([]);
+        setCommissionSummary(null);
+        setLiquidaciones([]);
       } finally {
         setIsLoading(false);
       }
@@ -57,13 +74,16 @@ export default function VendedorDashboardPage() {
     (acc, o) => acc + o.items.reduce((sum, item) => sum + item.cantidad, 0),
     0
   );
-  // $4.00 USD per delivered pair
-  const totalCommissions = totalPairs * 4;
 
+  // Use server data if available, otherwise calculate locally
+  const totalCommissions = commissionSummary?.totalComisiones ?? totalPairs * 4;
+  const comisionesPagadas = commissionSummary?.comisionesPagadas ?? 0;
+  const comisionesPendientes = commissionSummary?.comisionesPendientes ?? (totalCommissions - comisionesPagadas);
+
+  // Pairs in transit (active orders not yet delivered or cancelled)
   const pendingPairs = orders
-    .filter((o) => o.estado !== "ENTREGADO" && o.estado !== "CANCELADO")
+    .filter((o) => !["ENTREGADO", "CANCELADO", "PAGO_RECHAZADO"].includes(o.estado))
     .reduce((acc, o) => acc + o.items.reduce((sum, item) => sum + item.cantidad, 0), 0);
-  const pendingCommissions = pendingPairs * 4;
 
   // Monthly target: 50 pairs
   const monthlyGoal = 50;
@@ -159,24 +179,39 @@ export default function VendedorDashboardPage() {
       <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-2xl border border-purple-100 bg-purple-50/60 p-6">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-purple-600">Comisiones Liquidadas</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-purple-600">Saldo por cobrar</span>
             <div className="rounded-xl bg-purple-100 p-2.5">
               <DollarSign className="h-6 w-6 text-purple-600" />
             </div>
           </div>
-          <p className="mt-3 font-display text-4xl text-purple-950">{formatCurrency(totalCommissions)}</p>
-          <p className="mt-1 text-xs font-semibold text-purple-600">{totalPairs} pares entregados ($4/par)</p>
+            <p className="mt-3 font-display text-4xl text-slate-900">{formatCurrency(totalCommissions)}</p>
+          <p className="mt-1 text-xs font-semibold text-purple-600">
+            {totalPairs} pares entregados × $4.00 — solo pedidos <strong>ENTREGADO</strong>
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-6">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-700">Ya cobrado</span>
+            <div className="rounded-xl bg-emerald-100 p-2.5">
+              <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+            </div>
+          </div>
+            <p className="mt-3 font-display text-4xl text-slate-900">{formatCurrency(comisionesPagadas)}</p>
+          <p className="mt-1 text-xs font-semibold text-emerald-700">Liquidaciones pagadas</p>
         </div>
 
         <div className="rounded-2xl border border-amber-100 bg-amber-50/60 p-6">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-amber-700">Por Liquidar (En camino)</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-amber-700">Por liquidar</span>
             <div className="rounded-xl bg-amber-100 p-2.5">
               <TrendingUp className="h-6 w-6 text-amber-600" />
             </div>
           </div>
-          <p className="mt-3 font-display text-4xl text-amber-950">{formatCurrency(pendingCommissions)}</p>
-          <p className="mt-1 text-xs font-semibold text-amber-700">{pendingPairs} pares pendientes de entrega</p>
+            <p className="mt-3 font-display text-4xl text-slate-900">{formatCurrency(comisionesPendientes)}</p>
+          <p className="mt-1 text-xs font-semibold text-amber-700">
+            {pendingPairs} pares en camino · se acredita al entregar
+          </p>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-6">
@@ -273,6 +308,7 @@ export default function VendedorDashboardPage() {
                         <td className="px-6 py-4">
                           <p className="font-semibold text-slate-900">{o.clienteNombre || "Cliente Drip"}</p>
                           <p className="text-xs text-slate-400">{o.ciudad ? `${o.ciudad}, ${o.provincia || ""}` : "Ecuador"}</p>
+                          <p className="mt-1 text-xs text-slate-500">{o.telefonoContacto || "Sin teléfono registrado"}</p>
                         </td>
                         <td className="px-6 py-4 font-mono text-slate-700 font-medium">
                           {orderPairs} par(es)
@@ -285,9 +321,13 @@ export default function VendedorDashboardPage() {
                         </td>
                         <td className="px-6 py-4 font-mono font-bold text-purple-700">
                           {o.estado === "ENTREGADO" ? (
-                            <span className="text-emerald-600">+{formatCurrency(commission)} (Liquidado)</span>
+                            <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2.5 py-1 text-xs font-bold text-sky-700 border border-sky-100">
+                              <CheckCircle2 className="h-3.5 w-3.5 text-sky-700" /> +{formatCurrency(commission)} acreditado
+                            </span>
                           ) : (
-                            <span className="text-amber-600">+{formatCurrency(commission)} (Pendiente)</span>
+                            <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700 border border-sky-100">
+                              <Clock className="h-3.5 w-3.5 text-sky-700" /> +{formatCurrency(commission)} al entregar
+                            </span>
                           )}
                         </td>
                         <td className="px-6 py-4 text-right">
@@ -316,6 +356,107 @@ export default function VendedorDashboardPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* ── LIQUIDACIONES ── */}
+      <div className="mt-12 border-t border-theme pt-10">
+        <h2 className="font-display text-2xl text-primary mb-1">Mis liquidaciones</h2>
+        <p className="text-sm text-secondary mb-5">
+          El contador genera la liquidación mensual. Cuando realizan la transferencia la marcan como <strong>Pagada</strong> y recibes una notificación.
+        </p>
+
+        {liquidaciones.length === 0 ? (
+          <div className="rounded-2xl border border-theme bg-surf p-10 text-center text-secondary">
+            <DollarSign className="mx-auto h-10 w-10 text-muted-t mb-3" />
+            <p className="font-display text-xl">Aún no tienes liquidaciones</p>
+            <p className="text-sm mt-1 text-muted-t">
+              El contador generará tu primera liquidación al cerrar el mes.
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {liquidaciones.map((liq) => (
+              <div key={liq.id} className="overflow-hidden rounded-2xl border border-theme bg-surf shadow-card">
+                <div className="flex flex-wrap items-center gap-4 px-5 py-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold text-primary">
+                        {["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"][liq.periodoMes - 1]} {liq.periodoAnio}
+                      </span>
+                      {liq.pagada ? (
+                        <Badge tone="success" className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4" /> Pagada</Badge>
+                      ) : (
+                        <Badge tone="warning">Pendiente de pago</Badge>
+                      )}
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-4 text-sm">
+                      <span className="text-muted-t">{liq.totalPares} pares entregados</span>
+                      <span className="font-mono font-bold text-primary">{formatCurrency(liq.totalComisiones)}</span>
+                      {liq.fechaPago && (
+                        <span className="text-xs text-emerald-600">
+                          Pagado el {new Date(liq.fechaPago).toLocaleDateString("es-EC")}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {liq.comprobanteUrl && (
+                      <a
+                        href={resolveMediaUrl(liq.comprobanteUrl) ?? "#"}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-600 hover:bg-sky-100 transition-colors"
+                      >
+                        <ExternalLink className="h-3 w-3" /> Ver comprobante
+                      </a>
+                    )}
+                    {(liq.comisiones?.length ?? 0) > 0 && (
+                      <button
+                        onClick={() => setExpandedLiq(expandedLiq === liq.id ? null : liq.id)}
+                        className="flex items-center gap-1 rounded-lg border border-theme px-2 py-1.5 text-xs text-muted-t hover:bg-surf2 transition-colors"
+                      >
+                        {expandedLiq === liq.id ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                        {liq.comisiones?.length} pedidos
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {expandedLiq === liq.id && liq.comisiones && liq.comisiones.length > 0 && (
+                  <div className="border-t border-theme bg-surf2 px-5 py-4">
+                    <table className="w-full text-sm">
+                      <thead className="text-xs font-bold uppercase tracking-wider text-muted-t">
+                        <tr>
+                          <th className="pb-2 text-left">Pedido</th>
+                          <th className="pb-2 text-left">Pares</th>
+                          <th className="pb-2 text-left">$/par</th>
+                          <th className="pb-2 text-right">Comisión</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-theme">
+                        {liq.comisiones.map((c) => (
+                          <tr key={c.id}>
+                            <td className="py-2 font-mono text-primary">#{c.pedidoId}</td>
+                            <td className="py-2 text-secondary">{c.cantidadPares}</td>
+                            <td className="py-2 font-mono text-secondary">{formatCurrency(c.montoPorPar)}</td>
+                            <td className="py-2 text-right font-mono font-bold text-primary">{formatCurrency(c.monto)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="border-t-2 border-theme">
+                          <td colSpan={3} className="pt-2 text-xs font-bold text-muted-t">Total</td>
+                          <td className="pt-2 text-right font-mono font-bold text-primary">{formatCurrency(liq.totalComisiones)}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ORDER DETAIL MODAL */}
@@ -352,13 +493,17 @@ export default function VendedorDashboardPage() {
 
               <div className="grid grid-cols-2 gap-4 text-sm bg-slate-50 p-4 rounded-xl border border-slate-200">
                 <div>
-                  <span className="text-xs text-slate-400">Dirección de Envió:</span>
-                  <p className="font-medium text-slate-800">{selectedOrder.direccionEnvio || "Dirección de cliente"}</p>
-                  <p className="text-xs text-slate-500">{selectedOrder.ciudad}, {selectedOrder.provincia}</p>
+                  <span className="text-xs text-slate-400">Cliente:</span>
+                  <p className="font-medium text-slate-800">{selectedOrder.clienteNombre || "Cliente Drip"}</p>
+                  <p className="text-xs text-slate-500">{selectedOrder.ciudad || "Quito"}, {selectedOrder.provincia || "Pichincha"}</p>
                 </div>
                 <div>
                   <span className="text-xs text-slate-400">Teléfono Contacto:</span>
                   <p className="font-mono font-bold text-slate-800">{selectedOrder.telefonoContacto || "—"}</p>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-xs text-slate-400">Dirección de Envío:</span>
+                  <p className="font-medium text-slate-800">{formatAddressForDisplay(selectedOrder.direccionEnvio) || "Dirección de cliente"}</p>
                 </div>
               </div>
 

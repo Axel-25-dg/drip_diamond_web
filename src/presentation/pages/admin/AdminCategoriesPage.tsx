@@ -4,7 +4,7 @@ import { useCases } from "@/infrastructure/factories/useCases.factory";
 import type { Category } from "@/domain/entities/Product";
 import { Button } from "@/presentation/components/ui/Button";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Layers, Pencil, Trash2, ImagePlus, Tag, CalendarDays, Hash, Sparkles } from "lucide-react";
+import { ArrowLeft, Plus, Layers, Pencil, Trash2, ImagePlus, Tag, CalendarDays, Hash, Sparkles, CheckCircle2 } from "lucide-react";
 import { resolveMediaUrl } from "@/presentation/utils/format";
 
 export default function AdminCategoriesPage() {
@@ -343,8 +343,9 @@ export default function AdminCategoriesPage() {
                         />
                         {imagenFile && (
                           <div className="flex items-center gap-2">
-                            <span className="chip chip-success">
-                              ✓ Listo para subir
+                            <span className="chip chip-success inline-flex items-center gap-2">
+                              <CheckCircle2 className="h-4 w-4" />
+                              Listo para subir
                             </span>
                             <span className="truncate text-xs text-secondary">{imagenFile.name}</span>
                           </div>

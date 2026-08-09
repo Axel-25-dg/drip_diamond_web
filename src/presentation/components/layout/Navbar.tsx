@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Search, ShoppingBag, User, X, Menu, ChevronRight,
-  Gem, LayoutDashboard, BarChart3, Briefcase, Sun, Moon, Bell, Heart,
+  Gem, LayoutDashboard, BarChart3, Briefcase, Bell, Heart, Package,
 } from "lucide-react";
 import { useCases } from "@/infrastructure/factories/useCases.factory";
 import { useAuthStore } from "@/presentation/store/authStore";
@@ -22,7 +22,7 @@ export function Navbar() {
   const { isAuthenticated, user } = useAuthStore();
   const { cart, openDrawer } = useCartStore();
   const { favorites } = useFavoritesStore();
-  const { theme, toggleTheme } = useThemeStore();
+  const { theme } = useThemeStore();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -151,16 +151,25 @@ export function Navbar() {
               {rol === "administrador" && (
                 <Link
                   to="/admin"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-sky-600 bg-sky-50 hover:bg-sky-100 dark:bg-sky-500/10 dark:hover:bg-sky-500/20 dark:text-sky-400 transition-colors"
+                  className="flex items-center gap-1.5 rounded-full bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-600 shadow-sm transition-colors"
                 >
                   <LayoutDashboard className="h-3.5 w-3.5" />
                   Admin
                 </Link>
               )}
+              {rol === "administrador" && (
+                <Link
+                  to="/admin/pedidos"
+                  className="flex items-center gap-1.5 rounded-full bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-600 shadow-sm transition-colors"
+                >
+                  <ShoppingBag className="h-3.5 w-3.5" />
+                  Pedidos
+                </Link>
+              )}
               {(rol === "contador" || rol === "administrador") && (
                 <Link
                   to="/contador"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 dark:text-emerald-400 transition-colors"
+                  className="flex items-center gap-1.5 rounded-full bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-600 shadow-sm transition-colors"
                 >
                   <BarChart3 className="h-3.5 w-3.5" />
                   Contabilidad
@@ -169,7 +178,7 @@ export function Navbar() {
               {(rol === "vendedor" || rol === "administrador") && (
                 <Link
                   to="/vendedor"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 dark:bg-purple-500/10 dark:hover:bg-purple-500/20 dark:text-purple-400 transition-colors"
+                  className="flex items-center gap-1.5 rounded-full bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-600 shadow-sm transition-colors"
                 >
                   <Briefcase className="h-3.5 w-3.5" />
                   Ventas
@@ -179,7 +188,7 @@ export function Navbar() {
           )}
         </nav>
 
-        {/* RIGHT: Search, Theme Toggle, Account, Cart */}
+        {/* RIGHT: Search, Theme Toggle, Account, Mis Pedidos, Cart */}
         <div className="flex items-center gap-1">
           {/* Search toggle */}
           <button
@@ -190,8 +199,6 @@ export function Navbar() {
           >
             <Search className="h-4 w-4" />
           </button>
-
-
 
           {isAuthenticated && (
             <div className="relative">
@@ -263,6 +270,18 @@ export function Navbar() {
               </span>
             )}
           </Link>
+
+          {/* Quick access: Mis pedidos (visible para usuarios autenticados) */}
+          {isAuthenticated && (
+            <Link
+              to="/pedidos"
+              className="ml-2 hidden items-center gap-2 rounded-full bg-sky-50 px-3 py-1.5 text-sm font-semibold text-sky-600 shadow-sm transition-colors lg:flex"
+              title="Ver mis pedidos"
+            >
+              <Package className="h-4 w-4" />
+              Mis pedidos
+            </Link>
+          )}
 
           {/* Favorites */}
           <Link
@@ -364,17 +383,22 @@ export function Navbar() {
             {isAuthenticated && rol && (
               <div className="mt-2 pt-2 space-y-0.5" style={{ borderTop: `1px solid var(--bg-border)` }}>
                 {rol === "administrador" && (
-                  <Link to="/admin" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-sky-500">
+                  <Link to="/admin" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 rounded-full bg-sky-50 px-3 py-2.5 text-sm font-medium text-sky-600 shadow-sm">
                     <LayoutDashboard className="h-4 w-4" /> Panel Admin
                   </Link>
                 )}
+                {rol === "administrador" && (
+                  <Link to="/admin/pedidos" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 rounded-full bg-sky-50 px-3 py-2.5 text-sm font-medium text-sky-600 shadow-sm">
+                    <ShoppingBag className="h-4 w-4" /> Gestión Pedidos
+                  </Link>
+                )}
                 {(rol === "contador" || rol === "administrador") && (
-                  <Link to="/contador" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-emerald-500">
+                  <Link to="/contador" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 rounded-full bg-sky-50 px-3 py-2.5 text-sm font-medium text-sky-600 shadow-sm">
                     <BarChart3 className="h-4 w-4" /> Contabilidad
                   </Link>
                 )}
                 {(rol === "vendedor" || rol === "administrador") && (
-                  <Link to="/vendedor" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-purple-500">
+                  <Link to="/vendedor" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 rounded-full bg-sky-50 px-3 py-2.5 text-sm font-medium text-sky-600 shadow-sm">
                     <Briefcase className="h-4 w-4" /> Panel Ventas
                   </Link>
                 )}

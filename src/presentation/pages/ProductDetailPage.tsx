@@ -14,6 +14,8 @@ import { useFavoritesStore } from "@/presentation/store/favoritesStore";
 import { resolveMediaUrl } from "@/presentation/utils/format";
 import { cn } from "@/presentation/utils/cn";
 
+const FALLBACK_SHOE_IMAGE = null;
+
 export default function ProductDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -37,7 +39,7 @@ export default function ProductDetailPage() {
       .execute(Number(id))
       .then((p) => {
         setProduct(p);
-        const main = resolveMediaUrl(p.imagenPrincipal) ?? resolveMediaUrl(p.galeria[0]?.url);
+        const main = resolveMediaUrl(p.imagenPrincipal) ?? resolveMediaUrl(p.galeria[0]?.url) ?? null;
         setActiveImage(main);
 
         // Fetch related products from same brand/category or general catalog
@@ -100,6 +102,7 @@ export default function ProductDetailPage() {
   if (!product) return null;
 
   const images = [product.imagenPrincipal, ...product.galeria.map((g) => g.url)].filter(Boolean) as string[];
+  const galleryImages = images.length > 0 ? images : [];
   const maxStock = selectedVariant?.stock ?? 9999;
   const isOutOfStock = (selectedVariant?.stock ?? 0) === 0;
 
@@ -145,9 +148,9 @@ export default function ProductDetailPage() {
               <div className="flex h-full items-center justify-center font-display text-4xl text-ink/20">EC</div>
             )}
           </div>
-          {images.length > 1 && (
+          {galleryImages.length > 1 && (
             <div className="mt-3 flex gap-3 overflow-x-auto no-scrollbar">
-              {images.map((img, i) => {
+              {galleryImages.map((img, i) => {
                 const url = resolveMediaUrl(img)!;
                 return (
                   <button
@@ -289,7 +292,7 @@ export default function ProductDetailPage() {
                   tallasDisponibles: availableSizes,
                 };
                 const added = toggleFavorite(summary);
-                if (added) toast.success(`"${product.nombre}" agregada a favoritos ❤️`);
+                if (added) toast.success(`"${product.nombre}" agregada a favoritos`);
                 else toast.info(`"${product.nombre}" eliminada de favoritos`);
               }}
               className="flex items-center gap-2"

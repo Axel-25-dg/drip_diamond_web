@@ -166,6 +166,15 @@
 }
 
 /* ─── Utilities ────────────────────────────────────────────────────────── */
+@keyframes heroFloat {
+  0%, 100% {
+    transform: translateY(0px) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(1deg);
+  }
+}
+
 @layer utilities {
   /* Layout */
   .container-app {
@@ -245,6 +254,9 @@
   .shadow-card       { box-shadow: var(--shadow-card); }
   .shadow-card-hover { box-shadow: var(--shadow-card-hover); }
   .shadow-premium    { box-shadow: var(--shadow-premium); }
+  .hero-sneaker-float {
+    animation: heroFloat 6s ease-in-out infinite;
+  }
 
   /* ── Premium badges ── */
   .chip {
@@ -275,6 +287,19 @@
     background: linear-gradient(135deg, rgba(220,38,38,0.10), rgba(239,68,68,0.06));
     color: #991b1b;
     border-color: rgba(220,38,38,0.25);
+  }
+
+  /* ── Role pill / "bomba" styling ── */
+  .role-bomba {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.45rem 0.9rem; border-radius: 999px;
+    background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-light) 100%);
+    color: var(--text-inverse); font-weight: 700; box-shadow: var(--shadow-glow);
+    border: 1px solid rgba(14,165,233,0.18);
+  }
+
+  .role-bomba-muted {
+    background: var(--bg-surface2); color: var(--text-secondary); border: 1px solid var(--bg-border);
   }
 
   /* ── Patterns ── */

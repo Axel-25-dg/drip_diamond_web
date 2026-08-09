@@ -31,47 +31,71 @@ function safeUnwrap<T>(data: any): T {
 
 export class ApiCatalogRepository implements CatalogRepositoryPort {
   async getProducts(filters: ProductFilters): Promise<PaginatedResult<ProductSummary>> {
-    const params: Record<string, unknown> = {
-      search: filters.search || undefined,
-      marca: filters.marcaId || undefined,
-      marca_id: filters.marcaId || undefined,
-      categoria: filters.categoriaId || undefined,
-      categoria_id: filters.categoriaId || undefined,
-      talla: filters.tallaId || undefined,
-      talla_id: filters.tallaId || undefined,
-      precio_min: filters.precioMin || undefined,
-      precio_max: filters.precioMax || undefined,
-      ordering: filters.ordering || undefined,
-      page: filters.page || 1,
-      page_size: filters.pageSize || 50,
-    };
+    // Build params — send each filter with both possible names for max backend compatibility
+    const params: Record<string, unknown> = {};
+    if (filters.search) params.search = filters.search;
+    if (filters.marcaId) {
+      params.marca = filters.marcaId;
+      params.marca_id = filters.marcaId;
+    }
+    if (filters.categoriaId) {
+      params.categoria = filters.categoriaId;
+      params.categoria_id = filters.categoriaId;
+    }
+    if (filters.tallaId) {
+      params.talla = filters.tallaId;
+      params.talla_id = filters.tallaId;
+    }
+    if (filters.precioMin != null) params.precio_min = filters.precioMin;
+    if (filters.precioMax != null) params.precio_max = filters.precioMax;
+    if (filters.ordering) params.ordering = filters.ordering;
+    params.page = filters.page || 1;
+    params.page_size = filters.pageSize || 12;
+
     const { data } = await httpClient.get<any>("/productos/", { params });
     const payload = safeUnwrap<any>(data);
-    let rawList: ProductListDTO[] = Array.isArray(payload)
-      ? payload
-      : payload?.results ?? payload?.items ?? [];
+
+    let rawList: ProductListDTO[];
+    let serverTotal: number | undefined;
+    let serverTotalPages: number | undefined;
+
+    if (Array.isArray(payload)) {
+      rawList = payload;
+    } else {
+      rawList = payload?.results ?? payload?.items ?? [];
+      serverTotal = payload?.count ?? payload?.total;
+      serverTotalPages = payload?.total_pages ?? payload?.totalPages;
+    }
 
     let items = rawList.map(toProductSummary);
 
-    // Client-side category fallback
+    // Client-side fallbacks only when backend returned unfiltered data
+    // IMPORTANT: Only apply if categoriaId/marcaId were actually parsed from the summary items.
+    // If ALL items have undefined IDs (backend only returns string names in the list), skip client filtering.
     if (filters.categoriaId && items.length > 0) {
-      const filtered = items.filter(
-        (it) => (it as any).categoriaId === filters.categoriaId || (it as any).categoria_id === filters.categoriaId
-      );
-      // Only apply if backend didn't already filter (i.e., if some don't match)
-      if (filtered.length < items.length) items = filtered;
+      const itemsWithId = items.filter((it) => it.categoriaId != null);
+      if (itemsWithId.length > 0) {
+        // Some items have IDs — we can filter
+        const filtered = items.filter((it) => it.categoriaId === filters.categoriaId);
+        // Only restrict if not ALL already match (i.e., backend didn't filter)
+        if (filtered.length < items.length && filtered.length > 0) {
+          items = filtered;
+        }
+      }
+      // If no items have IDs parsed, backend already filtered or listing doesn't include IDs — keep all
     }
 
-    // Client-side brand fallback
     if (filters.marcaId && items.length > 0) {
-      const filtered = items.filter(
-        (it) => (it as any).marcaId === filters.marcaId || (it as any).marca_id === filters.marcaId
-      );
-      if (filtered.length < items.length) items = filtered;
+      const itemsWithId = items.filter((it) => it.marcaId != null);
+      if (itemsWithId.length > 0) {
+        const filtered = items.filter((it) => it.marcaId === filters.marcaId);
+        if (filtered.length < items.length && filtered.length > 0) {
+          items = filtered;
+        }
+      }
     }
 
-    // Client-side size filter
-    if (filters.tallaId) {
+    if (filters.tallaId && items.length > 0) {
       try {
         const sizes = await this.getSizes();
         const foundSize = sizes.find((s) => s.id === filters.tallaId);
@@ -81,13 +105,13 @@ export class ApiCatalogRepository implements CatalogRepositoryPort {
             (t) => String(t).trim() === targetVal.trim() || String(t) === String(filters.tallaId)
           )
         );
-        items = filtered;
+        // Only apply if it actually filters something and leaves some results
+        if (filtered.length < items.length && filtered.length > 0) items = filtered;
       } catch {
-        // fallback: keep all
+        // keep all if sizes endpoint fails
       }
     }
 
-    // Price filter client-side
     if (filters.precioMin != null) {
       items = items.filter((it) => it.precioBase >= filters.precioMin!);
     }
@@ -95,15 +119,16 @@ export class ApiCatalogRepository implements CatalogRepositoryPort {
       items = items.filter((it) => it.precioBase <= filters.precioMax!);
     }
 
-    const count: number = items.length;
-    const pageSize = filters.pageSize || 50;
+    const total = serverTotal ?? items.length;
+    const pageSize = filters.pageSize || 12;
+    const totalPages = serverTotalPages ?? Math.max(1, Math.ceil(total / pageSize));
 
     return {
       items,
-      total: count,
+      total,
       page: filters.page || 1,
       pageSize,
-      totalPages: Math.max(1, Math.ceil(count / pageSize)),
+      totalPages,
     };
   }
 

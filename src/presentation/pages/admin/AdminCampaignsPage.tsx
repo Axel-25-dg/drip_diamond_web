@@ -383,7 +383,7 @@ export default function AdminCampaignsPage() {
                     required
                     value={asunto}
                     onChange={(e) => setAsunto(e.target.value)}
-                    placeholder="🔥 30% OFF en Zapatillas Nike seleccionadas"
+                    placeholder="30% OFF en Zapatillas Nike seleccionadas"
                     className="input-premium mt-1.5 h-[50px] rounded-[14px] border-[1.5px] px-4 text-sm outline-none transition-all duration-200 focus:border-[var(--color-brand)] focus:shadow-[0_0_0_4px_rgba(14,165,233,0.12)]"
                     style={{
                       borderColor: "var(--input-border)",

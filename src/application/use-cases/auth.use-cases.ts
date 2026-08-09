@@ -36,6 +36,13 @@ export class UpdateProfileUseCase {
   }
 }
 
+export class UploadAvatarUseCase {
+  constructor(private repo: AuthRepositoryPort) {}
+  execute(file: File) {
+    return this.repo.uploadAvatar(file);
+  }
+}
+
 export class RequestPasswordResetUseCase {
   constructor(private repo: AuthRepositoryPort) {}
   execute(correo: string) {

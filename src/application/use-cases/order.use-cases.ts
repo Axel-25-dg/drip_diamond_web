@@ -1,6 +1,6 @@
 import type { CartRepositoryPort } from "@/domain/ports/CartRepositoryPort";
 import type { OrderRepositoryPort } from "@/domain/ports/OrderRepositoryPort";
-import type { CreateOrderPayload } from "@/domain/entities/Order";
+import type { CreateOrderPayload, UploadComprobanteMetadata } from "@/domain/entities/Order";
 
 export class GetCartUseCase {
   constructor(private repo: CartRepositoryPort) {}
@@ -48,10 +48,10 @@ export class GetOrderDetailUseCase {
 
 export class UploadComprobanteUseCase {
   constructor(private repo: OrderRepositoryPort) {}
-  execute(pedidoId: number, archivo: File) {
+  execute(pedidoId: number, archivo: File, metadata?: UploadComprobanteMetadata) {
     const maxSize = 5 * 1024 * 1024;
     if (archivo.size > maxSize) throw new Error("El comprobante no debe superar 5 MB.");
-    return this.repo.uploadComprobante(pedidoId, archivo);
+    return this.repo.uploadComprobante(pedidoId, archivo, metadata);
   }
 }
 

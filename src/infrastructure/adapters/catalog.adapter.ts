@@ -36,26 +36,69 @@ const normalizeStatus = (estado?: string, activo?: boolean): string => {
 const extractMainImage = (dto: any): string | null => {
   const check = (val: any): string | null => {
     if (!val) return null;
-    if (typeof val === "string") return val;
-    if (typeof val === "object") return val.url ?? val.imagen ?? val.archivo ?? val.path ?? null;
+    if (typeof val === "string" && val.trim() && val !== "null" && val !== "undefined") return val.trim();
+    if (typeof val === "object") {
+      return (
+        val.url ??
+        val.imagen_url ??
+        val.imagen ??
+        val.archivo ??
+        val.path ??
+        val.file ??
+        null
+      );
+    }
     return null;
   };
 
-  return (
-    check(dto.imagen_principal) ??
-    check(dto.imagen) ??
-    check(dto.imagen_url) ??
-    check(dto.foto) ??
-    (Array.isArray(dto.imagenes) && dto.imagenes.length > 0 ? check(dto.imagenes[0]) : null) ??
-    (Array.isArray(dto.galeria) && dto.galeria.length > 0 ? check(dto.galeria[0]) : null) ??
-    (Array.isArray(dto.variantes) && dto.variantes.length > 0 ? check(dto.variantes[0]?.imagen ?? dto.variantes[0]?.imagen_url) : null) ??
-    null
-  );
+  // Try every possible field the Django backend might use
+  const candidates = [
+    dto.imagen_principal,
+    dto.imagen,
+    dto.imagen_url,
+    dto.foto,
+    dto.foto_url,
+    dto.foto_principal,
+    dto.thumbnail,
+    dto.cover,
+    dto.picture,
+    dto.image,
+  ];
+
+  for (const c of candidates) {
+    const result = check(c);
+    if (result) return result;
+  }
+
+  // Try arrays: imagenes[], galeria[]
+  if (Array.isArray(dto.imagenes) && dto.imagenes.length > 0) {
+    const r = check(dto.imagenes[0]);
+    if (r) return r;
+  }
+  if (Array.isArray(dto.galeria) && dto.galeria.length > 0) {
+    // prefer the one marked as principal
+    const principal = dto.galeria.find((g: any) => g.es_principal);
+    const r = check(principal ?? dto.galeria[0]);
+    if (r) return r;
+  }
+
+  // Last resort: check variantes for an image
+  if (Array.isArray(dto.variantes) && dto.variantes.length > 0) {
+    for (const v of dto.variantes) {
+      const r = check(v?.imagen ?? v?.imagen_url ?? v?.foto ?? null);
+      if (r) return r;
+    }
+  }
+
+  return null;
 };
 
 const extractTallas = (dto: any): string[] => {
   if (Array.isArray(dto.tallas_disponibles) && dto.tallas_disponibles.length > 0) {
     return dto.tallas_disponibles.map(String);
+  }
+  if (Array.isArray(dto.tallas) && dto.tallas.length > 0) {
+    return dto.tallas.map(String);
   }
   if (Array.isArray(dto.variantes) && dto.variantes.length > 0) {
     return Array.from(
@@ -118,11 +161,12 @@ export function toProduct(dto: ProductDetailDTO): Product {
     })),
     variantes: (dto.variantes ?? []).map((v) => ({
       id: v.id,
-      tallaId: typeof v.talla === "number" ? v.talla : v.talla.id,
+      tallaId: typeof v.talla === "number" ? v.talla : v.talla?.id ?? 0,
       talla: v.talla_valor ?? (typeof v.talla === "object" ? v.talla.valor : String(v.talla)),
       color: v.color?.trim() ? v.color.trim() : "Estándar",
       stock: v.stock,
       sku: v.sku ?? null,
+      pesoKg: v.peso_kg != null ? Number(v.peso_kg) : null,
     })),
     creadoEn: dto.creado_en,
     actualizadoEn: dto.actualizado_en,

@@ -284,13 +284,27 @@ export class ApiAdminRepository implements AdminRepositoryPort {
 
   async updateUser(id: number, payload: UpdateUserDTO): Promise<User> {
     const body: Record<string, any> = {};
-    if (payload.nombre !== undefined) body.nombre = payload.nombre;
-    if (payload.apellido !== undefined) body.apellido = payload.apellido;
+    if (payload.nombre !== undefined) {
+      body.nombre = payload.nombre;
+      body.primer_nombre = payload.nombre;
+    }
+    if (payload.apellido !== undefined) {
+      body.apellido = payload.apellido;
+      body.primer_apellido = payload.apellido;
+    }
     if (payload.telefono !== undefined) body.telefono = payload.telefono;
     if (payload.rol !== undefined) body.rol = payload.rol;
     const { data } = await httpClient.patch<any>(`/usuarios/${id}/`, body);
     const u = safeUnwrap<any>(data);
-    return { id: u.id || id, nombre: u.nombre || payload.nombre || "", apellido: u.apellido || payload.apellido || "", correo: u.correo || u.email || "", telefono: u.telefono || payload.telefono || "", rol: u.rol || payload.rol || "CLIENTE", username: u.username };
+    return {
+      id: u.id || id,
+      nombre: u.nombre || u.primer_nombre || payload.nombre || "",
+      apellido: u.apellido || u.primer_apellido || payload.apellido || "",
+      correo: u.correo || u.email || "",
+      telefono: u.telefono || payload.telefono || "",
+      rol: u.rol || payload.rol || "CLIENTE",
+      username: u.username,
+    };
   }
 
   async deleteUser(id: number): Promise<void> {
@@ -324,14 +338,38 @@ export class ApiAdminRepository implements AdminRepositoryPort {
   }
 
   async shipOrder(payload: ShipOrderDTO): Promise<Order> {
-    const { data } = await httpClient.post<any>(`/pedidos/${payload.pedidoId}/marcar_enviado/`, {
+    const { data } = await httpClient.post<any>(`/pedidos/${payload.pedidoId}/marcar-enviado/`, {
       numero_guia: payload.numeroGuia,
     });
     return toOrder(safeUnwrap(data));
   }
 
   async deliverOrder(pedidoId: number): Promise<Order> {
-    const { data } = await httpClient.post<any>(`/pedidos/${pedidoId}/marcar_entregado/`);
+    const { data } = await httpClient.post<any>(`/pedidos/${pedidoId}/marcar-entregado/`);
+    return toOrder(safeUnwrap(data));
+  }
+
+  async prepareOrder(pedidoId: number): Promise<Order> {
+    const { data } = await httpClient.post<any>(`/pedidos/${pedidoId}/preparar-pedido/`);
+    return toOrder(safeUnwrap(data));
+  }
+
+  async updateOrderStatus(pedidoId: number, estado: string, extra?: Record<string, any>): Promise<Order> {
+    // Map states to their real backend action endpoints
+    const actionMap: Record<string, string> = {
+      PREPARANDO_PEDIDO: `/pedidos/${pedidoId}/preparar-pedido/`,
+      ENVIADO: `/pedidos/${pedidoId}/marcar-enviado/`,
+      ENTREGADO: `/pedidos/${pedidoId}/marcar-entregado/`,
+      PAGO_EN_REVISION: `/pedidos/${pedidoId}/marcar-contactado/`,
+    };
+    const actionUrl = actionMap[estado];
+
+    if (!actionUrl) {
+      throw new Error(`No hay endpoint para el estado "${estado}". Contacta al administrador.`);
+    }
+
+    const body = extra ?? {};
+    const { data } = await httpClient.post<any>(actionUrl, body);
     return toOrder(safeUnwrap(data));
   }
 
@@ -378,6 +416,118 @@ export class ApiAdminRepository implements AdminRepositoryPort {
     } catch {
       return [];
     }
+  }
+
+  async getSellerCommissionSummary(): Promise<{
+    totalComisiones: number;
+    comisionesPendientes: number;
+    comisionesPagadas: number;
+    ventasEntregadas: number;
+    ventasAsignadas: number;
+  } | null> {
+    try {
+      const { data } = await httpClient.get<any>("/comisiones/resumen-vendedor/");
+      const raw = safeUnwrap<any>(data);
+      return {
+        totalComisiones: Number(raw.total_comisiones ?? 0),
+        comisionesPendientes: Number(raw.comisiones_pendientes ?? 0),
+        comisionesPagadas: Number(raw.comisiones_pagadas ?? 0),
+        ventasEntregadas: Number(raw.ventas_entregadas ?? 0),
+        ventasAsignadas: Number(raw.ventas_asignadas ?? 0),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private _mapLiquidacion(l: any): import("@/domain/ports/AdminRepositoryPort").Liquidacion {
+    return {
+      id: l.id,
+      vendedorId: typeof l.vendedor === "object" ? l.vendedor?.id : l.vendedor,
+      vendedorNombre:
+        typeof l.vendedor === "object"
+          ? `${l.vendedor?.primer_nombre || l.vendedor?.nombre || ""} ${l.vendedor?.primer_apellido || l.vendedor?.apellido || ""}`.trim()
+          : undefined,
+      periodoAnio: l.periodo_anio,
+      periodoMes: l.periodo_mes,
+      totalPares: Number(l.total_pares ?? 0),
+      totalComisiones: Number(l.total_comisiones ?? 0),
+      pagada: Boolean(l.pagada),
+      fechaPago: l.fecha_pago ?? null,
+      comprobanteUrl: l.comprobante_pago ?? null,
+      comisiones: (l.comisiones ?? []).map((c: any) => ({
+        id: c.id,
+        pedidoId: c.pedido_id ?? c.pedido ?? 0,
+        vendedorId: typeof c.vendedor === "object" ? c.vendedor?.id : c.vendedor,
+        cantidadPares: Number(c.cantidad_pares ?? 0),
+        montoPorPar: Number(c.monto_por_par ?? 4),
+        monto: Number(c.monto ?? 0),
+        estado: c.estado ?? "PENDIENTE",
+        generadaEn: c.generada_en ?? "",
+      })),
+      creadaEn: l.creada_en ?? "",
+    };
+  }
+
+  async getLiquidaciones(vendedorId?: number): Promise<import("@/domain/ports/AdminRepositoryPort").Liquidacion[]> {
+    const params = vendedorId ? { vendedor: vendedorId } : {};
+    const { data } = await httpClient.get<any>("/liquidaciones/", { params });
+    const raw = safeUnwrap<any>(data);
+    const items: any[] = Array.isArray(raw) ? raw : raw?.results ?? [];
+    return items.map((l) => this._mapLiquidacion(l));
+  }
+
+  async getComisionesPendientes(vendedorId?: number): Promise<import("@/domain/ports/AdminRepositoryPort").ComisionItem[]> {
+    const params: Record<string, any> = { estado: "PENDIENTE" };
+    if (vendedorId) params.vendedor = vendedorId;
+    const { data } = await httpClient.get<any>("/comisiones/", { params });
+    const raw = safeUnwrap<any>(data);
+    const items: any[] = Array.isArray(raw) ? raw : raw?.results ?? [];
+    return items.map((c: any) => ({
+      id: c.id,
+      pedidoId: c.pedido_id ?? c.pedido ?? 0,
+      vendedorId: typeof c.vendedor === "object" ? c.vendedor?.id : c.vendedor,
+      cantidadPares: Number(c.cantidad_pares ?? 0),
+      montoPorPar: Number(c.monto_por_par ?? 4),
+      monto: Number(c.monto ?? 0),
+      estado: c.estado ?? "PENDIENTE",
+      generadaEn: c.generada_en ?? "",
+    }));
+  }
+
+  async marcarComisionLiquidada(comisionId: number): Promise<{ id: number; estado: string }> {
+    try {
+      const { data } = await httpClient.post<any>(`/comisiones/${comisionId}/marcar-liquidada/`);
+      const raw = safeUnwrap<any>(data);
+      return { id: raw.id ?? comisionId, estado: raw.estado ?? "LIQUIDADA" };
+    } catch {
+      throw new Error("No se pudo marcar la comisión como liquidada.");
+    }
+  }
+
+  async assignSellerToOrder(orderId: number, vendedorId: number): Promise<any> {
+    try {
+      const { data } = await httpClient.post<any>(`/pedidos/${orderId}/asignar-vendedor/`, { vendedor_id: vendedorId });
+      return this._mapLiquidacion(safeUnwrap(data));
+    } catch {
+      throw new Error("No se pudo asignar el vendedor al pedido.");
+    }
+  }
+
+  async generarLiquidacion(vendedorId: number, anio: number, mes: number): Promise<import("@/domain/ports/AdminRepositoryPort").Liquidacion> {
+    const { data } = await httpClient.post<any>("/liquidaciones/generar/", {
+      vendedor_id: vendedorId,
+      anio,
+      mes,
+    });
+    return this._mapLiquidacion(safeUnwrap(data));
+  }
+
+  async marcarLiquidacionPagada(liquidacionId: number, comprobante: File): Promise<import("@/domain/ports/AdminRepositoryPort").Liquidacion> {
+    const fd = new FormData();
+    fd.append("comprobante_pago", comprobante);
+    const { data } = await httpClient.post<any>(`/liquidaciones/${liquidacionId}/marcar-pagada/`, fd);
+    return this._mapLiquidacion(safeUnwrap(data));
   }
 
   async getCampaigns(): Promise<EmailCampaign[]> {

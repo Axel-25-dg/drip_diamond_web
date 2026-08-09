@@ -18,7 +18,9 @@ export interface ProductListDTO {
   id: number;
   nombre: string;
   marca: string | { id: number; nombre: string };
+  marca_id?: number;
   categoria: string | { id: number; nombre: string };
+  categoria_id?: number;
   precio_base: string | number;
   precio_oferta?: string | number | null;
   imagen_principal: string | null;

@@ -4,7 +4,8 @@ import { useCases } from "@/infrastructure/factories/useCases.factory";
 import type { ProductSummary } from "@/domain/entities/Product";
 import { Button } from "@/presentation/components/ui/Button";
 import { Badge } from "@/presentation/components/ui/Badge";
-import { formatCurrency, resolveMediaUrl } from "@/presentation/utils/format";
+import { ProductThumbnail } from "@/presentation/components/ui/ProductThumbnail";
+import { formatCurrency } from "@/presentation/utils/format";
 import { toast } from "sonner";
 import { Plus, Package, Search, ArrowLeft, Trash2 } from "lucide-react";
 
@@ -224,7 +225,6 @@ export default function AdminProductsPage() {
               </thead>
               <tbody>
                 {filtered.map((p, idx) => {
-                  const img = resolveMediaUrl(p.imagenPrincipal);
                   const delay = `${Math.min(idx * 30, 300)}ms`;
                   return (
                     <tr
@@ -246,17 +246,11 @@ export default function AdminProductsPage() {
                             }}
                           >
                             <div className="h-full w-full overflow-hidden rounded-[10px] bg-surf">
-                              {img ? (
-                                <img
-                                  src={img}
-                                  alt={p.nombre}
-                                  className="h-full w-full object-cover"
-                                />
-                              ) : (
-                                <div className="flex h-full w-full items-center justify-center font-display text-xs text-muted-t">
-                                  DD
-                                </div>
-                              )}
+                              <ProductThumbnail
+                                productId={p.id}
+                                imagenPrincipal={p.imagenPrincipal}
+                                nombre={p.nombre}
+                              />
                             </div>
                           </div>
                           <div>

@@ -14,6 +14,8 @@ export interface User {
   apellido: string;
   correo: string;
   telefono: string;
+  direccion?: string | null;
+  ciudad?: string | null;
   rol: UserRole;
   username?: string;
   fotoPerfilUrl?: string | null;
@@ -47,6 +49,8 @@ export interface RegisterPayload {
   apellido: string;
   correo: string;
   telefono: string;
+  direccion?: string;
+  ciudad?: string;
   password: string;
   rol?: string;
 }
@@ -61,6 +65,8 @@ export interface UpdateProfilePayload {
   apellido?: string;
   telefono?: string;
   fotoPerfilUrl?: string | null;
+  direccion?: string | null;
+  ciudad?: string | null;
 }
 
 export interface PaymentProof {

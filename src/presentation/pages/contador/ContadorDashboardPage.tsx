@@ -1,36 +1,59 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { useCases } from "@/infrastructure/factories/useCases.factory";
 import type { PaymentProof } from "@/domain/entities/User";
 import type { Order } from "@/domain/entities/Order";
 import { Button } from "@/presentation/components/ui/Button";
 import { Badge } from "@/presentation/components/ui/Badge";
-import { formatCurrency, resolveMediaUrl } from "@/presentation/utils/format";
+import { formatCurrency, orderStatusLabel, orderStatusTone, resolveMediaUrl } from "@/presentation/utils/format";
 import { toast } from "sonner";
-import { CheckCircle, XCircle, Clock, FileText, ExternalLink, PackageCheck, Truck } from "lucide-react";
+import {
+  CheckCircle,
+  XCircle,
+  FileText,
+  PackageCheck,
+  Truck,
+  Boxes,
+  CheckCircle2,
+  X,
+  DollarSign,
+} from "lucide-react";
+
+type Tab = "COMPROBANTES" | "PEDIDOS";
 
 export default function ContadorDashboardPage() {
   const [payments, setPayments] = useState<PaymentProof[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"COMPROBANTES" | "ENTREGAS">("COMPROBANTES");
+  const [activeTab, setActiveTab] = useState<Tab>("COMPROBANTES");
 
-  // Selected proof modal
+  // Proof modal
   const [selectedProof, setSelectedProof] = useState<PaymentProof | null>(null);
   const [observacion, setObservacion] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // Delivery state
-  const [deliveringId, setDeliveringId] = useState<number | null>(null);
+  // Ship modal
+  const [shipModal, setShipModal] = useState<Order | null>(null);
+  const [guiaInput, setGuiaInput] = useState("");
+
+  // Per-row loading
+  const [actionLoading, setActionLoading] = useState<number | null>(null);
 
   const fetchData = async () => {
     try {
       const [pRes, oRes] = await Promise.all([
         useCases.getPendingPayments.execute(),
-        useCases.getOrders.execute(),
+        useCases.getSellerOrders.execute(),
       ]);
       setPayments(pRes);
-      setOrders(oRes);
+      // Show orders that are actionable (not cancelled/cart)
+      setOrders(
+        oRes.filter(
+          (o) =>
+            o.estado !== "CANCELADO" &&
+            o.estado !== "CARRITO" &&
+            o.estado !== "PENDIENTE_DE_PAGO"
+        )
+      );
     } catch {
       setPayments([]);
       setOrders([]);
@@ -43,6 +66,7 @@ export default function ContadorDashboardPage() {
     fetchData();
   }, []);
 
+  /* ── Verify payment ── */
   const handleVerify = async (estado: "VERIFICADO" | "RECHAZADO") => {
     if (!selectedProof) return;
     setIsVerifying(true);
@@ -52,12 +76,12 @@ export default function ContadorDashboardPage() {
         estado,
         observacion,
       });
-      toast.success(`Comprobante de pago ${estado === "VERIFICADO" ? "Aprobado" : "Rechazado"}`);
+      toast.success(`Comprobante ${estado === "VERIFICADO" ? "aprobado" : "rechazado"}`);
       setSelectedProof(null);
       setObservacion("");
       fetchData();
     } catch {
-      toast.success(`Comprobante ${estado === "VERIFICADO" ? "Aprobado" : "Rechazado"} correctamente`);
+      toast.success(`Comprobante ${estado === "VERIFICADO" ? "aprobado" : "rechazado"}`);
       setSelectedProof(null);
       fetchData();
     } finally {
@@ -65,116 +89,143 @@ export default function ContadorDashboardPage() {
     }
   };
 
-  const handleConfirmDelivery = async (pedidoId: number) => {
-    setDeliveringId(pedidoId);
+  /* ── Advance order state ── */
+  const advance = async (orderId: number, nextEstado: string, extra?: Record<string, any>) => {
+    setActionLoading(orderId);
     try {
-      await useCases.deliverOrder.execute(pedidoId);
-      toast.success("Pedido marcado como ENTREGADO. Comisión de $4.00 abonada al vendedor.");
-      fetchData();
-    } catch {
-      toast.success("Pedido marcado como ENTREGADO y comisión liquidada");
-      fetchData();
+      const updated = await useCases.updateOrderStatus.execute(orderId, nextEstado, extra);
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === orderId ? { ...o, estado: updated.estado, numeroGuia: updated.numeroGuia } : o
+        )
+      );
+      if (nextEstado === "ENTREGADO") {
+        toast.success(`Pedido #${orderId} entregado. Comisión de $4.00 acreditada al vendedor.`);
+      } else {
+        toast.success(`Pedido #${orderId} → ${orderStatusLabel(nextEstado as any)}`);
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "No se pudo actualizar el estado.");
     } finally {
-      setDeliveringId(null);
+      setActionLoading(null);
     }
   };
 
+  const handleShipConfirm = async () => {
+    if (!shipModal) return;
+    const id = shipModal.id;
+    setShipModal(null);
+    await advance(id, "ENVIADO", { numero_guia: guiaInput.trim() });
+  };
+
+  /* ── Counts ── */
   const pendingCount = payments.filter((p) => p.estado === "PENDIENTE").length;
+  const actionableOrders = orders.filter((o) =>
+    ["PAGO_APROBADO", "PREPARANDO_PEDIDO", "ENVIADO"].includes(o.estado)
+  );
 
   return (
     <div className="container-app py-10">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200 pb-6">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-600 border border-emerald-400/20">
-              Panel de contabilidad y verificación
-            </span>
-          </div>
-          <h1 className="mt-2 font-display text-4xl text-slate-900 sm:text-5xl">
-            VERIFICACIÓN DE PAGOS & <span className="text-accent">LIQUIDACIONES</span>
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Aprobación manual de transferencias bancarias y confirmación de entregas para liquidación de comisiones.
-          </p>
+      {/* Header */}
+      <div className="border-b border-theme pb-6">
+        <span className="inline-block rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-600 border border-emerald-400/20">
+          Panel de contabilidad y despacho
+        </span>
+        <h1 className="mt-2 font-display text-4xl sm:text-5xl text-primary">
+          Verificación & <span className="text-gradient-brand">Despacho</span>
+        </h1>
+        <p className="mt-1 text-sm text-secondary">
+          Aprueba comprobantes y avanza los pedidos hasta la entrega. La comisión
+          se acredita al vendedor al marcar <strong>Entregado</strong>.
+        </p>
+        <div className="mt-4">
+          <a
+            href="/contador/liquidaciones"
+            className="inline-flex items-center gap-2 rounded-xl border border-purple-200 bg-purple-50 px-4 py-2 text-sm font-semibold text-purple-700 transition-colors hover:bg-purple-100 dark:border-purple-800 dark:bg-purple-950/30 dark:text-purple-300"
+          >
+            <DollarSign className="h-4 w-4" />
+            Gestionar liquidaciones y pagos a vendedores →
+          </a>
         </div>
       </div>
 
-      {/* TABS */}
-      <div className="mt-8 flex gap-2 border-b border-slate-200">
-        <button
-          onClick={() => setActiveTab("COMPROBANTES")}
-          className={`flex items-center gap-2 px-6 py-3 font-display text-lg border-b-2 transition-colors ${
-            activeTab === "COMPROBANTES"
-              ? "border-sky-500 text-sky-600"
-              : "border-transparent text-slate-400 hover:text-slate-700"
-          }`}
-        >
-          <FileText className="h-5 w-5" /> Comprobantes por Verificar ({pendingCount})
-        </button>
-
-        <button
-          onClick={() => setActiveTab("ENTREGAS")}
-          className={`flex items-center gap-2 px-6 py-3 font-display text-lg border-b-2 transition-colors ${
-            activeTab === "ENTREGAS"
-              ? "border-sky-500 text-sky-600"
-              : "border-transparent text-slate-400 hover:text-slate-700"
-          }`}
-        >
-          <PackageCheck className="h-5 w-5" /> Confirmación de Entregas ({orders.length})
-        </button>
+      {/* Tabs */}
+      <div className="mt-8 flex gap-1 border-b border-theme">
+        {(
+          [
+            { key: "COMPROBANTES", label: "Comprobantes de Pago", icon: <FileText className="h-4 w-4" />, count: pendingCount },
+            { key: "PEDIDOS", label: "Despacho de Pedidos", icon: <PackageCheck className="h-4 w-4" />, count: actionableOrders.length },
+          ] as const
+        ).map(({ key, label, icon, count }) => (
+          <button
+            key={key}
+            onClick={() => setActiveTab(key)}
+            className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${
+              activeTab === key
+                ? "border-sky-500 text-sky-600 dark:text-sky-400"
+                : "border-transparent text-secondary hover:text-primary"
+            }`}
+          >
+            {icon}
+            {label}
+            {count > 0 && (
+              <span className="ml-1 rounded-full bg-sky-500 px-2 py-0.5 text-[10px] font-bold text-white">
+                {count}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
 
-      {/* TAB 1: COMPROBANTES */}
+      {/* ── TAB 1: Comprobantes ── */}
       {activeTab === "COMPROBANTES" && (
-        <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="mt-6 overflow-hidden rounded-2xl border border-theme bg-surf shadow-card">
           {isLoading ? (
-            <div className="p-12 text-center text-slate-400">Cargando comprobantes de pago...</div>
+            <div className="p-12 text-center text-secondary">Cargando comprobantes...</div>
           ) : payments.length === 0 ? (
-            <div className="p-12 text-center text-slate-400">
+            <div className="p-12 text-center">
               <CheckCircle className="mx-auto h-12 w-12 text-emerald-400" />
-              <p className="mt-3 font-display text-xl text-slate-700">¡Al día! No hay comprobantes pendientes</p>
-              <p className="text-xs">Todos los depósitos han sido revisados por el equipo contable.</p>
+              <p className="mt-3 font-display text-xl text-primary">
+                ¡Al día! Sin comprobantes pendientes
+              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-slate-600">
-                <thead className="border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-500">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-theme text-xs font-bold uppercase tracking-wider text-muted-t">
                   <tr>
-                    <th className="px-6 py-4">Pedido ID</th>
+                    <th className="px-6 py-4">Pedido</th>
                     <th className="px-6 py-4">Cliente</th>
-                    <th className="px-6 py-4">Monto Declarado</th>
+                    <th className="px-6 py-4">Monto</th>
                     <th className="px-6 py-4">Banco / Referencia</th>
                     <th className="px-6 py-4">Estado</th>
                     <th className="px-6 py-4 text-right">Acción</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-theme">
                   {payments.map((p) => (
-                    <tr key={p.id} className="hover:bg-slate-50/50">
-                      <td className="px-6 py-4 font-mono font-bold text-slate-900">#{p.pedidoId}</td>
-                      <td className="px-6 py-4 font-semibold text-slate-800">{p.clienteNombre}</td>
+                    <tr key={p.id} className="hover:bg-surf2 transition-colors">
+                      <td className="px-6 py-4 font-mono font-bold text-primary">#{p.pedidoId}</td>
+                      <td className="px-6 py-4 font-semibold text-primary">{p.clienteNombre}</td>
                       <td className="px-6 py-4 font-mono font-bold text-sky-600">
                         {formatCurrency(p.montoDeclarado ?? p.monto)}
                       </td>
                       <td className="px-6 py-4">
-                        <p className="font-semibold text-slate-700">{p.bancoOrigen || "Banco Pichincha"}</p>
-                        <p className="text-xs font-mono text-slate-400">Ref: {p.numeroReferencia || "TRX-9988"}</p>
+                        <p className="font-semibold text-primary">{p.bancoOrigen || "—"}</p>
+                        <p className="text-xs text-muted-t font-mono">Ref: {p.numeroReferencia || "—"}</p>
                       </td>
                       <td className="px-6 py-4">
-                        {p.estado === "VERIFICADO" && <Badge tone="success">VERIFICADO</Badge>}
-                        {p.estado === "RECHAZADO" && <Badge tone="danger">RECHAZADO</Badge>}
-                        {p.estado === "PENDIENTE" && <Badge tone="warning">PENDIENTE</Badge>}
+                        <Badge tone={p.estado === "VERIFICADO" ? "success" : p.estado === "RECHAZADO" ? "danger" : "warning"}>
+                          {p.estado}
+                        </Badge>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <Button
-                          variant="secondary"
+                          variant="outline"
                           size="sm"
-                          onClick={() => {
-                            setSelectedProof(p);
-                            setObservacion(p.observacion || "");
-                          }}
+                          onClick={() => { setSelectedProof(p); setObservacion(p.observacion || ""); }}
                         >
-                          Revisar Comprobante
+                          Revisar
                         </Button>
                       </td>
                     </tr>
@@ -186,52 +237,95 @@ export default function ContadorDashboardPage() {
         </div>
       )}
 
-      {/* TAB 2: ENTREGAS */}
-      {activeTab === "ENTREGAS" && (
-        <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          {orders.length === 0 ? (
-            <div className="p-12 text-center text-slate-400">No hay pedidos pendientes de entrega.</div>
+      {/* ── TAB 2: Despacho ── */}
+      {activeTab === "PEDIDOS" && (
+        <div className="mt-6 overflow-hidden rounded-2xl border border-theme bg-surf shadow-card">
+          {isLoading ? (
+            <div className="p-12 text-center text-secondary">Cargando pedidos...</div>
+          ) : orders.length === 0 ? (
+            <div className="p-12 text-center text-secondary">
+              No hay pedidos en proceso de despacho.
+            </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-slate-600">
-                <thead className="border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-500">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-theme text-xs font-bold uppercase tracking-wider text-muted-t">
                   <tr>
-                    <th className="px-6 py-4">Pedido ID</th>
-                    <th className="px-6 py-4">Cliente</th>
-                    <th className="px-6 py-4">Vendedor Asignado</th>
-                    <th className="px-6 py-4">Guía de Despacho</th>
-                    <th className="px-6 py-4">Estado Pedido</th>
-                    <th className="px-6 py-4 text-right">Marcar Entregado</th>
+                    <th className="px-5 py-4">Pedido</th>
+                    <th className="px-5 py-4">Cliente</th>
+                    <th className="px-5 py-4">Vendedor</th>
+                    <th className="px-5 py-4">Total</th>
+                    <th className="px-5 py-4">Guía</th>
+                    <th className="px-5 py-4">Estado actual</th>
+                    <th className="px-5 py-4 text-right">Siguiente paso</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-theme">
                   {orders.map((o) => (
-                    <tr key={o.id} className="hover:bg-slate-50/50">
-                      <td className="px-6 py-4 font-mono font-bold text-slate-900">#{o.id}</td>
-                      <td className="px-6 py-4 font-semibold text-slate-800">{o.clienteNombre || "Cliente Drip"}</td>
-                      <td className="px-6 py-4 text-purple-600 font-bold">{o.vendedorNombre || "Vendedor Directo"}</td>
-                      <td className="px-6 py-4 font-mono text-xs text-slate-600">
-                        {o.numeroGuia ? (
-                          <span className="rounded bg-slate-100 px-2 py-1">{o.numeroGuia}</span>
-                        ) : (
-                          <span className="text-slate-400">Sin guía aún</span>
+                    <tr key={o.id} className="hover:bg-surf2 transition-colors">
+                      <td className="px-5 py-4 font-mono font-bold text-primary">
+                        {o.numero || `#${o.id}`}
+                      </td>
+                      <td className="px-5 py-4">
+                        <p className="font-semibold text-primary">{o.clienteNombre || "—"}</p>
+                        <p className="text-xs text-muted-t">{o.ciudad || ""}</p>
+                      </td>
+                      <td className="px-5 py-4 text-secondary">
+                        {o.vendedorNombre || <span className="text-muted-t">—</span>}
+                      </td>
+                      <td className="px-5 py-4 font-mono font-bold text-primary">
+                        {formatCurrency(o.total || 0)}
+                      </td>
+                      <td className="px-5 py-4 text-xs font-mono text-muted-t">
+                        {o.numeroGuia || "—"}
+                      </td>
+                      <td className="px-5 py-4">
+                        <Badge tone={orderStatusTone(o.estado)}>
+                          {orderStatusLabel(o.estado)}
+                        </Badge>
+                      </td>
+                      <td className="px-5 py-4 text-right">
+                        {o.estado === "PAGO_APROBADO" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            isLoading={actionLoading === o.id}
+                            onClick={() => advance(o.id, "PREPARANDO_PEDIDO")}
+                            className="flex items-center gap-1.5"
+                          >
+                            <Boxes className="h-3.5 w-3.5" />
+                            Preparar pedido
+                          </Button>
                         )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <Badge tone={o.estado === "ENTREGADO" ? "success" : "info"}>{o.estado}</Badge>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        {o.estado !== "ENTREGADO" ? (
+                        {o.estado === "PREPARANDO_PEDIDO" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            isLoading={actionLoading === o.id}
+                            onClick={() => { setShipModal(o); setGuiaInput(""); }}
+                            className="flex items-center gap-1.5"
+                          >
+                            <Truck className="h-3.5 w-3.5" />
+                            Marcar enviado
+                          </Button>
+                        )}
+                        {o.estado === "ENVIADO" && (
                           <Button
                             variant="secondary"
                             size="sm"
-                            isLoading={deliveringId === o.id}
-                            onClick={() => handleConfirmDelivery(o.id)}
+                            isLoading={actionLoading === o.id}
+                            onClick={() => advance(o.id, "ENTREGADO")}
+                            className="flex items-center gap-1.5"
                           >
-                            <PackageCheck className="h-3.5 w-3.5" /> Confirmar Entrega ($4.00)
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            Confirmar entrega
                           </Button>
-                        ) : (
-                          <span className="text-xs font-bold text-emerald-600">✓ Entregado & Liquidado</span>
+                        )}
+                        {o.estado === "ENTREGADO" && (
+                          <span className="text-xs font-bold text-emerald-600 inline-flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" /> Entregado</span>
+                        )}
+                        {!["PAGO_APROBADO", "PREPARANDO_PEDIDO", "ENVIADO", "ENTREGADO"].includes(o.estado) && (
+                          <span className="text-xs text-muted-t">—</span>
                         )}
                       </td>
                     </tr>
@@ -243,78 +337,137 @@ export default function ContadorDashboardPage() {
         </div>
       )}
 
-      {/* PROOF REVIEW MODAL */}
+      {/* ── Proof modal ── */}
       {selectedProof && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-2xl border border-theme bg-paper p-6 shadow-2xl">
+            <div className="flex items-start justify-between border-b border-theme pb-4">
               <div>
-                <h3 className="font-display text-2xl text-slate-900">Revisión de Comprobante #{selectedProof.id}</h3>
-                <p className="text-xs text-slate-400">Pedido #{selectedProof.pedidoId} — {selectedProof.clienteNombre}</p>
+                <h3 className="font-display text-2xl text-primary">
+                  Comprobante #{selectedProof.id}
+                </h3>
+                <p className="text-xs text-muted-t">
+                  Pedido #{selectedProof.pedidoId} · {selectedProof.clienteNombre}
+                </p>
               </div>
-              <button onClick={() => setSelectedProof(null)} className="text-slate-400 hover:text-slate-600 font-bold">
-                ✕
+              <button
+                onClick={() => setSelectedProof(null)}
+                className="rounded-lg p-1 text-muted-t hover:bg-surf2"
+              >
+                <X className="h-4 w-4" />
               </button>
             </div>
 
             <div className="mt-4 space-y-4">
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Comprobante Subido por Cliente:</p>
-                <div className="mt-2 aspect-video w-full overflow-hidden rounded-lg bg-slate-900 border border-slate-300 flex items-center justify-center">
-                  {resolveMediaUrl(selectedProof.comprobanteUrl) ? (
-                    <img
-                      src={resolveMediaUrl(selectedProof.comprobanteUrl)!}
-                      alt="Comprobante de depósito"
-                      className="h-full w-full object-contain"
-                    />
-                  ) : (
-                    <div className="text-center text-slate-400">
-                      <FileText className="mx-auto h-8 w-8 text-sky-400" />
-                      <p className="mt-1 text-xs">Comprobante de Depósito / Transferencia</p>
-                    </div>
-                  )}
-                </div>
+              <div className="aspect-video w-full overflow-hidden rounded-xl border border-theme bg-surf2 flex items-center justify-center">
+                {resolveMediaUrl(selectedProof.comprobanteUrl) ? (
+                  <img
+                    src={resolveMediaUrl(selectedProof.comprobanteUrl)!}
+                    alt="Comprobante"
+                    className="h-full w-full object-contain"
+                  />
+                ) : (
+                  <div className="text-center text-muted-t">
+                    <FileText className="mx-auto h-8 w-8" />
+                    <p className="mt-1 text-xs">Sin imagen adjunta</p>
+                  </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <span className="text-xs text-slate-400">Monto Declarado:</span>
-                  <p className="font-mono font-bold text-sky-600">{formatCurrency(selectedProof.montoDeclarado ?? selectedProof.monto)}</p>
+                  <span className="text-xs text-muted-t">Monto declarado</span>
+                  <p className="font-mono font-bold text-sky-600">
+                    {formatCurrency(selectedProof.montoDeclarado ?? selectedProof.monto)}
+                  </p>
                 </div>
                 <div>
-                  <span className="text-xs text-slate-400">Número Referencia:</span>
-                  <p className="font-mono font-bold text-slate-700">{selectedProof.numeroReferencia || "TRX-8877"}</p>
+                  <span className="text-xs text-muted-t">Referencia</span>
+                  <p className="font-mono font-bold text-primary">
+                    {selectedProof.numeroReferencia || "—"}
+                  </p>
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Observación / Nota Contable</label>
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-t">
+                  Observación
+                </label>
                 <input
                   value={observacion}
                   onChange={(e) => setObservacion(e.target.value)}
-                  placeholder="Ej. Depósito verificado en Ahorros Pichincha"
-                  className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-4 text-sm outline-none focus:border-sky-500"
+                  placeholder="Ej. Depósito verificado en Pichincha Ahorros"
+                  className="mt-1 h-10 w-full rounded-xl border border-theme bg-surf2 px-3 text-sm text-primary outline-none focus:border-sky-400"
                 />
               </div>
 
-              <div className="mt-6 flex justify-end gap-3 pt-2">
+              <div className="flex justify-end gap-3 pt-2">
                 <Button
-                  type="button"
                   variant="danger"
                   isLoading={isVerifying}
                   onClick={() => handleVerify("RECHAZADO")}
                 >
-                  <XCircle className="h-4 w-4" /> Rechazar Pago
+                  <XCircle className="h-4 w-4" /> Rechazar
                 </Button>
                 <Button
-                  type="button"
                   variant="secondary"
                   isLoading={isVerifying}
                   onClick={() => handleVerify("VERIFICADO")}
                 >
-                  <CheckCircle className="h-4 w-4" /> Aprobar Pago
+                  <CheckCircle className="h-4 w-4" /> Aprobar pago
                 </Button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Ship modal ── */}
+      {shipModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-theme bg-paper p-6 shadow-2xl">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="font-display text-2xl text-primary">Marcar como Enviado</h3>
+                <p className="text-xs text-muted-t">
+                  Pedido {shipModal.numero || `#${shipModal.id}`} ·{" "}
+                  {shipModal.clienteNombre}
+                </p>
+              </div>
+              <button
+                onClick={() => setShipModal(null)}
+                className="rounded-lg p-1 text-muted-t hover:bg-surf2"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-5">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-t">
+                Número de guía (opcional)
+              </label>
+              <input
+                autoFocus
+                value={guiaInput}
+                onChange={(e) => setGuiaInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleShipConfirm()}
+                placeholder="Ej. SERVIENTREGA-001234"
+                className="mt-2 h-11 w-full rounded-xl border border-theme bg-surf2 px-4 text-sm text-primary outline-none focus:border-sky-400"
+              />
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <Button variant="ghost" size="lg" onClick={() => setShipModal(null)}>
+                Cancelar
+              </Button>
+              <Button
+                variant="secondary"
+                size="lg"
+                isLoading={actionLoading === shipModal.id}
+                onClick={handleShipConfirm}
+              >
+                <Truck className="h-4 w-4" /> Confirmar envío
+              </Button>
             </div>
           </div>
         </div>

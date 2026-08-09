@@ -12,6 +12,8 @@ interface RegisterForm {
   apellido: string;
   correo: string;
   telefono: string;
+  direccion?: string;
+  ciudad?: string;
   password: string;
   confirmPassword: string;
 }
@@ -38,6 +40,8 @@ export default function RegisterPage() {
         apellido: form.apellido,
         correo: form.correo,
         telefono: form.telefono,
+        direccion: form.direccion,
+        ciudad: form.ciudad,
         password: form.password,
       });
       toast.success("Cuenta creada. Ahora inicia sesión.");
@@ -67,6 +71,18 @@ export default function RegisterPage() {
           placeholder="09XXXXXXXX"
           error={errors.telefono?.message}
           {...register("telefono", { required: "Requerido" })}
+        />
+        <Input
+          label="Dirección exacta"
+          placeholder="Av. Amazonas y Naciones Unidas"
+          error={errors.direccion?.message}
+          {...register("direccion")}
+        />
+        <Input
+          label="Ciudad"
+          placeholder="Quito"
+          error={errors.ciudad?.message}
+          {...register("ciudad")}
         />
         <Input
           label="Contraseña"

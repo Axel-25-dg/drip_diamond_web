@@ -9,6 +9,39 @@ export function formatDate(value?: string): string {
   return new Intl.DateTimeFormat("es-EC", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
+export function formatAddressForDisplay(value: unknown): string {
+  if (value == null || value === "") return "";
+
+  if (typeof value === "string") return value.trim();
+
+  if (Array.isArray(value)) {
+    return value
+      .filter((item) => item != null && item !== "")
+      .map((item) => String(item).trim())
+      .join(" · ");
+  }
+
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const parts = [
+      record.direccion_formateada,
+      record.direccion,
+      record.calle,
+      record.referencia_adicional,
+      record.referencia,
+      record.ciudad,
+      record.provincia,
+    ]
+      .filter((item): item is string => typeof item === "string" && item.trim() !== "")
+      .map((item) => item.trim());
+
+    if (parts.length > 0) return parts.join(" · ");
+    return JSON.stringify(record);
+  }
+
+  return String(value).trim();
+}
+
 const STATUS_LABELS: Record<OrderStatus, string> = {
   CARRITO: "En carrito",
   PENDIENTE_DE_PAGO: "Pendiente de pago",

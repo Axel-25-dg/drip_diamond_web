@@ -27,6 +27,7 @@ export interface ProductVariant {
   color: string;
   stock: number;
   sku?: string | null;
+  pesoKg?: number | null;
 }
 
 export type ProductStatus = "activo" | "agotado" | "inactivo" | string;

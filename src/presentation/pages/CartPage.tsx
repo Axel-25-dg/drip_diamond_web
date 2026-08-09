@@ -13,6 +13,7 @@ export default function CartPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Always re-fetch when entering the cart page to get the latest state
     fetchCart().catch((err: any) =>
       toast.error(err?.message || "No se pudo cargar tu carrito.")
     );

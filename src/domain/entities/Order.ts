@@ -83,7 +83,14 @@ export interface CreateOrderPayload {
   tipoEntrega?: "DOMICILIO" | "RETIRO_LOCAL";
 }
 
+export interface UploadComprobanteMetadata {
+  bancoOrigen?: string;
+  numeroReferencia?: string;
+  montoDeclarado?: number | null;
+}
+
 export interface UploadComprobantePayload {
   pedidoId: number;
   archivo: File;
+  metadata?: UploadComprobanteMetadata;
 }
