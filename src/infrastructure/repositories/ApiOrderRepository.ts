@@ -24,18 +24,23 @@ function looksLikeSeller(item: any): boolean {
   const role = normalizeUserRole(
     item?.rol ?? item?.role ?? item?.usuario?.rol ?? item?.usuario?.role ?? item?.user?.rol ?? item?.user?.role
   );
-  return (
-    role === "vendedor" ||
-    Boolean(
-      item?.perfil_vendedor ||
-      item?.perfilVendedor ||
-      item?.es_vendedor ||
-      item?.is_vendedor ||
-      item?.vendedor ||
-      item?.tipo === "VENDEDOR" ||
-      item?.tipo === "vendedor"
-    )
+
+  const hasSellerShape = Boolean(
+    item?.perfil_vendedor ||
+    item?.perfilVendedor ||
+    item?.es_vendedor ||
+    item?.is_vendedor ||
+    item?.vendedor ||
+    item?.tipo === "VENDEDOR" ||
+    item?.tipo === "vendedor"
   );
+
+  const hasBasicUserShape = Boolean(
+    item?.id &&
+    (item?.nombre || item?.apellido || item?.correo || item?.email || item?.username)
+  );
+
+  return role === "vendedor" || hasSellerShape || hasBasicUserShape;
 }
 
 function normalizeSellerItem(item: any): Seller | null {
@@ -86,7 +91,7 @@ function normalizeSellerItem(item: any): Seller | null {
     item.vendedor?.email ||
     "";
 
-  if (!id && !nombre && !apellido && !correo) return null;
+  if (!id) return null;
 
   return {
     id: Number(id) || 0,
@@ -99,7 +104,6 @@ function normalizeSellerItem(item: any): Seller | null {
 export class ApiOrderRepository implements OrderRepositoryPort {
   async createOrder(payload: CreateOrderPayload): Promise<Order> {
     const body: Record<string, any> = {
-      vendedor: payload.vendedorId ?? null,
       vendedor_id: payload.vendedorId ?? null,
       tipo_entrega: payload.tipoEntrega ?? "DOMICILIO",
       direccion_envio: payload.direccionEnvio,
@@ -135,32 +139,25 @@ export class ApiOrderRepository implements OrderRepositoryPort {
   }
 
   async getActiveSellers(): Promise<Seller[]> {
-    const endpoints = [
-      "/usuarios/vendedores/activos/",
-      "/usuarios/vendedores/",
-      "/usuarios/?rol=VENDEDOR",
-      "/usuarios/?rol=vendedor",
-      "/usuarios/",
-    ];
+    try {
+      const { data } = await httpClient.get<any>("/usuarios/vendedores/activos/");
+      const payload = safeUnwrap<any>(data);
+      const list = toList<any>(payload);
+      const sellers = list
+        .map((item: any) => normalizeSellerItem(item))
+        .filter((item): item is Seller => Boolean(item));
 
-    for (const endpoint of endpoints) {
-      try {
-        const { data } = await httpClient.get<any>(endpoint);
-        const payload = safeUnwrap<any>(data);
-        const list = toList<any>(payload);
-        const sellers = list
-          .map((item: any) => normalizeSellerItem(item))
-          .filter((item): item is Seller => Boolean(item));
-
-        if (sellers.length > 0) {
-          return sellers;
-        }
-      } catch {
-        // Intenta con la siguiente ruta si esta no está disponible.
+      if (import.meta.env.DEV) {
+        console.debug("[getActiveSellers] /usuarios/vendedores/activos/", "resultCount", list.length, "normalized", sellers.length, "payload", payload);
       }
-    }
 
-    return [];
+      return sellers;
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.warn("[getActiveSellers] failed fetching /usuarios/vendedores/activos/", error);
+      }
+      throw error;
+    }
   }
 
   async getShippingZones(): Promise<ShippingZone[]> {

@@ -56,23 +56,25 @@ export class ApiAuthRepository implements AuthRepositoryPort {
   }
 
   async updateProfile(payload: UpdateProfilePayload): Promise<User> {
-    const body: Record<string, any> = {};
-    if (payload.nombre !== undefined) body.nombre = payload.nombre;
-    if (payload.apellido !== undefined) body.apellido = payload.apellido;
-    if (payload.telefono !== undefined) body.telefono = payload.telefono;
-    if (payload.fotoPerfilUrl !== undefined) body.foto_perfil_url = payload.fotoPerfilUrl;
-    if (payload.direccion !== undefined) body.direccion = payload.direccion;
-    if (payload.ciudad !== undefined) body.ciudad = payload.ciudad;
-    const { data } = await httpClient.patch<any>("/usuarios/me/", body);
+    // Use FormData so the endpoint (MultiPartParser) accepts it regardless of content
+    const fd = new FormData();
+    if (payload.nombre !== undefined) fd.append("nombre", payload.nombre);
+    if (payload.apellido !== undefined) fd.append("apellido", payload.apellido);
+    if (payload.telefono !== undefined) fd.append("telefono", payload.telefono);
+    if (payload.fotoPerfilUrl !== undefined && payload.fotoPerfilUrl !== null)
+      fd.append("foto_perfil_url", payload.fotoPerfilUrl);
+    const { data } = await httpClient.patch<any>("/usuarios/me/", fd);
     const result = safeUnwrap<any>(data);
     const userDTO = result?.usuario || result?.user || result;
     return toUser(userDTO);
   }
 
   async uploadAvatar(file: File): Promise<User> {
-    const formData = new FormData();
-    formData.append("foto_perfil", file);
-    const { data } = await httpClient.patch<any>("/usuarios/me/", formData);
+    const fd = new FormData();
+    fd.append("foto_perfil", file);
+    // Also try common field names the backend might expect
+    fd.append("avatar", file);
+    const { data } = await httpClient.patch<any>("/usuarios/me/", fd);
     const result = safeUnwrap<any>(data);
     const userDTO = result?.usuario || result?.user || result;
     return toUser(userDTO);

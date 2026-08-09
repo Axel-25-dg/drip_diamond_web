@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Search, CreditCard, MessageSquare } from "lucide-react";
+import { Search, CreditCard, MessageSquare, UserCheck, AlertCircle } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -26,11 +26,14 @@ interface CheckoutForm {
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const { cart, fetchCart } = useCartStore();
+
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [zones, setZones] = useState<ShippingZone[]>([]);
   const [sellerSearch, setSellerSearch] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [sellersLoading, setSellersLoading] = useState(true);
+  const [sellersError, setSellersError] = useState(false);
 
   const {
     register,
@@ -49,20 +52,33 @@ export default function CheckoutPage() {
   });
 
   const location = useLocation();
-  const query = new URLSearchParams(location.search);
-  const refParam = query.get("ref");
+  const refParam = new URLSearchParams(location.search).get("ref");
 
+  // ── Load cart + zones (independent of sellers) ──────────────────────────
   useEffect(() => {
-    Promise.all([useCases.getActiveSellers.execute(), useCases.getShippingZones.execute(), fetchCart()])
-      .then(([s, z]) => {
+    Promise.all([
+      useCases.getShippingZones.execute(),
+      fetchCart(),
+    ])
+      .then(([z]) => setZones(z))
+      .catch(() => toast.error("No se pudo cargar la información de envío."))
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  // ── Load active sellers — separate request with JWT auto-injected ─────────
+  useEffect(() => {
+    setSellersLoading(true);
+    setSellersError(false);
+
+    useCases.getActiveSellers
+      .execute()
+      .then((s) => {
         setSellers(s);
-        setZones(z);
-        // Auto-select seller from ref param if present
+
+        // Auto-select seller from ?ref= URL param
         if (refParam && s.length > 0) {
           const m = refParam.match(/(\d+)$/);
-          let selId: number | null = null;
-          if (m) selId = Number(m[1]);
-          // try find by id or by code-containing string
+          const selId = m ? Number(m[1]) : null;
           const found = selId
             ? s.find((x) => x.id === selId)
             : s.find(
@@ -73,11 +89,15 @@ export default function CheckoutPage() {
               );
           if (found) {
             setValue("vendedorId", String(found.id));
+            toast.info(`Vendedor ${found.nombre} ${found.apellido} preseleccionado.`);
           }
         }
       })
-      .catch(() => toast.error("No se pudo cargar la información de checkout."))
-      .finally(() => setIsLoading(false));
+      .catch(() => {
+        setSellersError(true);
+        // Non-fatal: user can still checkout without a seller
+      })
+      .finally(() => setSellersLoading(false));
   }, []);
 
   const provincia = watch("provincia");
@@ -85,20 +105,22 @@ export default function CheckoutPage() {
 
   const shippingCost = useMemo(() => {
     const match = zones.find(
-      (z) => z.provincia.toLowerCase() === (provincia || "").toLowerCase() && z.ciudad.toLowerCase() === (ciudad || "").toLowerCase()
+      (z) =>
+        z.provincia.toLowerCase() === (provincia || "").toLowerCase() &&
+        z.ciudad.toLowerCase() === (ciudad || "").toLowerCase()
     );
     return match?.costo ?? null;
   }, [zones, provincia, ciudad]);
 
   const subtotal = cart?.subtotal ?? 0;
   const total = subtotal + (shippingCost ?? 0);
+
   const filteredSellers = useMemo(() => {
-    const query = sellerSearch.trim().toLowerCase();
-    if (!query) return sellers;
-    return sellers.filter((seller) => {
-      const values = [seller.nombre, seller.apellido, seller.correo].filter(Boolean).join(" ").toLowerCase();
-      return values.includes(query);
-    });
+    const q = sellerSearch.trim().toLowerCase();
+    if (!q) return sellers;
+    return sellers.filter((s) =>
+      [s.nombre, s.apellido, s.correo].filter(Boolean).join(" ").toLowerCase().includes(q)
+    );
   }, [sellerSearch, sellers]);
 
   const onSubmit = async (form: CheckoutForm) => {
@@ -114,6 +136,7 @@ export default function CheckoutPage() {
         provincia: form.provincia,
         ciudad: form.ciudad,
         telefonoContacto: form.telefonoContacto,
+        // vendedorId is sent as number or null
         vendedorId: form.vendedorId ? Number(form.vendedorId) : null,
         notas: form.notas || form.referenciaAdicional,
         referenciaAdicional: form.referenciaAdicional || form.notas,
@@ -136,6 +159,8 @@ export default function CheckoutPage() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="mt-8 grid gap-10 lg:grid-cols-[1fr_360px]">
         <div className="flex flex-col gap-8">
+
+          {/* ── Shipping data ── */}
           <section>
             <h2 className="mb-4 font-display text-xl">Datos de envío</h2>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -143,7 +168,7 @@ export default function CheckoutPage() {
                 <label className="mb-2 block text-sm font-medium text-ink/70">Tipo de entrega</label>
                 <select
                   {...register("tipoEntrega", { required: "Requerido" })}
-                  className="h-12 w-full rounded-xl border-2 border-ink/15 bg-white px-4 text-sm outline-none focus:border-ink"
+                  className="h-12 w-full rounded-xl border-2 border-ink/15 bg-white px-4 text-sm outline-none focus:border-ink dark:bg-slate-900 dark:border-slate-700 dark:text-white"
                 >
                   <option value="DOMICILIO">Domicilio</option>
                   <option value="RETIRO_LOCAL">Retiro local</option>
@@ -172,7 +197,6 @@ export default function CheckoutPage() {
                 label="Referencia adicional"
                 placeholder="Casa azul, junto a la panadería"
                 className="sm:col-span-2"
-                error={errors.referenciaAdicional?.message}
                 {...register("referenciaAdicional")}
               />
               <Input
@@ -184,50 +208,77 @@ export default function CheckoutPage() {
             </div>
           </section>
 
+          {/* ── Seller selector ── */}
           <section>
-            <h2 className="mb-4 font-display text-xl">Vendedor</h2>
-            <p className="mb-3 text-sm text-ink/60">
-              Si alguien te atendió, selecciónalo — así recibe su comisión. Si no, elige "Ningún vendedor".
+            <h2 className="mb-1 font-display text-xl flex items-center gap-2">
+              <UserCheck className="h-5 w-5 text-sky-500" />
+              Vendedor
+            </h2>
+            <p className="mb-4 text-sm text-ink/60">
+              Si alguien te atendió, selecciónalo para que reciba su comisión ($4 por par entregado).
             </p>
-            <div className="max-w-xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input
-                  value={sellerSearch}
-                  onChange={(e) => setSellerSearch(e.target.value)}
-                  placeholder="Buscar vendedor por nombre o correo"
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm outline-none focus:border-sky-500"
-                />
-              </div>
 
-              <select
-                {...register("vendedorId")}
-                className="mt-3 h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-sky-500"
-              >
-                <option value="">Ningún vendedor</option>
-                {filteredSellers.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.nombre} {s.apellido} {s.correo ? `• ${s.correo}` : ""}
-                  </option>
-                ))}
-              </select>
+            <div className="max-w-xl rounded-2xl border border-theme bg-surf p-4 shadow-sm">
+              {sellersLoading ? (
+                <div className="flex items-center gap-2 py-3 text-sm text-muted-t">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-sky-400 border-t-transparent" />
+                  Cargando vendedores...
+                </div>
+              ) : sellersError ? (
+                <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  No se pudieron cargar los vendedores. Puedes continuar sin seleccionar uno.
+                </div>
+              ) : (
+                <>
+                  {/* Search box */}
+                  <div className="relative mb-3">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-t" />
+                    <input
+                      value={sellerSearch}
+                      onChange={(e) => setSellerSearch(e.target.value)}
+                      placeholder="Buscar por nombre o correo..."
+                      className="h-11 w-full rounded-xl border border-theme bg-surf2 pl-9 pr-3 text-sm text-primary placeholder:text-muted-t outline-none focus:border-sky-400"
+                    />
+                  </div>
 
-              {sellerSearch && filteredSellers.length === 0 && (
-                <p className="mt-2 text-xs text-slate-500">
-                  {sellers.length === 0 ? "No hay vendedores disponibles en este momento." : "No se encontraron vendedores con ese texto."}
-                </p>
-              )}
+                  {/* Select */}
+                  <select
+                    {...register("vendedorId")}
+                    className="h-12 w-full rounded-xl border border-theme bg-surf px-3 text-sm text-primary outline-none focus:border-sky-400 dark:bg-slate-900"
+                  >
+                    <option value="">— Ningún vendedor —</option>
+                    {filteredSellers.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.nombre} {s.apellido}{s.correo ? ` · ${s.correo}` : ""}
+                      </option>
+                    ))}
+                  </select>
 
-              {!sellerSearch && sellers.length === 0 && (
-                <p className="mt-2 text-xs text-slate-500">No hay vendedores disponibles en este momento.</p>
+                  {sellerSearch && filteredSellers.length === 0 && (
+                    <p className="mt-2 text-xs text-muted-t">
+                      No se encontraron vendedores con "{sellerSearch}".
+                    </p>
+                  )}
+                  {sellers.length === 0 && !sellerSearch && (
+                    <p className="mt-2 text-xs text-muted-t">
+                      No hay vendedores activos registrados en este momento.
+                    </p>
+                  )}
+                  {sellers.length > 0 && (
+                    <p className="mt-2 text-xs text-muted-t">
+                      {sellers.length} vendedor{sellers.length !== 1 ? "es" : ""} disponible{sellers.length !== 1 ? "s" : ""}
+                    </p>
+                  )}
+                </>
               )}
             </div>
           </section>
 
-          {/* ── DATOS BANCARIOS DE PAGO ── */}
-          <section className="rounded-3xl border border-sky-200 bg-white p-6 shadow-sm">
+          {/* ── Bank info ── */}
+          <section className="rounded-3xl border border-sky-200 bg-white p-6 shadow-sm dark:border-sky-900 dark:bg-slate-900">
             <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 text-lg shadow-sm">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 shadow-sm dark:bg-sky-950">
                 <CreditCard className="h-5 w-5" />
               </div>
               <div>
@@ -236,7 +287,7 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 rounded-2xl bg-slate-50 p-4 text-sm">
+            <div className="grid gap-3 sm:grid-cols-2 rounded-2xl bg-slate-50 p-4 text-sm dark:bg-slate-800">
               <div>
                 <span className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-ink/60">Banco</span>
                 <span className="mt-1 block font-semibold text-ink">Banco Pichincha</span>
@@ -246,41 +297,52 @@ export default function CheckoutPage() {
                 <span className="mt-1 block font-mono font-bold text-sky-600">2213521473</span>
               </div>
               <div className="sm:col-span-2">
-                <span className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-ink/60">Titular de la cuenta</span>
+                <span className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-ink/60">Titular</span>
                 <span className="mt-1 block font-semibold text-ink">Danny Alexander Guaman Pillajo</span>
               </div>
             </div>
 
-            <div className="mt-4 rounded-xl border border-sky-100 bg-sky-50 p-4 text-sm leading-relaxed">
+            <div className="mt-4 rounded-xl border border-sky-100 bg-sky-50 p-4 text-sm leading-relaxed dark:border-sky-900 dark:bg-sky-950/40">
               <p className="flex items-center gap-2 font-bold text-ink">
                 <MessageSquare className="h-4 w-4 text-sky-600" /> Pasos para confirmar tu pedido:
               </p>
               <ol className="mt-2 list-inside list-decimal space-y-1 text-ink/70">
                 <li>Realiza la transferencia del monto total a la cuenta indicada.</li>
-                <li>Sube el comprobante en la sección <strong>Mis pedidos</strong> y, adicionalmente, si fuiste atendido por un vendedor, envíale también el comprobante para su registro.</li>
-                <li>Si no fuiste atendido por ningún vendedor, sube el comprobante en <strong>Mis pedidos</strong> y, si lo deseas, envíalo por WhatsApp a <a href="https://wa.me/593999001471?text=Hola,%20adjunto%20mi%20comprobante%20de%20pago" target="_blank" rel="noreferrer" className="font-semibold text-sky-600 underline">+593999001471</a>.</li>
+                <li>Sube el comprobante en <strong>Mis pedidos</strong> después de confirmar.</li>
+                <li>Si deseas, envía también el comprobante por WhatsApp a{" "}
+                  <a
+                    href="https://wa.me/593999001471?text=Hola,%20adjunto%20mi%20comprobante%20de%20pago"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-semibold text-sky-600 underline"
+                  >
+                    +593 999 001 471
+                  </a>.
+                </li>
               </ol>
             </div>
           </section>
 
+          {/* ── Notes ── */}
           <section>
-            <h2 className="mb-4 font-display text-xl">Notas (opcional)</h2>
+            <h2 className="mb-3 font-display text-xl">Notas <span className="text-sm font-normal text-muted-t">(opcional)</span></h2>
             <textarea
               {...register("notas")}
               rows={3}
               placeholder="Indicaciones adicionales para tu pedido"
-              className="w-full rounded-xl border-2 border-ink/15 bg-white p-4 text-sm outline-none focus:border-ink"
+              className="w-full rounded-xl border-2 border-ink/15 bg-white p-4 text-sm outline-none focus:border-ink dark:bg-slate-900 dark:border-slate-700 dark:text-white"
             />
           </section>
         </div>
 
-        <aside className="h-fit rounded-2xl bg-white p-6">
+        {/* ── Order summary ── */}
+        <aside className="h-fit rounded-2xl bg-white p-6 shadow-sm dark:bg-slate-900">
           <h3 className="font-display text-xl">Resumen del pedido</h3>
           <ul className="mt-4 flex flex-col gap-2 text-sm">
             {cart?.items.map((item) => (
               <li key={item.id} className="flex justify-between text-ink/70">
                 <span className="truncate pr-3">
-                  {item.nombre} <span className="text-ink/40">x{item.cantidad}</span>
+                  {item.nombre} <span className="text-ink/40">×{item.cantidad}</span>
                 </span>
                 <span className="flex-shrink-0 font-medium">{formatCurrency(item.precioUnitario * item.cantidad)}</span>
               </li>
@@ -294,7 +356,7 @@ export default function CheckoutPage() {
             <div className="flex justify-between text-ink/60">
               <span>Envío</span>
               <span className="font-semibold text-ink">
-                {shippingCost != null ? formatCurrency(shippingCost) : "Se calcula con tu ciudad"}
+                {shippingCost != null ? formatCurrency(shippingCost) : "Según tu ciudad"}
               </span>
             </div>
             <div className="flex justify-between border-t border-ink/10 pt-2 text-base font-bold">
@@ -302,11 +364,34 @@ export default function CheckoutPage() {
               <span>{formatCurrency(total)}</span>
             </div>
           </div>
-          <Button type="submit" variant="secondary" size="lg" fullWidth className="mt-6" isLoading={isSubmitting}>
+
+          {/* Selected seller summary */}
+          {watch("vendedorId") && (
+            <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs dark:border-sky-900 dark:bg-sky-950/30">
+              <p className="font-semibold text-sky-700 dark:text-sky-300">
+                Vendedor seleccionado:
+              </p>
+              <p className="text-sky-600 dark:text-sky-400">
+                {sellers.find((s) => String(s.id) === watch("vendedorId"))
+                  ? `${sellers.find((s) => String(s.id) === watch("vendedorId"))!.nombre} ${sellers.find((s) => String(s.id) === watch("vendedorId"))!.apellido}`
+                  : `ID #${watch("vendedorId")}`}
+              </p>
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            variant="secondary"
+            size="lg"
+            fullWidth
+            className="mt-6"
+            isLoading={isSubmitting}
+            disabled={sellersLoading}
+          >
             Confirmar pedido
           </Button>
           <p className="mt-3 text-center text-xs text-ink/40">
-            Después de confirmar, subirás tu comprobante de pago para su verificación.
+            Después de confirmar, subirás tu comprobante de pago.
           </p>
         </aside>
       </form>
