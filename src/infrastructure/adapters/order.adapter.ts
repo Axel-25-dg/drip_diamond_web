@@ -230,6 +230,7 @@ export function toOrder(dto: OrderDTO): Order {
     items.reduce((acc, item) => acc + item.precioUnitario * item.cantidad, 0);
   const addressValue = dto.direccion_envio ?? dto.direccion_formateada ?? null;
   const clientName =
+    // New dedicated field from backend serializer
     (dto as any).cliente_nombre ||
     (dto as any).cliente?.nombre ||
     (dto as any).cliente?.primer_nombre ||
@@ -241,16 +242,19 @@ export function toOrder(dto: OrderDTO): Order {
       .filter(Boolean)
       .join(" ") ||
     null;
+  const addressObj = (typeof addressValue === "object" && addressValue !== null ? addressValue : null) as Record<string, any> | null;
+
   const telefono =
+    // Prefer phone stored in direccion_envio (entered at checkout)
+    addressObj?.telefono_contacto ||
+    (dto as any).cliente_telefono ||
     dto.telefono_contacto ||
     dto.telefono ||
     (dto as any).usuario?.telefono ||
     (dto as any).usuario?.celular ||
     (dto as any).cliente?.telefono ||
     (dto as any).cliente?.celular ||
-    (dto as any).cliente?.telefono_contacto ||
     "";
-  const addressObj = (typeof addressValue === "object" && addressValue !== null ? addressValue : null) as Record<string, any> | null;
   const ciudad =
     (dto as any).ciudad ||
     addressObj?.ciudad ||
@@ -259,6 +263,7 @@ export function toOrder(dto: OrderDTO): Order {
     (dto as any).usuario?.ciudad ||
     "";
   const provincia =
+    // First check the new dedicated provincia field from serializer
     (dto as any).provincia ||
     addressObj?.provincia ||
     addressObj?.province ||
@@ -285,6 +290,8 @@ export function toOrder(dto: OrderDTO): Order {
       resolveId((dto as any).vendedor?.user) ??
       null,
     vendedorNombre:
+      // New dedicated field from backend serializer
+      (dto as any).vendedor_nombre ||
       dto.vendedor_nombre ||
       (typeof (dto as any).vendedor === "object"
         ? `${(dto as any).vendedor?.primer_nombre || (dto as any).vendedor?.nombre || ""} ${(dto as any).vendedor?.primer_apellido || (dto as any).vendedor?.apellido || ""}`.trim()

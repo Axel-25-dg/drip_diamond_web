@@ -34,6 +34,7 @@ export default function CheckoutPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [sellersLoading, setSellersLoading] = useState(true);
   const [sellersError, setSellersError] = useState(false);
+  const [sellersLoadAttempt, setSellersLoadAttempt] = useState(0);
 
   const {
     register,
@@ -93,12 +94,16 @@ export default function CheckoutPage() {
           }
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        // Log para diagnóstico
+        if (import.meta.env.DEV) {
+          console.warn("[CheckoutPage] getActiveSellers error:", err);
+        }
         setSellersError(true);
         // Non-fatal: user can still checkout without a seller
       })
       .finally(() => setSellersLoading(false));
-  }, []);
+  }, [sellersLoadAttempt]);
 
   const provincia = watch("provincia");
   const ciudad = watch("ciudad");
@@ -225,9 +230,18 @@ export default function CheckoutPage() {
                   Cargando vendedores...
                 </div>
               ) : sellersError ? (
-                <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  No se pudieron cargar los vendedores. Puedes continuar sin seleccionar uno.
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    No se pudieron cargar los vendedores. Puedes continuar sin seleccionar uno.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSellersLoadAttempt((n) => n + 1)}
+                    className="self-start text-xs text-sky-600 underline hover:text-sky-800 dark:text-sky-400"
+                  >
+                    Reintentar
+                  </button>
                 </div>
               ) : (
                 <>
@@ -386,7 +400,7 @@ export default function CheckoutPage() {
             fullWidth
             className="mt-6"
             isLoading={isSubmitting}
-            disabled={sellersLoading}
+            disabled={isSubmitting}
           >
             Confirmar pedido
           </Button>

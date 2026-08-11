@@ -298,6 +298,20 @@ export class MarcarLiquidacionPagadaUseCase {
   }
 }
 
+export class GetResumenGlobalVendedoresUseCase {
+  constructor(private repo: AdminRepositoryPort) {}
+  execute() {
+    return this.repo.getResumenGlobalVendedores();
+  }
+}
+
+export class GetLiquidacionDetalleUseCase {
+  constructor(private repo: AdminRepositoryPort) {}
+  execute(liquidacionId: number) {
+    return this.repo.getLiquidacionDetalle(liquidacionId);
+  }
+}
+
 export class GetCampaignsUseCase {
   constructor(private repo: AdminRepositoryPort) {}
   execute() {

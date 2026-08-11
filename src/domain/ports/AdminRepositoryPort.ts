@@ -44,6 +44,20 @@ export interface Liquidacion {
   creadaEn: string;
 }
 
+/** Resumen por vendedor para la vista global de liquidaciones */
+export interface ResumenVendedor {
+  vendedorId: number;
+  vendedorNombre: string;
+  vendedorEmail: string;
+  totalParesMes: number;
+  totalComisionesMes: number;
+  totalComisionesHistorico: number;
+  liquidacionId: number | null;
+  liquidacionPagada: boolean;
+  fechaPago: string | null;
+  comprobantePagoUrl: string | null;
+}
+
 export interface AdminRepositoryPort {
   uploadImage(file: File, appLabel?: string, model?: string, objectId?: number): Promise<{ id: number; url: string }>;
 
@@ -97,6 +111,8 @@ export interface AdminRepositoryPort {
   getComisionesPendientes(vendedorId?: number): Promise<ComisionItem[]>;
   generarLiquidacion(vendedorId: number, anio: number, mes: number): Promise<Liquidacion>;
   marcarLiquidacionPagada(liquidacionId: number, comprobante: File): Promise<Liquidacion>;
+  getResumenGlobalVendedores(): Promise<ResumenVendedor[]>;
+  getLiquidacionDetalle(liquidacionId: number): Promise<Liquidacion>;
 
   // Email Campaigns
   getCampaigns(): Promise<EmailCampaign[]>;

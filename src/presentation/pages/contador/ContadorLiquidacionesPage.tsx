@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { Liquidacion } from "@/domain/ports/AdminRepositoryPort";
-import type { User } from "@/domain/entities/User";
+import type { ResumenVendedor, Liquidacion } from "@/domain/ports/AdminRepositoryPort";
 import { Button } from "@/presentation/components/ui/Button";
 import { Badge } from "@/presentation/components/ui/Badge";
 import { formatCurrency, resolveMediaUrl } from "@/presentation/utils/format";
@@ -13,142 +12,125 @@ import {
   ChevronUp,
   X,
   UploadCloud,
-  Users,
-  Download,
+  ExternalLink,
+  History,
 } from "lucide-react";
 import { useCases } from "@/infrastructure/factories/useCases.factory";
 
 const MESES = [
-  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+  "Enero","Febrero","Marzo","Abril","Mayo","Junio",
+  "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre",
 ];
 
+/** Devuelve true si hoy está en la ventana de pago: del día 26 al último día del mes */
+function enVentanaDePago(): boolean {
+  const hoy = new Date();
+  const dia = hoy.getDate();
+  const ultimoDia = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate();
+  return dia >= 26 && dia <= ultimoDia;
+}
+
+/** Mes y año actuales */
+function mesActual() {
+  const hoy = new Date();
+  return { mes: hoy.getMonth() + 1, anio: hoy.getFullYear() };
+}
+
 export default function ContadorLiquidacionesPage() {
-  const [liquidaciones, setLiquidaciones] = useState<Liquidacion[]>([]);
-  const [vendedores, setVendedores] = useState<User[]>([]);
+  const [vendedores, setVendedores] = useState<ResumenVendedor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [expanded, setExpanded] = useState<number | null>(null);
 
-  // Generate modal
-  const [genModal, setGenModal] = useState(false);
-  const [genVendedorId, setGenVendedorId] = useState<number | "">("");
-  const [genAnio, setGenAnio] = useState(new Date().getFullYear());
-  const [genMes, setGenMes] = useState(new Date().getMonth() + 1);
-  const [isGenerating, setIsGenerating] = useState(false);
-  // Orders without seller
-  const [ordersNoSeller, setOrdersNoSeller] = useState<any[]>([]);
-  const [noSellerModal, setNoSellerModal] = useState(false);
-  const [assigningOrder, setAssigningOrder] = useState<number | null>(null);
-  const [selectedSellerForAssign, setSelectedSellerForAssign] = useState<number | "">("");
+  // Historial de liquidaciones pagadas (tab aparte)
+  const [historial, setHistorial] = useState<Liquidacion[]>([]);
+  const [historialLoading, setHistorialLoading] = useState(false);
+  const [tab, setTab] = useState<"actual" | "historial">("actual");
 
-  // Pay modal
-  const [payModal, setPayModal] = useState<Liquidacion | null>(null);
+  // Modal detalle de ventas
+  const [detalleVendedor, setDetalleVendedor] = useState<{ nombre: string; liq: Liquidacion } | null>(null);
+  const [detalleLoading, setDetalleLoading] = useState(false);
+
+  // Modal pago
+  const [pagoVendedor, setPagoVendedor] = useState<ResumenVendedor | null>(null);
   const [isPaying, setIsPaying] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState("");
 
-  const load = async () => {
+  const ventana = enVentanaDePago();
+  const { mes, anio } = mesActual();
+
+  const loadVendedores = async () => {
+    setIsLoading(true);
     try {
-      const [lRes, vRes] = await Promise.all([
-        useCases.getLiquidaciones.execute(),
-        useCases.getAdminUsers.execute("VENDEDOR"),
-      ]);
-      setLiquidaciones(lRes);
-      setVendedores(vRes);
+      const data = await useCases.getResumenGlobalVendedores.execute();
+      setVendedores(data);
     } catch {
-      setLiquidaciones([]);
+      toast.error("No se pudo cargar el resumen de vendedores.");
+      setVendedores([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const loadOrdersNoSeller = async () => {
+  const loadHistorial = async () => {
+    setHistorialLoading(true);
     try {
-      const all = await useCases.getOrders.execute();
-      const noSeller = all.filter((o: any) => !o.vendedorId && o.estado === "ENTREGADO");
-      setOrdersNoSeller(noSeller);
+      const all = await useCases.getLiquidaciones.execute();
+      setHistorial(all.filter((l) => l.pagada));
     } catch {
-      setOrdersNoSeller([]);
-    }
-  };
-
-  useEffect(() => { load(); }, []);
-
-  useEffect(() => { loadOrdersNoSeller(); }, []);
-
-  const exportLiquidacionPDF = (liq: Liquidacion) => {
-    // Open a new window and print — user can choose "Save as PDF" in browser
-    const win = window.open("", "_blank");
-    if (!win) return;
-    const rows = (liq.comisiones ?? []).map((c) => `
-      <tr>
-        <td>#${c.pedidoId}</td>
-        <td>${c.cantidadPares}</td>
-        <td>${formatCurrency(c.montoPorPar)}</td>
-        <td>${formatCurrency(c.monto)}</td>
-      </tr>
-    `).join("\n");
-    const html = `
-      <html><head><title>Liquidación ${liq.vendedorNombre}</title></head><body>
-        <h1>Liquidación — ${liq.vendedorNombre}</h1>
-        <p>Periodo: ${MESES[liq.periodoMes - 1]} ${liq.periodoAnio}</p>
-        <table border="1" cellpadding="6" cellspacing="0" width="100%">
-          <thead><tr><th>Pedido</th><th>Pares</th><th>$/par</th><th>Total</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-        <p style="margin-top:16px;font-weight:bold;">Total: ${formatCurrency(liq.totalComisiones)}</p>
-      </body></html>`;
-    win.document.write(html);
-    win.document.close();
-    win.focus();
-    setTimeout(() => win.print(), 300);
-  };
-
-  const handleMarkCommission = async (comisionId: number) => {
-    try {
-      await useCases.marcarComisionLiquidada.execute(comisionId);
-      toast.success("Comisión marcada como liquidada.");
-      load();
-    } catch (err: any) {
-      toast.error(err?.message || "No se pudo marcar la comisión.");
-    }
-  };
-
-  const handleGenerar = async () => {
-    if (!genVendedorId) { toast.error("Selecciona un vendedor."); return; }
-    setIsGenerating(true);
-    try {
-      const liq = await useCases.generarLiquidacion.execute(Number(genVendedorId), genAnio, genMes);
-      toast.success(`Liquidación ${MESES[liq.periodoMes - 1]} ${liq.periodoAnio} generada — ${formatCurrency(liq.totalComisiones)}`);
-      setGenModal(false);
-      load();
-    } catch (err: any) {
-      toast.error(err?.message || "No se pudo generar la liquidación.");
+      setHistorial([]);
     } finally {
-      setIsGenerating(false);
+      setHistorialLoading(false);
     }
   };
 
-  const handlePagar = async (file: File) => {
-    if (!payModal) return;
+  useEffect(() => {
+    loadVendedores();
+  }, []);
+
+  useEffect(() => {
+    if (tab === "historial" && historial.length === 0) {
+      loadHistorial();
+    }
+  }, [tab]);
+
+  const openDetalle = async (v: ResumenVendedor) => {
+    if (!v.liquidacionId) {
+      toast.info("Este vendedor no tiene liquidación generada aún este mes.");
+      return;
+    }
+    setDetalleLoading(true);
+    try {
+      const liq = await useCases.getLiquidacionDetalle.execute(v.liquidacionId);
+      setDetalleVendedor({ nombre: v.vendedorNombre, liq });
+    } catch {
+      toast.error("No se pudo cargar el detalle.");
+    } finally {
+      setDetalleLoading(false);
+    }
+  };
+
+  const handlePago = async (file: File) => {
+    if (!pagoVendedor?.liquidacionId) return;
     setIsPaying(true);
     try {
-      await useCases.marcarLiquidacionPagada.execute(payModal.id, file);
-      toast.success(`Liquidación #${payModal.id} marcada como PAGADA. Notificación enviada al vendedor.`);
-      setPayModal(null);
+      await useCases.marcarLiquidacionPagada.execute(pagoVendedor.liquidacionId, file);
+      toast.success(`Pago registrado para ${pagoVendedor.vendedorNombre}. Se notificó al vendedor.`);
+      setPagoVendedor(null);
       setFileName("");
-      load();
+      loadVendedores();
     } catch (err: any) {
-      toast.error(err?.message || "No se pudo marcar como pagada.");
+      toast.error(err?.message || "No se pudo registrar el pago.");
     } finally {
       setIsPaying(false);
     }
   };
 
-  // Stats
-  const pendientes = liquidaciones.filter((l) => !l.pagada);
-  const pagadas = liquidaciones.filter((l) => l.pagada);
-  const totalPendiente = pendientes.reduce((s, l) => s + l.totalComisiones, 0);
+  // KPIs
+  const totalPendiente = vendedores
+    .filter((v) => !v.liquidacionPagada && v.totalComisionesMes > 0)
+    .reduce((s, v) => s + v.totalComisionesMes, 0);
+  const totalVendedoresConComision = vendedores.filter((v) => v.totalComisionesMes > 0).length;
+  const totalPagados = vendedores.filter((v) => v.liquidacionPagada).length;
 
   return (
     <div className="container-app py-10">
@@ -161,300 +143,338 @@ export default function ContadorLiquidacionesPage() {
           Pago de <span className="text-gradient-brand">Comisiones</span>
         </h1>
         <p className="mt-1 text-sm text-secondary">
-          Genera el cierre mensual de cada vendedor y marca el pago al transferir. La comisión ($4/par) se genera automáticamente al confirmar cada entrega.
+          Resumen automático del mes actual — <strong>{MESES[mes - 1]} {anio}</strong>.
+          El botón de pago está activo del <strong>día 26 al último día del mes</strong>.
         </p>
+
+        {/* Ventana de pago banner */}
+        {ventana ? (
+          <div className="mt-4 inline-flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
+            <CheckCircle2 className="h-4 w-4" />
+            Ventana de pago activa — puedes registrar pagos hasta el último día del mes.
+          </div>
+        ) : (
+          <div className="mt-4 inline-flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
+            <Clock className="h-4 w-4" />
+            Fuera de ventana de pago — los pagos se habilitan del día 26 al último día del mes.
+          </div>
+        )}
       </div>
 
       {/* KPIs */}
       <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-800 dark:bg-amber-950/30">
-          <p className="text-xs font-bold uppercase tracking-wider text-amber-700">Por pagar</p>
-          <p className="mt-2 font-display text-3xl text-amber-900">{formatCurrency(totalPendiente)}</p>
-          <p className="mt-1 text-xs text-amber-700">{pendientes.length} liquidación(es) pendiente(s)</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-amber-700">Por pagar este mes</p>
+          <p className="mt-2 font-display text-3xl text-amber-900 dark:text-amber-300">{formatCurrency(totalPendiente)}</p>
+          <p className="mt-1 text-xs text-amber-700">{totalVendedoresConComision} vendedor(es) con comisión pendiente</p>
         </div>
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-800 dark:bg-emerald-950/30">
-          <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Pagadas este año</p>
-          <p className="mt-2 font-display text-3xl text-emerald-900">
-            {formatCurrency(pagadas.filter(l => l.periodoAnio === new Date().getFullYear()).reduce((s, l) => s + l.totalComisiones, 0))}
-          </p>
-          <p className="mt-1 text-xs text-emerald-700">{pagadas.length} liquidación(es) pagada(s)</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Pagados este mes</p>
+          <p className="mt-2 font-display text-3xl text-emerald-900 dark:text-emerald-300">{totalPagados}</p>
+          <p className="mt-1 text-xs text-emerald-700">vendedor(es) ya liquidados</p>
         </div>
-        <div className="rounded-2xl border border-theme bg-surf p-5 flex flex-col justify-between">
-          <p className="text-xs font-bold uppercase tracking-wider text-muted-t">Vendedores activos</p>
+        <div className="rounded-2xl border border-theme bg-surf p-5">
+          <p className="text-xs font-bold uppercase tracking-wider text-muted-t">Total vendedores</p>
           <p className="mt-2 font-display text-3xl text-primary">{vendedores.length}</p>
-          <Button variant="secondary" size="sm" className="mt-3 self-start" onClick={() => setGenModal(true)}>
-            <DollarSign className="h-3.5 w-3.5" /> Generar liquidación
-          </Button>
-          <div className="mt-3">
-            <Button variant="ghost" size="sm" onClick={() => { setNoSellerModal(true); loadOrdersNoSeller(); }}>
-              Ver ventas sin vendedor
-            </Button>
-          </div>
+          <p className="mt-1 text-xs text-muted-t">registrados en el sistema</p>
         </div>
       </div>
 
-      {/* Liquidaciones list */}
-      <div className="mt-10">
-        <h2 className="font-display text-2xl text-primary mb-4">Historial de liquidaciones</h2>
+      {/* Tabs */}
+      <div className="mt-10 flex gap-1 border-b border-theme">
+        {[
+          { key: "actual", label: `${MESES[mes - 1]} ${anio}`, icon: <DollarSign className="h-4 w-4" /> },
+          { key: "historial", label: "Historial de pagos", icon: <History className="h-4 w-4" /> },
+        ].map(({ key, label, icon }) => (
+          <button
+            key={key}
+            onClick={() => setTab(key as "actual" | "historial")}
+            className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${
+              tab === key
+                ? "border-sky-500 text-sky-600 dark:text-sky-400"
+                : "border-transparent text-secondary hover:text-primary"
+            }`}
+          >
+            {icon} {label}
+          </button>
+        ))}
+      </div>
 
-        {isLoading ? (
-          <p className="text-secondary py-8 text-center">Cargando liquidaciones...</p>
-        ) : liquidaciones.length === 0 ? (
-          <div className="rounded-2xl border border-theme bg-surf p-12 text-center text-secondary">
-            <Users className="mx-auto h-10 w-10 text-muted-t mb-3" />
-            <p className="font-display text-xl">No hay liquidaciones aún</p>
-            <p className="text-sm mt-1">Genera la primera liquidación mensual de un vendedor.</p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {liquidaciones.map((liq) => (
-              <div key={liq.id} className="overflow-hidden rounded-2xl border border-theme bg-surf shadow-card">
-                {/* Row */}
-                <div className="flex flex-wrap items-center gap-4 px-5 py-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-primary">
-                        {liq.vendedorNombre || `Vendedor #${liq.vendedorId}`}
-                      </span>
-                      <span className="text-xs text-muted-t">
-                        {MESES[liq.periodoMes - 1]} {liq.periodoAnio}
-                      </span>
-                      {liq.pagada ? (
-                        <Badge tone="success">Pagada</Badge>
-                      ) : (
-                        <Badge tone="warning">Pendiente de pago</Badge>
-                      )}
-                    </div>
-                    <div className="mt-1 flex flex-wrap gap-4 text-sm">
-                      <span className="text-muted-t">{liq.totalPares} pares</span>
-                      <span className="font-mono font-bold text-primary">{formatCurrency(liq.totalComisiones)}</span>
-                      {liq.fechaPago && (
-                        <span className="text-xs text-emerald-600">
-                          Pagado: {new Date(liq.fechaPago).toLocaleDateString("es-EC")}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+      {/* ── TAB: MES ACTUAL ── */}
+      {tab === "actual" && (
+        <div className="mt-6">
+          {isLoading ? (
+            <p className="py-16 text-center text-secondary">Cargando vendedores...</p>
+          ) : vendedores.length === 0 ? (
+            <div className="rounded-2xl border border-theme bg-surf p-16 text-center text-secondary">
+              <DollarSign className="mx-auto h-10 w-10 text-muted-t mb-3" />
+              <p className="font-display text-xl">No hay vendedores registrados</p>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-2xl border border-theme bg-surf shadow-card">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="border-b border-theme text-xs font-bold uppercase tracking-wider text-muted-t">
+                    <tr>
+                      <th className="px-5 py-4">Vendedor</th>
+                      <th className="px-5 py-4">Pares del mes</th>
+                      <th className="px-5 py-4">Comisión del mes</th>
+                      <th className="px-5 py-4">Histórico total</th>
+                      <th className="px-5 py-4">Estado</th>
+                      <th className="px-5 py-4 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-theme">
+                    {vendedores.map((v) => {
+                      const tienePago = v.liquidacionPagada;
+                      const tieneComision = v.totalComisionesMes > 0;
+                      const puedeAPagar = ventana && tieneComision && !tienePago && v.liquidacionId != null;
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    {!liq.pagada && liq.totalComisiones > 0 && (
-                      <>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => { setPayModal(liq); setFileName(""); }}
-                        >
-                          <CheckCircle2 className="h-3.5 w-3.5" /> Marcar pagada
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => exportLiquidacionPDF(liq)}
-                          className="ml-2"
-                        >
-                          <Download className="h-3.5 w-3.5" /> Exportar PDF
-                        </Button>
-                      </>
-                    )}
-                    {liq.comprobanteUrl && (
-                      <a
-                        href={resolveMediaUrl(liq.comprobanteUrl) ?? "#"}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-xs font-semibold text-sky-500 hover:underline"
-                      >
-                        Ver comprobante
-                      </a>
-                    )}
-                    <button
-                      onClick={() => setExpanded(expanded === liq.id ? null : liq.id)}
-                      className="flex items-center gap-1 rounded-lg border border-theme px-2 py-1.5 text-xs text-muted-t hover:bg-surf2 transition-colors"
-                    >
-                      {expanded === liq.id ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                      {(liq.comisiones?.length ?? 0)} comisiones
-                    </button>
-                  </div>
-                </div>
-
-                {/* Expanded comisiones detail */}
-                {expanded === liq.id && liq.comisiones && liq.comisiones.length > 0 && (
-                  <div className="border-t border-theme bg-surf2 px-5 py-4">
-                    <table className="w-full text-sm">
-                      <thead className="text-xs font-bold uppercase tracking-wider text-muted-t">
-                        <tr>
-                          <th className="pb-2 text-left">Pedido</th>
-                          <th className="pb-2 text-left">Pares</th>
-                          <th className="pb-2 text-left">$/par</th>
-                          <th className="pb-2 text-left">Total</th>
-                          <th className="pb-2 text-left">Estado</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-theme">
-                        {liq.comisiones.map((c) => (
-                          <tr key={c.id}>
-                            <td className="py-2 font-mono text-primary">#{c.pedidoId}</td>
-                            <td className="py-2 text-secondary">{c.cantidadPares}</td>
-                            <td className="py-2 font-mono text-secondary">{formatCurrency(c.montoPorPar)}</td>
-                            <td className="py-2 font-mono font-bold text-primary">{formatCurrency(c.monto)}</td>
-                            <td className="py-2 flex items-center gap-2">
-                              <Badge tone={c.estado === "LIQUIDADA" ? "success" : "warning"}>
-                                {c.estado}
+                      return (
+                        <tr key={v.vendedorId} className="hover:bg-surf2 transition-colors">
+                          <td className="px-5 py-4">
+                            <p className="font-semibold text-primary">{v.vendedorNombre}</p>
+                            <p className="text-xs text-muted-t">{v.vendedorEmail}</p>
+                          </td>
+                          <td className="px-5 py-4 font-mono font-bold text-primary">
+                            {v.totalParesMes > 0 ? `${v.totalParesMes} par(es)` : <span className="text-muted-t">—</span>}
+                          </td>
+                          <td className="px-5 py-4 font-mono font-bold text-purple-600 dark:text-purple-400">
+                            {tieneComision ? formatCurrency(v.totalComisionesMes) : <span className="text-muted-t">$0.00</span>}
+                          </td>
+                          <td className="px-5 py-4 font-mono text-secondary">
+                            {formatCurrency(v.totalComisionesHistorico)}
+                          </td>
+                          <td className="px-5 py-4">
+                            {tienePago ? (
+                              <Badge tone="success">
+                                <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                                Pagado
                               </Badge>
-                              {c.estado !== "LIQUIDADA" && (
-                                <Button size="xs" variant="ghost" onClick={() => handleMarkCommission(c.id)}>
-                                  Marcar
+                            ) : tieneComision ? (
+                              <Badge tone="warning">Pendiente</Badge>
+                            ) : (
+                              <Badge tone="neutral">Sin ventas</Badge>
+                            )}
+                          </td>
+                          <td className="px-5 py-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              {/* Ver detalle de ventas */}
+                              {v.liquidacionId && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  isLoading={detalleLoading}
+                                  onClick={() => openDetalle(v)}
+                                >
+                                  Ver detalle
                                 </Button>
                               )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
 
-      {/* Generate modal */}
-      {genModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-theme bg-paper p-6 shadow-2xl">
-            <div className="flex items-start justify-between mb-5">
-              <h3 className="font-display text-2xl text-primary">Generar liquidación</h3>
-              <button onClick={() => setGenModal(false)} className="rounded-lg p-1 text-muted-t hover:bg-surf2">
-                <X className="h-4 w-4" />
-              </button>
+                              {/* Ver comprobante si ya se pagó */}
+                              {tienePago && v.comprobantePagoUrl && (
+                                <a
+                                  href={resolveMediaUrl(v.comprobantePagoUrl) ?? "#"}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1 rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-600 hover:bg-sky-100"
+                                >
+                                  <ExternalLink className="h-3 w-3" /> Comprobante
+                                </a>
+                              )}
+
+                              {/* Botón pagar — solo en ventana, con comisión, sin pago previo */}
+                              {puedeAPagar && (
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => { setPagoVendedor(v); setFileName(""); }}
+                                >
+                                  <DollarSign className="h-3.5 w-3.5" /> Pagar
+                                </Button>
+                              )}
+
+                              {/* Fuera de ventana con comisión pendiente */}
+                              {!tienePago && tieneComision && !ventana && (
+                                <span className="text-xs text-muted-t italic">Disponible día 26</span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
+          )}
+        </div>
+      )}
 
-            <div className="flex flex-col gap-4">
-              <div>
-                <label className="text-xs font-semibold uppercase tracking-wider text-muted-t">Vendedor</label>
-                <select
-                  value={genVendedorId}
-                  onChange={(e) => setGenVendedorId(e.target.value ? Number(e.target.value) : "")}
-                  className="mt-1 h-11 w-full rounded-xl border border-theme bg-surf2 px-3 text-sm text-primary outline-none focus:border-sky-400"
-                >
-                  <option value="">Seleccionar vendedor...</option>
-                  {vendedores.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.nombre} {v.apellido}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-t">Mes</label>
-                  <select
-                    value={genMes}
-                    onChange={(e) => setGenMes(Number(e.target.value))}
-                    className="mt-1 h-11 w-full rounded-xl border border-theme bg-surf2 px-3 text-sm text-primary outline-none focus:border-sky-400"
-                  >
-                    {MESES.map((m, i) => (
-                      <option key={i + 1} value={i + 1}>{m}</option>
+      {/* ── TAB: HISTORIAL ── */}
+      {tab === "historial" && (
+        <div className="mt-6">
+          {historialLoading ? (
+            <p className="py-16 text-center text-secondary">Cargando historial...</p>
+          ) : historial.length === 0 ? (
+            <div className="rounded-2xl border border-theme bg-surf p-16 text-center text-secondary">
+              <History className="mx-auto h-10 w-10 text-muted-t mb-3" />
+              <p className="font-display text-xl">No hay pagos registrados aún</p>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-2xl border border-theme bg-surf shadow-card">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="border-b border-theme text-xs font-bold uppercase tracking-wider text-muted-t">
+                    <tr>
+                      <th className="px-5 py-4">Vendedor</th>
+                      <th className="px-5 py-4">Período</th>
+                      <th className="px-5 py-4">Pares</th>
+                      <th className="px-5 py-4">Total pagado</th>
+                      <th className="px-5 py-4">Fecha de pago</th>
+                      <th className="px-5 py-4 text-right">Comprobante</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-theme">
+                    {historial.map((liq) => (
+                      <tr key={liq.id} className="hover:bg-surf2 transition-colors">
+                        <td className="px-5 py-4 font-semibold text-primary">
+                          {liq.vendedorNombre || `Vendedor #${liq.vendedorId}`}
+                        </td>
+                        <td className="px-5 py-4 text-secondary">
+                          {MESES[liq.periodoMes - 1]} {liq.periodoAnio}
+                        </td>
+                        <td className="px-5 py-4 font-mono text-primary">{liq.totalPares}</td>
+                        <td className="px-5 py-4 font-mono font-bold text-emerald-600">
+                          {formatCurrency(liq.totalComisiones)}
+                        </td>
+                        <td className="px-5 py-4 text-xs text-secondary">
+                          {liq.fechaPago
+                            ? new Date(liq.fechaPago).toLocaleDateString("es-EC", {
+                                day: "2-digit", month: "long", year: "numeric",
+                              })
+                            : "—"}
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                          {liq.comprobanteUrl ? (
+                            <a
+                              href={resolveMediaUrl(liq.comprobanteUrl) ?? "#"}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-xs font-semibold text-sky-500 hover:underline"
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" /> Ver
+                            </a>
+                          ) : (
+                            <span className="text-muted-t text-xs">—</span>
+                          )}
+                        </td>
+                      </tr>
                     ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-t">Año</label>
-                  <input
-                    type="number"
-                    value={genAnio}
-                    onChange={(e) => setGenAnio(Number(e.target.value))}
-                    className="mt-1 h-11 w-full rounded-xl border border-theme bg-surf2 px-3 text-sm text-primary outline-none focus:border-sky-400"
-                  />
-                </div>
+                  </tbody>
+                </table>
               </div>
-
-              <p className="text-xs text-muted-t">
-                Esto agrupa todas las comisiones PENDIENTE del vendedor en ese período y genera la liquidación para pago.
-              </p>
             </div>
-
-            <div className="mt-6 flex justify-end gap-3">
-              <Button variant="ghost" size="lg" onClick={() => setGenModal(false)}>Cancelar</Button>
-              <Button variant="secondary" size="lg" isLoading={isGenerating} onClick={handleGenerar}>
-                <DollarSign className="h-4 w-4" /> Generar liquidación
-              </Button>
-            </div>
-          </div>
+          )}
         </div>
       )}
 
-      {/* No-seller modal */}
-      {noSellerModal && (
+      {/* ── Modal detalle de ventas ── */}
+      {detalleVendedor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl rounded-2xl border border-theme bg-paper p-6 shadow-2xl">
-            <div className="flex items-start justify-between mb-5">
-              <h3 className="font-display text-2xl text-primary">Ventas sin vendedor asignado</h3>
-              <button onClick={() => setNoSellerModal(false)} className="rounded-lg p-1 text-muted-t hover:bg-surf2">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              {ordersNoSeller.length === 0 ? (
-                <p className="text-sm text-secondary">No se encontraron ventas sin vendedor.</p>
-              ) : (
-                <div className="space-y-2">
-                  {ordersNoSeller.map((o) => (
-                    <div key={o.id} className="flex items-center justify-between rounded-lg border border-theme p-3">
-                      <div>
-                        <div className="font-semibold">Pedido #{o.numero} · {o.clienteNombre}</div>
-                        <div className="text-xs text-muted-t">Total: {formatCurrency(o.total)} · {o.items?.length ?? 0} pares</div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <select value={selectedSellerForAssign} onChange={(e) => setSelectedSellerForAssign(e.target.value ? Number(e.target.value) : "")} className="h-9 rounded-xl border px-3">
-                          <option value="">Seleccionar vendedor...</option>
-                          {vendedores.map((v) => (
-                            <option key={v.id} value={v.id}>{v.nombre} {v.apellido}</option>
-                          ))}
-                        </select>
-                        <Button size="sm" variant="secondary" onClick={async () => {
-                          if (!selectedSellerForAssign) { toast.error("Selecciona un vendedor"); return; }
-                          try {
-                            await useCases.assignSellerToOrder.execute(o.id, Number(selectedSellerForAssign));
-                            toast.success("Vendedor asignado.");
-                            loadOrdersNoSeller(); load();
-                          } catch (err: any) {
-                            toast.error(err?.message || "No se pudo asignar vendedor.");
-                          }
-                        }}>Asignar</Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Pay modal */}
-      {payModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-theme bg-paper p-6 shadow-2xl">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-theme bg-paper p-6 shadow-2xl">
             <div className="flex items-start justify-between mb-5">
               <div>
-                <h3 className="font-display text-2xl text-primary">Marcar como pagada</h3>
-                <p className="text-xs text-muted-t mt-1">
-                  {payModal.vendedorNombre} · {MESES[payModal.periodoMes - 1]} {payModal.periodoAnio}
-                  · <span className="font-bold text-primary">{formatCurrency(payModal.totalComisiones)}</span>
+                <h3 className="font-display text-2xl text-primary">
+                  Detalle — {detalleVendedor.nombre}
+                </h3>
+                <p className="text-xs text-muted-t mt-0.5">
+                  {MESES[detalleVendedor.liq.periodoMes - 1]} {detalleVendedor.liq.periodoAnio}
+                  {" · "}
+                  <span className="font-bold text-primary">
+                    {formatCurrency(detalleVendedor.liq.totalComisiones)}
+                  </span>
+                  {" · "}
+                  {detalleVendedor.liq.totalPares} pares
                 </p>
               </div>
-              <button onClick={() => setPayModal(null)} className="rounded-lg p-1 text-muted-t hover:bg-surf2">
+              <button
+                onClick={() => setDetalleVendedor(null)}
+                className="rounded-lg p-1 text-muted-t hover:bg-surf2"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {(detalleVendedor.liq.comisiones?.length ?? 0) === 0 ? (
+              <p className="text-secondary text-sm py-6 text-center">No hay ventas detalladas para este período.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="text-xs font-bold uppercase tracking-wider text-muted-t border-b border-theme">
+                  <tr>
+                    <th className="pb-3 text-left">Pedido</th>
+                    <th className="pb-3 text-left">Pares</th>
+                    <th className="pb-3 text-left">$/par</th>
+                    <th className="pb-3 text-right">Comisión</th>
+                    <th className="pb-3 text-right">Estado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-theme">
+                  {detalleVendedor.liq.comisiones!.map((c) => (
+                    <tr key={c.id}>
+                      <td className="py-3 font-mono text-primary">#{c.pedidoId}</td>
+                      <td className="py-3 text-secondary">{c.cantidadPares}</td>
+                      <td className="py-3 font-mono text-secondary">{formatCurrency(c.montoPorPar)}</td>
+                      <td className="py-3 text-right font-mono font-bold text-primary">{formatCurrency(c.monto)}</td>
+                      <td className="py-3 text-right">
+                        <Badge tone={c.estado === "LIQUIDADA" ? "success" : "warning"}>{c.estado}</Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-theme">
+                    <td colSpan={3} className="pt-3 text-xs font-bold text-muted-t">Total</td>
+                    <td className="pt-3 text-right font-mono font-bold text-primary">
+                      {formatCurrency(detalleVendedor.liq.totalComisiones)}
+                    </td>
+                    <td />
+                  </tr>
+                </tfoot>
+              </table>
+            )}
+
+            <div className="mt-6 flex justify-end">
+              <Button variant="ghost" onClick={() => setDetalleVendedor(null)}>Cerrar</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal pago ── */}
+      {pagoVendedor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-theme bg-paper p-6 shadow-2xl">
+            <div className="flex items-start justify-between mb-5">
+              <div>
+                <h3 className="font-display text-2xl text-primary">Registrar pago</h3>
+                <p className="text-xs text-muted-t mt-1">
+                  {pagoVendedor.vendedorNombre} · {MESES[mes - 1]} {anio}
+                  {" · "}
+                  <span className="font-bold text-primary">
+                    {formatCurrency(pagoVendedor.totalComisionesMes)}
+                  </span>
+                </p>
+              </div>
+              <button onClick={() => setPagoVendedor(null)} className="rounded-lg p-1 text-muted-t hover:bg-surf2">
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 mb-4 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
-              <p className="font-semibold">Antes de marcar como pagada:</p>
+              <p className="font-semibold">Antes de marcar como pagado:</p>
               <ol className="mt-1 list-decimal list-inside space-y-0.5 text-xs">
-                <li>Transfiere <strong>{formatCurrency(payModal.totalComisiones)}</strong> al vendedor</li>
+                <li>Transfiere <strong>{formatCurrency(pagoVendedor.totalComisionesMes)}</strong> a {pagoVendedor.vendedorNombre}</li>
                 <li>Sube el comprobante de la transferencia</li>
                 <li>El vendedor recibirá una notificación automática</li>
               </ol>
@@ -473,23 +493,20 @@ export default function ContadorLiquidacionesPage() {
                 className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0];
-                  if (f) {
-                    setFileName(f.name);
-                    handlePagar(f);
-                  }
+                  if (f) { setFileName(f.name); handlePago(f); }
                 }}
               />
             </label>
 
             <div className="mt-5 flex justify-end gap-3">
-              <Button variant="ghost" size="lg" onClick={() => setPayModal(null)}>Cancelar</Button>
+              <Button variant="ghost" size="lg" onClick={() => setPagoVendedor(null)}>Cancelar</Button>
               <Button
                 variant="secondary"
                 size="lg"
                 isLoading={isPaying}
                 onClick={() => fileRef.current?.click()}
               >
-                <CheckCircle2 className="h-4 w-4" /> Subir y marcar pagada
+                <CheckCircle2 className="h-4 w-4" /> Subir y registrar pago
               </Button>
             </div>
           </div>

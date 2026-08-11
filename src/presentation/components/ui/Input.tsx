@@ -2,11 +2,11 @@ import { type InputHTMLAttributes, forwardRef } from "react";
 import { cn } from "@/presentation/utils/cn";
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
-  error?: string;
-  hint?: string;
-  iconLeft?: React.ReactNode;
-  iconRight?: React.ReactNode;
+  label?:      string;
+  error?:      string;
+  hint?:       string;
+  iconLeft?:   React.ReactNode;
+  iconRight?:  React.ReactNode;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
@@ -17,22 +17,23 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-secondary"
+            className="text-[11px] font-bold uppercase tracking-widest text-blue-700"
           >
             {label}
           </label>
         )}
+
         <div
           className={cn(
-            "group relative flex items-center rounded-[14px] border-[1.5px] transition-all duration-200",
-            "bg-[var(--input-bg)]",
+            "group relative flex items-center rounded-xl border transition-all duration-200",
+            "bg-white",
             error
-              ? "border-danger focus-within:border-danger focus-within:shadow-[0_0_0_3px_rgba(220,38,38,0.12)]"
-              : "border-[var(--input-border)] hover:border-[var(--bg-border-strong)] focus-within:border-[var(--input-border-focus)] focus-within:shadow-[0_0_0_3px_rgba(14,165,233,0.14)] focus-within:bg-[var(--bg-surface)]"
+              ? "border-red-300 focus-within:border-red-400 focus-within:shadow-[0_0_0_3px_rgba(220,38,38,0.12)]"
+              : "border-blue-100 hover:border-blue-300 focus-within:border-blue-500 focus-within:shadow-[0_0_0_3px_rgba(59,130,246,0.16)] focus-within:bg-white"
           )}
         >
           {iconLeft && (
-            <span className="pointer-events-none pl-3.5 pr-1 text-muted-t transition-colors group-focus-within:text-accent">
+            <span className="pointer-events-none pl-3.5 text-gray-400 transition-colors group-focus-within:text-blue-500">
               {iconLeft}
             </span>
           )}
@@ -40,22 +41,23 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             id={inputId}
             className={cn(
-              "h-[50px] w-full flex-1 bg-transparent px-4 text-[14px] text-primary outline-none",
-              "placeholder:text-muted-t placeholder:opacity-80",
-              iconLeft && "pl-1",
-              iconRight && "pr-1",
+              "h-[46px] w-full flex-1 bg-transparent px-4 text-sm text-gray-900 outline-none",
+              "placeholder:text-gray-400",
+              iconLeft  && "pl-2",
+              iconRight && "pr-2",
               className
             )}
             {...props}
           />
           {iconRight && (
-            <span className="pointer-events-none pl-1 pr-3.5 text-muted-t transition-colors group-focus-within:text-accent">
+            <span className="pointer-events-none pr-3.5 text-gray-400 transition-colors group-focus-within:text-blue-500">
               {iconRight}
             </span>
           )}
         </div>
-        {hint && !error && <span className="text-[11px] text-muted-t leading-relaxed">{hint}</span>}
-        {error && <span className="text-[11px] font-semibold text-danger leading-relaxed">{error}</span>}
+
+        {hint  && !error && <span className="text-[11px] text-gray-500 leading-relaxed">{hint}</span>}
+        {error &&           <span className="text-[11px] font-semibold text-red-600 leading-relaxed">{error}</span>}
       </div>
     );
   }

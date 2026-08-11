@@ -41,6 +41,7 @@ import {
   GetLiquidacionesUseCase, GetComisionesPendientesUseCase,
   GenerarLiquidacionUseCase, MarcarLiquidacionPagadaUseCase, MarcarComisionLiquidadaUseCase, AssignSellerToOrderUseCase,
   GetCampaignsUseCase, CreateCampaignUseCase, SendCampaignUseCase,
+  GetResumenGlobalVendedoresUseCase, GetLiquidacionDetalleUseCase,
 } from "@/application/use-cases/admin.use-cases";
 import {
   GetNotificationsUseCase,
@@ -116,6 +117,8 @@ export const useCases = {
   getCampaigns: new GetCampaignsUseCase(adminRepository),
   createCampaign: new CreateCampaignUseCase(adminRepository),
   sendCampaign: new SendCampaignUseCase(adminRepository),
+  getResumenGlobalVendedores: new GetResumenGlobalVendedoresUseCase(adminRepository),
+  getLiquidacionDetalle: new GetLiquidacionDetalleUseCase(adminRepository),
 
   getNotifications: new GetNotificationsUseCase(notificationRepository),
   markNotificationRead: new MarkNotificationReadUseCase(notificationRepository),

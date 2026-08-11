@@ -21,6 +21,8 @@ function toList<T>(payload: any): T[] {
 }
 
 function looksLikeSeller(item: any): boolean {
+  if (!item || typeof item !== "object") return false;
+
   const role = normalizeUserRole(
     item?.rol ?? item?.role ?? item?.usuario?.rol ?? item?.usuario?.role ?? item?.user?.rol ?? item?.user?.role
   );
@@ -30,14 +32,16 @@ function looksLikeSeller(item: any): boolean {
     item?.perfilVendedor ||
     item?.es_vendedor ||
     item?.is_vendedor ||
-    item?.vendedor ||
+    item?.codigo_referido ||
+    item?.codigoReferido ||
     item?.tipo === "VENDEDOR" ||
     item?.tipo === "vendedor"
   );
 
   const hasBasicUserShape = Boolean(
     item?.id &&
-    (item?.nombre || item?.apellido || item?.correo || item?.email || item?.username)
+    (item?.nombre || item?.primer_nombre || item?.apellido || item?.primer_apellido ||
+     item?.correo || item?.email || item?.username)
   );
 
   return role === "vendedor" || hasSellerShape || hasBasicUserShape;
@@ -139,29 +143,26 @@ export class ApiOrderRepository implements OrderRepositoryPort {
   }
 
   async getActiveSellers(): Promise<Seller[]> {
-    try {
-      // Add a cache-bust param so the deduplication logic in httpClient doesn't
-      // swallow this request when multiple components call it simultaneously
-      const { data } = await httpClient.get<any>("/usuarios/vendedores/activos/", {
-        params: { _t: Date.now() },
-      });
-      const payload = safeUnwrap<any>(data);
-      const list = toList<any>(payload);
-      const sellers = list
-        .map((item: any) => normalizeSellerItem(item))
-        .filter((item): item is Seller => Boolean(item));
+    // Único endpoint público para vendedores activos (IsAuthenticated)
+    const { data } = await httpClient.get<any>("/usuarios/vendedores/activos/", {
+      params: { _t: Date.now() },
+    });
+    const payload = safeUnwrap<any>(data);
+    const list = toList<any>(payload);
 
-      if (import.meta.env.DEV) {
-        console.debug("[getActiveSellers] count:", sellers.length, "raw:", list.length);
-      }
-
-      return sellers;
-    } catch (error) {
-      if (import.meta.env.DEV) {
-        console.warn("[getActiveSellers] error:", error);
-      }
-      throw error;
+    if (import.meta.env.DEV) {
+      console.debug("[getActiveSellers] raw count:", list.length, list.slice(0, 2));
     }
+
+    const sellers = list
+      .map((item: any) => normalizeSellerItem(item))
+      .filter((item): item is Seller => Boolean(item));
+
+    if (import.meta.env.DEV) {
+      console.debug("[getActiveSellers] normalized sellers:", sellers.length, sellers);
+    }
+
+    return sellers;
   }
 
   async getShippingZones(): Promise<ShippingZone[]> {

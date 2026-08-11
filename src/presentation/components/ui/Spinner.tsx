@@ -1,13 +1,23 @@
-import { Loader2 } from "lucide-react";
 import { cn } from "@/presentation/utils/cn";
 
-export function Spinner({ className, full }: { className?: string; full?: boolean }) {
+export function Spinner({ full, className }: { full?: boolean; className?: string }) {
+  const spinner = (
+    <div
+      className={cn(
+        "h-9 w-9 rounded-full border-[3px] border-blue-100 border-t-blue-500 animate-spin",
+        className
+      )}
+    />
+  );
+
   if (full) {
     return (
-      <div className="flex min-h-[40vh] w-full items-center justify-center">
-        <Loader2 className={cn("h-8 w-8 animate-spin text-ink/40", className)} />
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
+        {spinner}
+        <p className="text-sm font-medium text-gray-400">Cargando...</p>
       </div>
     );
   }
-  return <Loader2 className={cn("h-5 w-5 animate-spin", className)} />;
+
+  return spinner;
 }

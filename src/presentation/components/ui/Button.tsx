@@ -2,101 +2,113 @@ import { type ButtonHTMLAttributes, forwardRef } from "react";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/presentation/utils/cn";
 
-type Variant = "primary" | "secondary" | "outline" | "ghost" | "danger" | "glass" | "gold";
-type Size = "xs" | "sm" | "md" | "lg" | "xl";
+type Variant = "primary" | "secondary" | "outline" | "ghost" | "danger" | "sky" | "gold";
+type Size    = "xs" | "sm" | "md" | "lg" | "xl";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: Variant;
-  size?: Size;
+  variant?:  Variant;
+  size?:     Size;
   isLoading?: boolean;
   fullWidth?: boolean;
 }
 
 const variants: Record<Variant, string> = {
+  /* Azul institucional sólido — acción principal */
   primary:
-    "bg-[#0a0c12] text-white hover:bg-[#1a1f2e] " +
-    "shadow-[0_10px_30px_-12px_rgba(10,12,18,0.45),0_0_0_1px_rgba(10,12,18,0.10)] " +
-    "hover:shadow-[0_18px_40px_-16px_rgba(10,12,18,0.55),0_0_0_1px_rgba(10,12,18,0.18)]",
+    "bg-blue-600 text-white " +
+    "shadow-[0_1px_2px_rgba(15,23,42,0.06),0_4px_16px_-6px_rgba(37,99,235,0.45)] " +
+    "hover:bg-blue-700 " +
+    "hover:shadow-[0_1px_2px_rgba(15,23,42,0.08),0_8px_24px_-8px_rgba(37,99,235,0.55)] " +
+    "hover:-translate-y-px active:translate-y-0 active:bg-blue-800",
+
+  /* Gradiente azul→celeste — CTA destacado */
   secondary:
-    "bg-gradient-to-br from-[#0ea5e9] via-[#3b82f6] to-[#6366f1] text-white font-bold " +
-    "shadow-[0_10px_30px_-12px_rgba(14,165,233,0.55),0_0_0_1px_rgba(14,165,233,0.18)] " +
-    "hover:shadow-[0_18px_45px_-15px_rgba(99,102,241,0.55),0_0_0_1px_rgba(14,165,233,0.28)] " +
-    "hover:from-[#0284c7] hover:via-[#2563eb] hover:to-[#4f46e5] " +
+    "bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold " +
+    "shadow-[0_1px_2px_rgba(15,23,42,0.06),0_6px_20px_-8px_rgba(14,165,233,0.50)] " +
+    "hover:from-blue-700 hover:to-sky-600 " +
+    "hover:shadow-[0_1px_2px_rgba(15,23,42,0.08),0_10px_28px_-8px_rgba(14,165,233,0.60)] " +
     "hover:-translate-y-0.5 active:translate-y-0",
-  gold:
-    "bg-gradient-to-br from-[#f4cf57] via-[#d4af37] to-[#9d7b1b] text-[#1a1200] font-bold " +
-    "shadow-[0_10px_30px_-12px_rgba(212,175,55,0.55),0_0_0_1px_rgba(212,175,55,0.28)] " +
-    "hover:shadow-[0_18px_45px_-15px_rgba(212,175,55,0.65),0_0_0_1px_rgba(212,175,55,0.38)] " +
+
+  /* Celeste vibrante puro — acción de acento */
+  sky:
+    "bg-sky-500 text-white font-bold " +
+    "shadow-[0_1px_2px_rgba(15,23,42,0.06),0_6px_20px_-8px_rgba(14,165,233,0.50)] " +
+    "hover:bg-sky-600 " +
+    "hover:shadow-[0_1px_2px_rgba(15,23,42,0.08),0_10px_28px_-8px_rgba(14,165,233,0.60)] " +
     "hover:-translate-y-0.5 active:translate-y-0",
+
+  /* Borde azul — acción secundaria */
   outline:
-    "border-[1.5px] border-theme-s bg-surf text-primary " +
-    "hover:bg-surf2 hover:border-[color:var(--card-border-hover)] " +
-    "shadow-[0_1px_2px_rgba(15,23,42,0.04),0_0_0_1px_rgba(15,23,42,0.02)] " +
-    "hover:shadow-[0_10px_25px_-15px_rgba(14,165,233,0.25),0_0_0_1px_rgba(14,165,233,0.15)]",
+    "border border-blue-200 bg-white text-blue-700 font-semibold " +
+    "shadow-[0_1px_2px_rgba(15,23,42,0.04)] " +
+    "hover:border-blue-400 hover:bg-blue-50 " +
+    "hover:shadow-[0_1px_3px_rgba(15,23,42,0.06),0_4px_14px_-6px_rgba(37,99,235,0.20)] " +
+    "hover:-translate-y-px active:translate-y-0",
+
+  /* Transparente — acción terciaria */
   ghost:
-    "text-secondary hover:bg-surf2 hover:text-primary " +
-    "hover:shadow-[0_6px_20px_-12px_rgba(15,23,42,0.25)]",
+    "text-blue-700 bg-transparent " +
+    "hover:bg-blue-50 hover:text-blue-800 " +
+    "active:bg-blue-100",
+
+  /* Peligro */
   danger:
-    "bg-gradient-to-br from-[#ef4444] to-[#dc2626] text-white font-semibold " +
-    "shadow-[0_10px_30px_-12px_rgba(239,68,68,0.55),0_0_0_1px_rgba(220,38,38,0.18)] " +
-    "hover:shadow-[0_18px_45px_-15px_rgba(220,38,38,0.55),0_0_0_1px_rgba(220,38,38,0.28)] " +
-    "hover:from-[#dc2626] hover:to-[#b91c1c] hover:-translate-y-0.5 active:translate-y-0",
-  glass:
-    "bg-white/12 text-white border-[1.5px] border-white/25 backdrop-blur-xl " +
-    "hover:bg-white/20 hover:border-white/40 " +
-    "shadow-[0_10px_40px_-20px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.06)]",
+    "bg-red-600 text-white font-semibold " +
+    "shadow-[0_1px_2px_rgba(15,23,42,0.06),0_4px_16px_-6px_rgba(220,38,38,0.40)] " +
+    "hover:bg-red-700 " +
+    "hover:shadow-[0_1px_2px_rgba(15,23,42,0.08),0_8px_24px_-8px_rgba(220,38,38,0.50)] " +
+    "hover:-translate-y-px active:translate-y-0",
+
+  /* Dorado — mantener para compatibilidad */
+  gold:
+    "bg-amber-500 text-white font-bold " +
+    "shadow-[0_1px_2px_rgba(15,23,42,0.06),0_6px_20px_-8px_rgba(217,119,6,0.50)] " +
+    "hover:bg-amber-600 hover:-translate-y-0.5 active:translate-y-0",
 };
 
 const sizes: Record<Size, string> = {
-  xs: "h-8 px-3 text-[11px] gap-1 rounded-[10px]",
-  sm: "h-10 px-4 text-[13px] gap-1.5 rounded-[12px]",
-  md: "h-11 px-5 text-sm gap-2 rounded-[14px]",
-  lg: "h-13 px-7 text-sm gap-2.5 rounded-[16px]",
-  xl: "h-15 px-10 text-base gap-3 rounded-[18px]",
+  xs: "h-8  px-3   text-[11px] gap-1   rounded-[10px]",
+  sm: "h-9  px-4   text-[13px] gap-1.5 rounded-[11px]",
+  md: "h-11 px-5   text-sm     gap-2   rounded-[12px]",
+  lg: "h-12 px-7   text-sm     gap-2   rounded-[13px]",
+  xl: "h-14 px-9   text-base   gap-3   rounded-[14px]",
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  (
-    { className, variant = "primary", size = "md", isLoading, fullWidth, disabled, children, ...props },
-    ref
-  ) => {
-    return (
-      <button
-        ref={ref}
-        disabled={disabled || isLoading}
-        className={cn(
-          "relative inline-flex items-center justify-center font-semibold",
-          "tracking-tight transition-all duration-250 ease-out",
-          "disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0",
-          "active:scale-[0.98] focus-visible:outline-none",
-          "focus-visible:ring-[3px] focus-visible:ring-sky-400/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white",
-          "overflow-hidden select-none",
-          variants[variant],
-          sizes[size],
-          fullWidth && "w-full",
-          className
-        )}
-        {...props}
-      >
+  ({ className, variant = "primary", size = "md", isLoading, fullWidth, disabled, children, ...props }, ref) => (
+    <button
+      ref={ref}
+      disabled={disabled || isLoading}
+      className={cn(
+        "relative inline-flex items-center justify-center font-semibold select-none overflow-hidden",
+        "tracking-tight transition-all duration-200 ease-out",
+        "disabled:cursor-not-allowed disabled:opacity-40 disabled:pointer-events-none",
+        "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-blue-400/40 focus-visible:ring-offset-2",
+        variants[variant],
+        sizes[size],
+        fullWidth && "w-full",
+        className
+      )}
+      {...props}
+    >
+      {/* Shine sweep en variantes sólidas */}
+      {(variant === "secondary" || variant === "sky" || variant === "primary") && (
         <span
           aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300"
+          className="pointer-events-none absolute inset-0 opacity-0 hover:opacity-100 transition-opacity duration-500"
           style={{
-            backgroundImage:
-              "linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.35) 50%, transparent 70%)",
+            background:
+              "linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.22) 50%, transparent 70%)",
             backgroundSize: "200% 100%",
-            animation:
-              variant === "secondary" || variant === "gold" || variant === "danger"
-                ? "shine 3.5s linear infinite"
-                : undefined,
+            animation: "shine 3s linear infinite",
           }}
         />
-        <span className="relative z-10 inline-flex items-center justify-center gap-[inherit]">
-          {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-          {children}
-        </span>
-      </button>
-    );
-  }
+      )}
+      <span className="relative z-10 inline-flex items-center justify-center gap-[inherit]">
+        {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+        {children}
+      </span>
+    </button>
+  )
 );
 Button.displayName = "Button";
