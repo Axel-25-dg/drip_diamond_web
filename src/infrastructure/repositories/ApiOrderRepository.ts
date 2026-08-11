@@ -140,7 +140,11 @@ export class ApiOrderRepository implements OrderRepositoryPort {
 
   async getActiveSellers(): Promise<Seller[]> {
     try {
-      const { data } = await httpClient.get<any>("/usuarios/vendedores/activos/");
+      // Add a cache-bust param so the deduplication logic in httpClient doesn't
+      // swallow this request when multiple components call it simultaneously
+      const { data } = await httpClient.get<any>("/usuarios/vendedores/activos/", {
+        params: { _t: Date.now() },
+      });
       const payload = safeUnwrap<any>(data);
       const list = toList<any>(payload);
       const sellers = list
@@ -148,13 +152,13 @@ export class ApiOrderRepository implements OrderRepositoryPort {
         .filter((item): item is Seller => Boolean(item));
 
       if (import.meta.env.DEV) {
-        console.debug("[getActiveSellers] /usuarios/vendedores/activos/", "resultCount", list.length, "normalized", sellers.length, "payload", payload);
+        console.debug("[getActiveSellers] count:", sellers.length, "raw:", list.length);
       }
 
       return sellers;
     } catch (error) {
       if (import.meta.env.DEV) {
-        console.warn("[getActiveSellers] failed fetching /usuarios/vendedores/activos/", error);
+        console.warn("[getActiveSellers] error:", error);
       }
       throw error;
     }

@@ -13,13 +13,22 @@ export interface User {
   nombre: string;
   apellido: string;
   correo: string;
+  email?: string;
   telefono: string;
   direccion?: string | null;
   ciudad?: string | null;
+  direccionReferencial?: string | null;
+  primerNombre?: string;
+  segundoNombre?: string;
+  primerApellido?: string;
+  segundoApellido?: string;
+  nombreCompleto?: string;
   rol: UserRole;
   username?: string;
+  fotoPerfil?: string | null;
   fotoPerfilUrl?: string | null;
   creadoEn?: string;
+  dobleFactorActivo?: boolean;
   perfilVendedor?: {
     codigoReferido?: string;
     totalVentas?: number;

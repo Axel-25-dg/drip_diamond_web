@@ -56,13 +56,11 @@ export class ApiAuthRepository implements AuthRepositoryPort {
   }
 
   async updateProfile(payload: UpdateProfilePayload): Promise<User> {
-    // Use FormData so the endpoint (MultiPartParser) accepts it regardless of content
+    // Send as FormData — backend uses MultiPartParser on the me action
     const fd = new FormData();
-    if (payload.nombre !== undefined) fd.append("nombre", payload.nombre);
-    if (payload.apellido !== undefined) fd.append("apellido", payload.apellido);
+    if (payload.nombre !== undefined) fd.append("primer_nombre", payload.nombre);
+    if (payload.apellido !== undefined) fd.append("primer_apellido", payload.apellido);
     if (payload.telefono !== undefined) fd.append("telefono", payload.telefono);
-    if (payload.fotoPerfilUrl !== undefined && payload.fotoPerfilUrl !== null)
-      fd.append("foto_perfil_url", payload.fotoPerfilUrl);
     const { data } = await httpClient.patch<any>("/usuarios/me/", fd);
     const result = safeUnwrap<any>(data);
     const userDTO = result?.usuario || result?.user || result;
@@ -70,10 +68,9 @@ export class ApiAuthRepository implements AuthRepositoryPort {
   }
 
   async uploadAvatar(file: File): Promise<User> {
+    // foto_perfil is the exact field name defined in the User model
     const fd = new FormData();
     fd.append("foto_perfil", file);
-    // Also try common field names the backend might expect
-    fd.append("avatar", file);
     const { data } = await httpClient.patch<any>("/usuarios/me/", fd);
     const result = safeUnwrap<any>(data);
     const userDTO = result?.usuario || result?.user || result;
