@@ -19,9 +19,9 @@ const variants: Record<Variant, string> = {
     "hover:brightness-110 hover:-translate-y-0.5 active:translate-y-0",
 
   secondary:
-    "border border-blue-200 bg-white text-blue-700 font-semibold " +
+    "border border-blue-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-blue-700 dark:text-sky-300 font-semibold " +
     "shadow-[0_8px_24px_-16px_rgba(37,99,235,0.24)] " +
-    "hover:border-sky-400 hover:bg-sky-50 hover:text-sky-700 hover:-translate-y-0.5 active:translate-y-0",
+    "hover:border-sky-400 dark:hover:border-sky-500 hover:bg-sky-50 dark:hover:bg-slate-700 hover:text-sky-700 dark:hover:text-sky-200 hover:-translate-y-0.5 active:translate-y-0",
 
   sky:
     "bg-sky-500 text-white font-semibold " +
@@ -29,13 +29,13 @@ const variants: Record<Variant, string> = {
     "hover:bg-sky-600 hover:-translate-y-0.5 active:translate-y-0",
 
   outline:
-    "border border-blue-200 bg-transparent text-blue-700 font-semibold " +
+    "border border-blue-200 dark:border-slate-700 bg-transparent text-blue-700 dark:text-sky-400 font-semibold " +
     "shadow-[0_4px_16px_-12px_rgba(37,99,235,0.22)] " +
-    "hover:border-blue-400 hover:bg-blue-50 hover:text-blue-800",
+    "hover:border-blue-400 dark:hover:border-sky-400 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-800 dark:hover:text-sky-300",
 
   ghost:
-    "bg-transparent text-blue-700 font-medium " +
-    "hover:bg-blue-50 hover:text-blue-800",
+    "bg-transparent text-blue-700 dark:text-sky-400 font-medium " +
+    "hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-800 dark:hover:text-sky-300",
 
   danger:
     "bg-[#dc2626] text-white font-semibold " +
@@ -43,9 +43,9 @@ const variants: Record<Variant, string> = {
     "hover:bg-[#b91c1c] hover:-translate-y-0.5 active:translate-y-0",
 
   gold:
-    "bg-[#0f172a] text-white font-semibold " +
+    "bg-[#0f172a] dark:bg-slate-800 text-white font-semibold " +
     "shadow-[0_10px_24px_-14px_rgba(15,23,42,0.28)] " +
-    "hover:bg-[#1e293b] hover:-translate-y-0.5 active:translate-y-0",
+    "hover:bg-[#1e293b] dark:hover:bg-slate-700 hover:-translate-y-0.5 active:translate-y-0",
 };
 
 const sizes: Record<Size, string> = {

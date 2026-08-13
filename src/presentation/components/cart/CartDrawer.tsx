@@ -32,18 +32,22 @@ export function CartDrawer() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={closeDrawer}
-            className="fixed inset-0 z-50 bg-ink/50"
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
           />
           <motion.aside
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "tween", duration: 0.25 }}
-            className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-paper shadow-2xl"
+            className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-white dark:bg-[#12151c] text-slate-900 dark:text-white shadow-2xl"
           >
-            <div className="flex items-center justify-between border-b-2 border-ink/10 px-5 py-4">
-              <h3 className="font-display text-xl">Tu carrito</h3>
-              <button onClick={closeDrawer} aria-label="Cerrar">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#222732] px-5 py-4">
+              <h3 className="font-display text-xl font-bold text-slate-900 dark:text-white">Tu carrito</h3>
+              <button
+                onClick={closeDrawer}
+                aria-label="Cerrar"
+                className="rounded-lg p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -52,7 +56,7 @@ export function CartDrawer() {
               {isLoading && <Spinner full />}
 
               {!isLoading && (!cart || cart.items.length === 0) && (
-                <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-ink/50">
+                <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-slate-400 dark:text-slate-500">
                   <ShoppingBag className="h-10 w-10" />
                   <p className="text-sm">Tu carrito está vacío.</p>
                 </div>
@@ -61,7 +65,7 @@ export function CartDrawer() {
               <ul className="flex flex-col gap-4">
                 {cart?.items.map((item) => (
                   <li key={item.id} className="flex gap-3">
-                    <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl bg-black/5">
+                    <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
                       {resolveMediaUrl(item.imagenUrl) ? (
                         <img
                           src={resolveMediaUrl(item.imagenUrl)!}
@@ -69,22 +73,22 @@ export function CartDrawer() {
                           className="h-full w-full object-cover"
                         />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center font-display text-base font-black text-slate-400">
+                        <div className="flex h-full w-full items-center justify-center font-display text-base font-black text-slate-400 dark:text-slate-600">
                           DD
                         </div>
                       )}
                     </div>
                     <div className="flex flex-1 flex-col">
-                      <span className="text-xs font-semibold uppercase text-ink/50">{item.marca}</span>
-                      <span className="text-sm font-semibold leading-snug">{item.nombre}</span>
-                      <span className="mt-1 text-xs text-ink/60">
+                      <span className="text-xs font-semibold uppercase text-blue-600 dark:text-sky-400">{item.marca}</span>
+                      <span className="text-sm font-semibold leading-snug text-slate-900 dark:text-white">{item.nombre}</span>
+                      <span className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                         Talla {item.talla} · {item.color} · x{item.cantidad}
                       </span>
                       <div className="mt-auto flex items-center justify-between pt-1">
-                        <span className="text-sm font-bold">{formatCurrency(item.precioUnitario * item.cantidad)}</span>
+                        <span className="text-sm font-bold text-slate-900 dark:text-white">{formatCurrency(item.precioUnitario * item.cantidad)}</span>
                         <button
                           onClick={() => handleRemove(item.id)}
-                          className="text-ink/40 hover:text-danger"
+                          className="text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
                           aria-label="Quitar"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -97,10 +101,10 @@ export function CartDrawer() {
             </div>
 
             {cart && cart.items.length > 0 && (
-              <div className="border-t-2 border-ink/10 px-5 py-4">
+              <div className="border-t border-slate-200 dark:border-[#222732] px-5 py-4 bg-white dark:bg-[#12151c]">
                 <div className="mb-4 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-ink/60">Subtotal</span>
-                  <span className="text-lg font-bold">{formatCurrency(cart.subtotal)}</span>
+                  <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">Subtotal</span>
+                  <span className="text-lg font-bold text-slate-900 dark:text-white">{formatCurrency(cart.subtotal)}</span>
                 </div>
                 <Link to="/carrito" onClick={closeDrawer}>
                   <Button variant="outline" fullWidth size="lg" className="mb-2">

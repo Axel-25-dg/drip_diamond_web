@@ -120,11 +120,11 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="container-app py-8 lg:py-12">
+    <div className="container-app py-6 sm:py-8 lg:py-12 text-slate-900 dark:text-white">
       {/* Header */}
-      <div className="mb-8 flex items-center gap-5">
+      <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-5 text-center sm:text-left">
         <div className="relative">
-          <div className="h-20 w-20 overflow-hidden rounded-full ring-2 ring-ink/10">
+          <div className="h-20 w-20 overflow-hidden rounded-full ring-2 ring-slate-200 dark:ring-slate-700">
             {avatarUrl ? (
               <img
                 src={avatarUrl}
@@ -141,7 +141,7 @@ export default function ProfilePage() {
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploadingAvatar}
-            className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-ink text-paper shadow transition hover:opacity-80 disabled:opacity-50 dark:border-slate-900"
+            className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-slate-900 text-white shadow transition hover:opacity-80 disabled:opacity-50 dark:border-slate-900"
             aria-label="Cambiar foto de perfil"
           >
             {isUploadingAvatar ? (
@@ -160,7 +160,7 @@ export default function ProfilePage() {
         </div>
 
         <div>
-          <h1 className="font-display text-3xl leading-tight">
+          <h1 className="font-display text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white leading-tight">
             {user.nombre} {user.apellido}
           </h1>
           <span className="mt-1 inline-block rounded-full bg-slate-100 px-3 py-0.5 text-xs font-semibold capitalize text-slate-600 dark:bg-slate-800 dark:text-slate-300">
@@ -173,9 +173,9 @@ export default function ProfilePage() {
         {/* Datos personales */}
         <form
           onSubmit={handleSubmit(onSubmit)}
-          className="rounded-2xl border border-theme bg-surf p-6"
+          className="rounded-2xl border border-slate-200 dark:border-[#222732] bg-white dark:bg-[#12151c] p-4 sm:p-6 shadow-sm"
         >
-          <h2 className="mb-5 font-display text-xl">Datos personales</h2>
+          <h2 className="mb-5 font-display text-xl font-bold text-slate-900 dark:text-white">Datos personales</h2>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
@@ -226,8 +226,8 @@ export default function ProfilePage() {
 
           {user.username && (
             <div className="mt-4">
-              <p className="mb-1 text-xs font-semibold text-ink/50">Nombre de usuario</p>
-              <p className="rounded-lg border border-theme bg-surf2 px-3 py-2 text-sm text-primary">
+              <p className="mb-1 text-xs font-semibold text-slate-500 dark:text-slate-400">Nombre de usuario</p>
+              <p className="rounded-lg border border-slate-200 dark:border-[#222732] bg-slate-50 dark:bg-[#171a22] px-3 py-2 text-sm text-slate-900 dark:text-white">
                 {user.username}
               </p>
             </div>
@@ -235,27 +235,27 @@ export default function ProfilePage() {
 
           {/* Vendedor info */}
           {user.perfilVendedor && (
-            <div className="mt-5 rounded-xl border border-sky-200 bg-sky-50 p-4 dark:border-sky-800 dark:bg-sky-950/30">
+            <div className="mt-5 rounded-xl border border-sky-200 bg-sky-50 p-4 dark:border-sky-800/60 dark:bg-sky-950/30">
               <p className="mb-3 text-xs font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
                 Perfil de vendedor
               </p>
               <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
                 {user.perfilVendedor.codigoReferido && (
                   <div>
-                    <p className="text-xs text-slate-500">Código referido</p>
-                    <p className="font-semibold">{user.perfilVendedor.codigoReferido}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Código referido</p>
+                    <p className="font-semibold text-slate-900 dark:text-white">{user.perfilVendedor.codigoReferido}</p>
                   </div>
                 )}
                 {user.perfilVendedor.totalVentas != null && (
                   <div>
-                    <p className="text-xs text-slate-500">Total ventas</p>
-                    <p className="font-semibold">{user.perfilVendedor.totalVentas}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Total ventas</p>
+                    <p className="font-semibold text-slate-900 dark:text-white">{user.perfilVendedor.totalVentas}</p>
                   </div>
                 )}
                 {user.perfilVendedor.comisionesAcumuladas != null && (
                   <div>
-                    <p className="text-xs text-slate-500">Comisiones</p>
-                    <p className="font-semibold">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Comisiones</p>
+                    <p className="font-semibold text-slate-900 dark:text-white">
                       ${user.perfilVendedor.comisionesAcumuladas.toFixed(2)}
                     </p>
                   </div>
@@ -280,18 +280,18 @@ export default function ProfilePage() {
         <div className="flex flex-col gap-3">
           <Link
             to="/pedidos"
-            className="flex items-center gap-3 rounded-2xl border border-theme bg-surf p-5 transition-colors hover:bg-surf2"
+            className="flex items-center gap-3 rounded-2xl border border-slate-200 dark:border-[#222732] bg-white dark:bg-[#12151c] p-5 text-slate-900 dark:text-white transition-colors hover:bg-slate-50 dark:hover:bg-[#171a22] shadow-sm"
           >
-            <Package className="h-5 w-5 shrink-0 text-ink/60" />
+            <Package className="h-5 w-5 shrink-0 text-slate-400" />
             <div>
               <p className="font-semibold">Mis pedidos</p>
-              <p className="text-xs text-ink/50">Revisa el estado de tus compras</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Revisa el estado de tus compras</p>
             </div>
           </Link>
 
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 rounded-2xl border border-red-100 bg-red-50 p-5 text-left text-danger transition-colors hover:bg-red-100 dark:border-red-900/30 dark:bg-red-950/20 dark:hover:bg-red-950/40"
+            className="flex items-center gap-3 rounded-2xl border border-red-100 bg-red-50 p-5 text-left text-red-600 transition-colors hover:bg-red-100 dark:border-red-900/30 dark:bg-red-950/20 dark:text-red-400 dark:hover:bg-red-950/40"
           >
             <LogOut className="h-5 w-5 shrink-0" />
             <p className="font-semibold">Cerrar sesión</p>

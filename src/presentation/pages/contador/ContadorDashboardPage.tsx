@@ -125,46 +125,46 @@ export default function ContadorDashboardPage() {
   );
 
   return (
-    <div className="min-h-screen bg-sky-50">
-      <div className="container-app py-10">
-        <section className="rounded-[32px] border border-blue-100 bg-white p-8 shadow-[0_24px_70px_rgba(14,165,233,0.08)]">
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-[#0a0c10] dark:text-slate-100 transition-colors duration-200">
+      <div className="container-app py-6 sm:py-10">
+        <section className="rounded-[24px] sm:rounded-[32px] border border-blue-100 bg-white p-5 sm:p-8 shadow-[0_24px_70px_rgba(14,165,233,0.08)] dark:border-[#222732] dark:bg-[#12151c]">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-3xl">
-              <span className="inline-flex rounded-full bg-sky-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.24em] text-sky-700 border border-sky-200">
+              <span className="inline-flex rounded-full bg-sky-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.24em] text-sky-700 border border-sky-200 dark:bg-sky-500/10 dark:text-sky-400 dark:border-sky-500/20">
                 Panel de contabilidad y despacho
               </span>
-              <h1 className="mt-4 font-display text-4xl font-extrabold text-slate-900">Verificación & <span className="text-blue-600">Despacho</span></h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">Aprueba comprobantes y avanza los pedidos hasta la entrega con un diseño fresco, limpio y fácil de usar.</p>
+              <h1 className="mt-3 font-display text-3xl font-extrabold text-slate-900 dark:text-white sm:text-4xl">Verificación & <span className="text-blue-600 dark:text-[#38bdf8]">Despacho</span></h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">Aprueba comprobantes y avanza los pedidos hasta la entrega con un diseño fresco, limpio y fácil de usar.</p>
             </div>
             <a
               href="/contador/liquidaciones"
-              className="inline-flex h-11 items-center gap-2 rounded-2xl border border-blue-100 bg-slate-50 px-4 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-white"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-blue-100 bg-slate-50 px-4 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-white dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 w-full sm:w-auto"
             >
               <DollarSign className="h-4 w-4 text-sky-500" />
               Ir a liquidaciones
             </a>
           </div>
 
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-8 sm:mt-10 grid gap-4 grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-4">
             {[
               { label: "Pendientes", value: pendingCount, helper: "Comprobantes a revisar" },
               { label: "Pedidos activos", value: actionableOrders.length, helper: "Solicitudes en proceso" },
               { label: "Pagos aprobados", value: payments.filter((p) => p.estado === "VERIFICADO").length, helper: "Aprobados" },
               { label: "Pagos rechazados", value: payments.filter((p) => p.estado === "RECHAZADO").length, helper: "Rechazos" },
             ].map((item) => (
-              <div key={item.label} className="rounded-[28px] border border-blue-100 bg-slate-50 p-5 shadow-[0_18px_45px_rgba(14,165,233,0.08)]">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">{item.label}</p>
-                <p className="mt-3 text-4xl font-extrabold text-slate-900">{item.value}</p>
-                <p className="mt-2 text-sm text-slate-500">{item.helper}</p>
+              <div key={item.label} className="rounded-[24px] sm:rounded-[28px] border border-blue-100 bg-slate-50 p-5 shadow-sm dark:border-[#222732] dark:bg-[#171a22]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400">{item.label}</p>
+                <p className="mt-3 text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white">{item.value}</p>
+                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{item.helper}</p>
               </div>
             ))}
           </div>
 
-          <div className="mt-10 rounded-[28px] border border-blue-100 bg-slate-50 p-6 shadow-[0_18px_45px_rgba(14,165,233,0.08)]">
+          <div className="mt-8 sm:mt-10 rounded-[24px] sm:rounded-[28px] border border-blue-100 bg-slate-50 p-5 sm:p-6 shadow-sm dark:border-[#222732] dark:bg-[#171a22]">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <h2 className="font-display text-2xl font-bold text-slate-900">Panel operativo</h2>
-                <p className="mt-2 text-sm text-slate-500">Cambia rápidamente entre comprobantes y despacho de pedidos.</p>
+                <h2 className="font-display text-2xl font-bold text-slate-900 dark:text-white">Panel operativo</h2>
+                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Cambia rápidamente entre comprobantes y despacho de pedidos.</p>
               </div>
               <div className="flex flex-wrap gap-3">
                 {(
@@ -179,7 +179,7 @@ export default function ContadorDashboardPage() {
                     className={`rounded-2xl px-5 py-3 text-sm font-semibold transition ${
                       activeTab === key
                         ? "bg-blue-600 text-white shadow-lg shadow-sky-500/20"
-                        : "bg-white text-slate-700 border border-blue-100 hover:border-blue-200"
+                        : "bg-white text-slate-700 border border-blue-100 hover:border-blue-200 dark:bg-[#12151c] dark:text-slate-300 dark:border-[#222732] dark:hover:border-[#313746]"
                     }`}
                   >
                     {label}
@@ -190,18 +190,18 @@ export default function ContadorDashboardPage() {
           </div>
 
           {activeTab === "COMPROBANTES" && (
-            <div className="mt-8 overflow-hidden rounded-[28px] border border-blue-100 bg-white shadow-[0_18px_45px_rgba(14,165,233,0.08)]">
+            <div className="mt-8 overflow-hidden rounded-[28px] border border-blue-100 bg-white shadow-sm dark:border-[#222732] dark:bg-[#12151c]">
               {isLoading ? (
-                <div className="flex min-h-[260px] items-center justify-center p-12 text-slate-500">Cargando comprobantes...</div>
+                <div className="flex min-h-[260px] items-center justify-center p-12 text-slate-500 dark:text-slate-400">Cargando comprobantes...</div>
               ) : payments.length === 0 ? (
-                <div className="flex min-h-[260px] flex-col items-center justify-center gap-4 p-12 text-center text-slate-500">
+                <div className="flex min-h-[260px] flex-col items-center justify-center gap-4 p-12 text-center text-slate-500 dark:text-slate-400">
                   <CheckCircle className="h-12 w-12 text-sky-400" />
-                  <p className="text-xl font-semibold text-slate-900">¡Al día! Sin comprobantes pendientes</p>
+                  <p className="text-xl font-semibold text-slate-900 dark:text-white">¡Al día! Sin comprobantes pendientes</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm text-slate-600">
-                    <thead className="bg-sky-50 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  <table className="w-full text-left text-sm text-slate-600 dark:text-slate-300">
+                    <thead className="bg-sky-50 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:bg-[#171a22] dark:text-slate-400 border-b border-slate-100 dark:border-[#222732]">
                       <tr>
                         <th className="px-6 py-4">Pedido</th>
                         <th className="px-6 py-4">Cliente</th>
@@ -211,15 +211,15 @@ export default function ContadorDashboardPage() {
                         <th className="px-6 py-4 text-right">Acción</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-slate-100 dark:divide-[#1c2029]">
                       {payments.map((p) => (
-                        <tr key={p.id} className="hover:bg-slate-50">
-                          <td className="px-6 py-4 font-mono font-semibold text-slate-900">#{p.pedidoId}</td>
-                          <td className="px-6 py-4 text-slate-800">{p.clienteNombre}</td>
-                          <td className="px-6 py-4 font-mono font-bold text-blue-700">{formatCurrency(p.montoDeclarado ?? p.monto)}</td>
+                        <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-[#171a22]/60 transition-colors">
+                          <td className="px-6 py-4 font-mono font-semibold text-slate-900 dark:text-white">#{p.pedidoId}</td>
+                          <td className="px-6 py-4 text-slate-800 dark:text-slate-200">{p.clienteNombre}</td>
+                          <td className="px-6 py-4 font-mono font-bold text-blue-700 dark:text-[#38bdf8]">{formatCurrency(p.montoDeclarado ?? p.monto)}</td>
                           <td className="px-6 py-4">
-                            <div className="font-semibold text-slate-900">{p.bancoOrigen || "—"}</div>
-                            <div className="mt-1 text-xs text-slate-500 font-mono">Ref: {p.numeroReferencia || "—"}</div>
+                            <div className="font-semibold text-slate-900 dark:text-white">{p.bancoOrigen || "—"}</div>
+                            <div className="mt-1 text-xs text-slate-500 dark:text-slate-400 font-mono">Ref: {p.numeroReferencia || "—"}</div>
                           </td>
                           <td className="px-6 py-4"><Badge tone={p.estado === "VERIFICADO" ? "success" : p.estado === "RECHAZADO" ? "danger" : "warning"}>{p.estado}</Badge></td>
                           <td className="px-6 py-4 text-right">
@@ -241,15 +241,15 @@ export default function ContadorDashboardPage() {
           )}
 
           {activeTab === "PEDIDOS" && (
-            <div className="mt-8 overflow-hidden rounded-[28px] border border-blue-100 bg-white shadow-[0_18px_45px_rgba(14,165,233,0.08)]">
+            <div className="mt-8 overflow-hidden rounded-[28px] border border-blue-100 bg-white shadow-sm dark:border-[#222732] dark:bg-[#12151c]">
               {isLoading ? (
-                <div className="flex min-h-[260px] items-center justify-center p-12 text-slate-500">Cargando pedidos...</div>
+                <div className="flex min-h-[260px] items-center justify-center p-12 text-slate-500 dark:text-slate-400">Cargando pedidos...</div>
               ) : orders.length === 0 ? (
-                <div className="flex min-h-[260px] items-center justify-center p-12 text-slate-500">No hay pedidos en proceso de despacho.</div>
+                <div className="flex min-h-[260px] items-center justify-center p-12 text-slate-500 dark:text-slate-400">No hay pedidos en proceso de despacho.</div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm text-slate-600">
-                    <thead className="bg-sky-50 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  <table className="w-full text-left text-sm text-slate-600 dark:text-slate-300">
+                    <thead className="bg-sky-50 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:bg-[#171a22] dark:text-slate-400 border-b border-slate-100 dark:border-[#222732]">
                       <tr>
                         <th className="px-6 py-4">Pedido</th>
                         <th className="px-6 py-4">Cliente</th>
@@ -260,14 +260,14 @@ export default function ContadorDashboardPage() {
                         <th className="px-6 py-4 text-right">Acción</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-slate-100 dark:divide-[#1c2029]">
                       {orders.map((o) => (
-                        <tr key={o.id} className="hover:bg-slate-50">
-                          <td className="px-6 py-4 font-mono font-semibold text-slate-900">{o.numero || `#${o.id}`}</td>
-                          <td className="px-6 py-4 text-slate-800">{o.clienteNombre || "—"}</td>
-                          <td className="px-6 py-4 text-slate-600">{o.vendedorNombre || "—"}</td>
-                          <td className="px-6 py-4 font-mono font-bold text-slate-900">{formatCurrency(o.total || 0)}</td>
-                          <td className="px-6 py-4 text-xs text-slate-500 font-mono">{o.numeroGuia || "—"}</td>
+                        <tr key={o.id} className="hover:bg-slate-50 dark:hover:bg-[#171a22]/60 transition-colors">
+                          <td className="px-6 py-4 font-mono font-semibold text-slate-900 dark:text-white">{o.numero || `#${o.id}`}</td>
+                          <td className="px-6 py-4 text-slate-800 dark:text-slate-200">{o.clienteNombre || "—"}</td>
+                          <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{o.vendedorNombre || "—"}</td>
+                          <td className="px-6 py-4 font-mono font-bold text-slate-900 dark:text-white">{formatCurrency(o.total || 0)}</td>
+                          <td className="px-6 py-4 text-xs text-slate-500 dark:text-slate-400 font-mono">{o.numeroGuia || "—"}</td>
                           <td className="px-6 py-4"><Badge tone={orderStatusTone(o.estado)}>{orderStatusLabel(o.estado)}</Badge></td>
                           <td className="px-6 py-4 text-right">
                             {o.estado === "PAGO_APROBADO" && (
@@ -280,10 +280,10 @@ export default function ContadorDashboardPage() {
                               <Button variant="secondary" size="sm" isLoading={actionLoading === o.id} onClick={() => advance(o.id, "ENTREGADO")}>Confirmar entrega</Button>
                             )}
                             {o.estado === "ENTREGADO" && (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">Entregado</span>
+                              <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 dark:bg-sky-950/40 px-3 py-1 text-xs font-semibold text-sky-700 dark:text-sky-300">Entregado</span>
                             )}
                             {!["PAGO_APROBADO", "PREPARANDO_PEDIDO", "ENVIADO", "ENTREGADO"].includes(o.estado) && (
-                              <span className="text-xs text-slate-400">—</span>
+                              <span className="text-xs text-slate-400 dark:text-slate-500">—</span>
                             )}
                           </td>
                         </tr>
@@ -298,18 +298,18 @@ export default function ContadorDashboardPage() {
       </div>
 
       {selectedProof && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-[28px] border border-blue-100 bg-white p-6 shadow-[0_24px_70px_rgba(14,165,233,0.18)]">
-            <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-[28px] border border-blue-100 bg-white p-6 shadow-2xl dark:border-[#262c38] dark:bg-[#12151c] dark:text-white">
+            <div className="flex items-start justify-between border-b border-slate-100 dark:border-[#1e232e] pb-4">
               <div>
-                <h3 className="font-display text-2xl font-bold text-slate-900">Comprobante #{selectedProof.id}</h3>
-                <p className="text-xs text-slate-500">Pedido #{selectedProof.pedidoId} · {selectedProof.clienteNombre}</p>
+                <h3 className="font-display text-2xl font-bold text-slate-900 dark:text-white">Comprobante #{selectedProof.id}</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Pedido #{selectedProof.pedidoId} · {selectedProof.clienteNombre}</p>
               </div>
-              <button onClick={() => setSelectedProof(null)} className="rounded-2xl p-2 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button>
+              <button onClick={() => setSelectedProof(null)} className="rounded-2xl p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"><X className="h-4 w-4" /></button>
             </div>
 
             <div className="mt-4 space-y-4">
-              <div className="aspect-video w-full overflow-hidden rounded-2xl border border-blue-100 bg-slate-50 flex items-center justify-center">
+              <div className="aspect-video w-full overflow-hidden rounded-2xl border border-blue-100 bg-slate-50 dark:border-[#222732] dark:bg-[#171a22] flex items-center justify-center">
                 {resolveMediaUrl(selectedProof.comprobanteUrl) ? (
                   <img src={resolveMediaUrl(selectedProof.comprobanteUrl)!} alt="Comprobante" className="h-full w-full object-contain" />
                 ) : (
@@ -322,27 +322,27 @@ export default function ContadorDashboardPage() {
 
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <span className="text-xs text-slate-500">Monto declarado</span>
-                  <p className="mt-1 font-mono font-bold text-blue-700">{formatCurrency(selectedProof.montoDeclarado ?? selectedProof.monto)}</p>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">Monto declarado</span>
+                  <p className="mt-1 font-mono font-bold text-blue-700 dark:text-[#38bdf8]">{formatCurrency(selectedProof.montoDeclarado ?? selectedProof.monto)}</p>
                 </div>
                 <div>
-                  <span className="text-xs text-slate-500">Referencia</span>
-                  <p className="mt-1 font-mono font-bold text-slate-900">{selectedProof.numeroReferencia || "—"}</p>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">Referencia</span>
+                  <p className="mt-1 font-mono font-bold text-slate-900 dark:text-white">{selectedProof.numeroReferencia || "—"}</p>
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Observación</label>
+                <label className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400">Observación</label>
                 <input
                   value={observacion}
                   onChange={(e) => setObservacion(e.target.value)}
                   placeholder="Ej. Depósito verificado en Pichincha Ahorros"
-                  className="mt-2 h-11 w-full rounded-2xl border border-blue-100 bg-slate-50 px-4 text-sm text-slate-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-sky-100"
+                  className="mt-2 h-11 w-full rounded-2xl border border-blue-100 bg-slate-50 dark:border-[#262c38] dark:bg-[#171a22] px-4 text-sm text-slate-900 dark:text-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-sky-100"
                 />
               </div>
 
               <div className="flex flex-wrap justify-end gap-3 pt-2">
-                <Button variant="ghost" className="text-slate-600" onClick={() => setSelectedProof(null)}>Cancelar</Button>
+                <Button variant="ghost" className="text-slate-600 dark:text-slate-300" onClick={() => setSelectedProof(null)}>Cancelar</Button>
                 <Button variant="secondary" isLoading={isVerifying} onClick={() => handleVerify("VERIFICADO")}>Aprobar pago</Button>
                 <Button variant="outline" isLoading={isVerifying} onClick={() => handleVerify("RECHAZADO")}>Rechazar</Button>
               </div>
@@ -352,25 +352,25 @@ export default function ContadorDashboardPage() {
       )}
 
       {shipModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-[28px] border border-blue-100 bg-white p-6 shadow-[0_24px_70px_rgba(14,165,233,0.18)]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[28px] border border-blue-100 bg-white p-6 shadow-2xl dark:border-[#262c38] dark:bg-[#12151c] dark:text-white">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="font-display text-2xl font-bold text-slate-900">Marcar como Enviado</h3>
-                <p className="text-sm text-slate-500">Pedido {shipModal.numero || `#${shipModal.id}`} · {shipModal.clienteNombre}</p>
+                <h3 className="font-display text-2xl font-bold text-slate-900 dark:text-white">Marcar como Enviado</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Pedido {shipModal.numero || `#${shipModal.id}`} · {shipModal.clienteNombre}</p>
               </div>
-              <button onClick={() => setShipModal(null)} className="rounded-2xl p-2 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button>
+              <button onClick={() => setShipModal(null)} className="rounded-2xl p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"><X className="h-4 w-4" /></button>
             </div>
 
             <div className="mt-6">
-              <label className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Número de guía (opcional)</label>
+              <label className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400">Número de guía (opcional)</label>
               <input
                 autoFocus
                 value={guiaInput}
                 onChange={(e) => setGuiaInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleShipConfirm()}
                 placeholder="Ej. SERVIENTREGA-001234"
-                className="mt-3 h-12 w-full rounded-2xl border border-blue-100 bg-slate-50 px-4 text-sm text-slate-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-sky-100"
+                className="mt-3 h-12 w-full rounded-2xl border border-blue-100 bg-slate-50 dark:border-[#262c38] dark:bg-[#171a22] px-4 text-sm text-slate-900 dark:text-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-sky-100"
               />
             </div>
 

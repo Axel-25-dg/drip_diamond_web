@@ -158,9 +158,9 @@ function Sneaker3D({ products }: { products: ProductSummary[] }) {
         <div className="absolute bottom-[12%] h-5 w-2/5 rounded-[100%] bg-blue-600/20 blur-xl" aria-hidden />
 
         {/* Price chip */}
-        <div className="absolute right-2 top-6 rounded-2xl border border-blue-100 bg-white/90 px-4 py-3 shadow-lg backdrop-blur sm:right-6">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Desde</p>
-          <p className="font-display text-xl font-extrabold text-gray-900">{price}</p>
+        <div className="absolute right-2 top-6 rounded-2xl border border-blue-100 bg-white/90 dark:border-[#222732] dark:bg-[#12151c]/90 px-4 py-3 shadow-lg backdrop-blur sm:right-6">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-slate-400">Desde</p>
+          <p className="font-display text-xl font-extrabold text-gray-900 dark:text-white">{price}</p>
         </div>
       </div>
 
@@ -174,10 +174,10 @@ function Sneaker3D({ products }: { products: ProductSummary[] }) {
               onClick={() => setActive(i)}
               aria-label={`Ver ${(s as any).nombre ?? (s as any).name}`}
               aria-pressed={i === active}
-              className={`relative h-14 w-14 overflow-hidden rounded-xl border bg-white transition-all sm:h-16 sm:w-16 ${
+              className={`relative h-14 w-14 overflow-hidden rounded-xl border bg-white dark:bg-[#12151c] transition-all sm:h-16 sm:w-16 ${
                 i === active
-                  ? "border-blue-500 ring-2 ring-blue-400/30"
-                  : "border-gray-200 opacity-60 hover:opacity-100"
+                  ? "border-blue-500 ring-2 ring-blue-400/30 dark:border-sky-400"
+                  : "border-gray-200 dark:border-[#222732] opacity-60 hover:opacity-100"
               }`}
             >
               <img src={thumb} alt="" className="h-full w-full object-contain p-1"
@@ -220,12 +220,12 @@ export default function HomePage() {
   const marqueeRow = [...MARQUEE_WORDS, ...MARQUEE_WORDS];
 
   return (
-    <main className="min-h-screen bg-[#f8faff]">
+    <main className="min-h-screen bg-[#f8faff] dark:bg-[#0a0c10] text-slate-900 dark:text-white transition-colors duration-200">
 
       {/* ══════════════════════════════════════════════════════════
           HERO
       ══════════════════════════════════════════════════════════ */}
-      <section className="relative overflow-hidden bg-white">
+      <section className="relative overflow-hidden bg-white dark:bg-[#0a0c10]">
         {/* Celeste wash */}
         <div
           className="pointer-events-none absolute inset-0"
@@ -233,22 +233,22 @@ export default function HomePage() {
           aria-hidden
         />
 
-        <div className="container-app relative grid items-center gap-10 py-14 lg:grid-cols-[1.05fr_1fr] lg:py-20">
+        <div className="container-app relative grid items-center gap-8 py-10 sm:gap-10 sm:py-14 lg:grid-cols-[1.05fr_1fr] lg:py-20">
 
           {/* LEFT */}
           <div className="space-y-7">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-blue-500" />
-              <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-blue-600">
+            <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 dark:border-blue-900/50 dark:bg-blue-950/40 px-3 py-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-blue-500 dark:text-sky-400" />
+              <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-blue-600 dark:text-sky-400">
                 Nueva temporada · Drip Diamond Ecuador
               </span>
             </div>
 
             {/* Headline */}
-            <h1 className="font-display text-5xl font-black leading-[0.92] tracking-tight text-gray-900 text-balance sm:text-6xl lg:text-7xl">
+            <h1 className="font-display text-4xl font-black leading-[0.92] tracking-tight text-gray-900 dark:text-white text-balance sm:text-5xl lg:text-6xl xl:text-7xl">
               Camina con{" "}
-              <span className="relative whitespace-nowrap text-blue-600">
+              <span className="relative whitespace-nowrap text-blue-600 dark:text-sky-400">
                 drip diamond
                 <svg
                   className="absolute -bottom-2 left-0 w-full text-sky-400"
@@ -264,7 +264,7 @@ export default function HomePage() {
             </h1>
 
             {/* Description */}
-            <p className="max-w-md text-base leading-relaxed text-gray-500">
+            <p className="max-w-md text-base leading-relaxed text-gray-500 dark:text-slate-400">
               Las sneakers más exclusivas de Ecuador. Verificadas y
               entregadas a todo el país. Gira, explora y descubre el par que combina con tu ritmo.
             </p>
@@ -280,22 +280,22 @@ export default function HomePage() {
               </Link>
               <Link
                 to="/catalogo?ordering=-reciente"
-                className="inline-flex h-12 items-center rounded-full border border-blue-200 bg-white px-7 text-sm font-semibold text-gray-700 transition-all hover:border-blue-400 hover:text-blue-700"
+                className="inline-flex h-12 items-center rounded-full border border-blue-200 bg-white dark:border-[#222732] dark:bg-[#12151c] px-7 text-sm font-semibold text-gray-700 dark:text-slate-200 transition-all hover:border-blue-400 dark:hover:border-sky-400 hover:text-blue-700 dark:hover:text-white"
               >
                 Ver novedades
               </Link>
             </div>
 
             {/* Stats */}
-            <div className="flex flex-wrap items-center gap-10 pt-2">
+            <div className="flex flex-wrap items-center gap-6 sm:gap-10 pt-2">
               {[
                 { v: "48h",  l: "Entrega express" },
                 { v: "+500", l: "Modelos únicos" },
                 { v: "4.9/5", l: "Valoración media" },
               ].map((s) => (
                 <div key={s.l}>
-                  <p className="font-display text-2xl font-black text-gray-900">{s.v}</p>
-                  <p className="text-xs text-gray-400">{s.l}</p>
+                  <p className="font-display text-2xl font-black text-gray-900 dark:text-white">{s.v}</p>
+                  <p className="text-xs text-gray-400 dark:text-slate-400">{s.l}</p>
                 </div>
               ))}
             </div>
@@ -336,25 +336,25 @@ export default function HomePage() {
       <section className="container-app py-16" id="categorias">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-500">Explorar</p>
-            <h2 className="mt-1 font-display text-3xl font-black tracking-tight text-gray-900 sm:text-4xl">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-500 dark:text-sky-400">Explorar</p>
+            <h2 className="mt-1 font-display text-3xl font-black tracking-tight text-gray-900 dark:text-white sm:text-4xl">
               Compra por categoría
             </h2>
           </div>
-          <Link to="/catalogo" className="hidden text-sm font-semibold text-gray-400 transition-colors hover:text-gray-900 sm:block">
+          <Link to="/catalogo" className="hidden text-sm font-semibold text-gray-400 dark:text-slate-400 transition-colors hover:text-gray-900 dark:hover:text-white sm:block">
             Ver todo →
           </Link>
         </div>
 
         {categories.length > 0 ? (
-          <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-6 sm:mt-8 grid grid-cols-1 gap-4 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4">
             {categories.slice(0, 4).map((c, idx) => {
               const isUrbano = /urbano|urban/i.test(String(c.nombre ?? ""));
               return (
                 <Link
                   key={c.id}
                   to={`/catalogo?categoria=${c.id}`}
-                  className={`group relative flex min-h-[320px] flex-col justify-end overflow-hidden rounded-3xl border border-blue-100 bg-blue-50 ${isUrbano ? "md:col-span-2 lg:col-span-2" : ""}`}
+                  className={`group relative flex min-h-[320px] flex-col justify-end overflow-hidden rounded-3xl border border-blue-100 dark:border-[#222732] bg-blue-50 dark:bg-[#12151c] ${isUrbano ? "md:col-span-2 lg:col-span-2" : ""}`}
                 >
                 <img
                   src={getCategoryImage(c) ?? resolveMediaUrl(c.imagenUrl) ?? `/zapatillas/shoe-${(idx % 4) + 1}.svg`}
@@ -375,7 +375,7 @@ export default function HomePage() {
           </div>
         ) : (
           /* Placeholder categories cuando no hay datos */
-          <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-6 sm:mt-8 grid grid-cols-1 gap-4 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4">
             {["Running","Urbano","Basket","Casual"].map((name, idx) => (
               <Link
                 key={name}
@@ -403,28 +403,28 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════════════════════
           FEATURED PRODUCTS
       ══════════════════════════════════════════════════════════ */}
-      <section className="bg-blue-50/60 py-16" id="novedades">
+      <section className="bg-blue-50/60 dark:bg-[#0e1117] py-16" id="novedades">
         <div className="container-app">
           <div className="flex items-end justify-between gap-4">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-500">Colección</p>
-              <h2 className="mt-1 font-display text-3xl font-black tracking-tight text-gray-900 sm:text-4xl">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-500 dark:text-sky-400">Colección</p>
+              <h2 className="mt-1 font-display text-3xl font-black tracking-tight text-gray-900 dark:text-white sm:text-4xl">
                 Recién llegados
               </h2>
             </div>
-            <Link to="/catalogo" className="hidden text-sm font-semibold text-gray-400 transition-colors hover:text-gray-900 sm:block">
+            <Link to="/catalogo" className="hidden text-sm font-semibold text-gray-400 dark:text-slate-400 transition-colors hover:text-gray-900 dark:hover:text-white sm:block">
               Ver catálogo →
             </Link>
           </div>
 
-          <div id="catalogo" className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <div id="catalogo" className="mt-6 sm:mt-8 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
             {isLoading
               ? Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="flex flex-col overflow-hidden rounded-3xl border border-blue-100 bg-white">
-                    <div className="aspect-square animate-pulse bg-blue-100" />
+                  <div key={i} className="flex flex-col overflow-hidden rounded-3xl border border-blue-100 dark:border-[#222732] bg-white dark:bg-[#12151c]">
+                    <div className="aspect-square animate-pulse bg-blue-100 dark:bg-slate-800" />
                     <div className="p-4 space-y-2">
-                      <div className="h-4 rounded-lg bg-blue-100 animate-pulse w-3/4" />
-                      <div className="h-3 rounded-lg bg-blue-50 animate-pulse w-1/2" />
+                      <div className="h-4 rounded-lg bg-blue-100 dark:bg-slate-800 animate-pulse w-3/4" />
+                      <div className="h-3 rounded-lg bg-blue-50 dark:bg-slate-900 animate-pulse w-1/2" />
                     </div>
                   </div>
                 ))
@@ -443,16 +443,16 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════════════════════
           BENEFITS
       ══════════════════════════════════════════════════════════ */}
-      <section className="container-app py-14">
-        <div className="grid gap-4 sm:grid-cols-3">
+      <section className="container-app py-10 sm:py-14">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {BENEFITS.map(({ Icon, title, text }) => (
-            <div key={title} className="flex gap-4 rounded-2xl border border-blue-100 bg-white p-5 shadow-[0_2px_12px_rgba(37,99,235,0.06)]">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+            <div key={title} className="flex gap-4 rounded-2xl border border-blue-100 dark:border-[#222732] bg-white dark:bg-[#12151c] p-5 shadow-sm">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 dark:bg-slate-800 text-blue-600 dark:text-sky-400">
                 <Icon className="h-5 w-5" />
               </span>
               <div>
-                <p className="font-display text-sm font-bold text-gray-900">{title}</p>
-                <p className="mt-1 text-sm leading-relaxed text-gray-500">{text}</p>
+                <p className="font-display text-sm font-bold text-gray-900 dark:text-white">{title}</p>
+                <p className="mt-1 text-sm leading-relaxed text-gray-500 dark:text-slate-400">{text}</p>
               </div>
             </div>
           ))}
@@ -463,27 +463,27 @@ export default function HomePage() {
           DETAIL BAND
       ══════════════════════════════════════════════════════════ */}
       <section className="container-app py-16">
-        <div className="relative grid overflow-hidden rounded-[2rem] border border-blue-100 bg-white shadow-[0_4px_32px_rgba(37,99,235,0.08)] md:grid-cols-2">
+        <div className="relative grid overflow-hidden rounded-[2rem] border border-blue-100 dark:border-[#222732] bg-white dark:bg-[#12151c] shadow-sm md:grid-cols-2">
           <div className="flex flex-col justify-center gap-5 p-8 sm:p-12">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-500">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-500 dark:text-sky-400">
               Detalle &amp; materiales
             </p>
-            <h2 className="font-display text-3xl font-black leading-tight tracking-tight text-gray-900 text-balance sm:text-4xl">
+            <h2 className="font-display text-3xl font-black leading-tight tracking-tight text-gray-900 dark:text-white text-balance sm:text-4xl">
               Cada puntada, pensada para durar.
             </h2>
-            <p className="max-w-md text-base leading-relaxed text-gray-500 text-pretty">
+            <p className="max-w-md text-base leading-relaxed text-gray-500 dark:text-slate-400 text-pretty">
               Tejidos técnicos, costuras en celeste y suelas amortiguadas. Un acabado limpio
               en blanco y azul que se siente tan bien como se ve.
             </p>
             <Link
               to="/catalogo"
-              className="group inline-flex w-fit items-center gap-2 text-sm font-bold text-blue-600"
+              className="group inline-flex w-fit items-center gap-2 text-sm font-bold text-blue-600 dark:text-sky-400"
             >
               Descubre la colección
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
           </div>
-          <div className="relative min-h-[280px] overflow-hidden bg-gradient-to-br from-blue-50 to-sky-100">
+          <div className="relative min-h-[280px] overflow-hidden bg-gradient-to-br from-blue-50 to-sky-100 dark:from-slate-900 dark:to-slate-800">
                 <img
                   src="/categoria_e_imagenes/jordan.jpg"
                   alt="Detalle Jordan"
@@ -498,9 +498,9 @@ export default function HomePage() {
           BRANDS
       ══════════════════════════════════════════════════════════ */}
       {brands.length > 0 && (
-        <section className="border-y border-blue-50 bg-white py-12">
+        <section className="border-y border-blue-50 dark:border-[#222732] bg-white dark:bg-[#0a0c10] py-12">
           <div className="container-app">
-            <p className="mb-8 text-center text-[11px] font-bold uppercase tracking-[0.22em] text-gray-400">
+            <p className="mb-8 text-center text-[11px] font-bold uppercase tracking-[0.22em] text-gray-400 dark:text-slate-500">
               Marcas Disponibles
             </p>
             <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-4">
@@ -508,7 +508,7 @@ export default function HomePage() {
                 <Link
                   key={b.id}
                   to={`/catalogo?marca=${b.id}`}
-                  className="font-display text-lg font-black tracking-tight text-gray-300 transition-colors hover:text-blue-600"
+                  className="font-display text-lg font-black tracking-tight text-gray-300 dark:text-slate-600 transition-colors hover:text-blue-600 dark:hover:text-sky-400"
                 >
                   {b.nombre}
                 </Link>
@@ -522,16 +522,16 @@ export default function HomePage() {
           CTA BAND
       ══════════════════════════════════════════════════════════ */}
       <section className="container-app pb-16 pt-4">
-        <div className="relative overflow-hidden rounded-[2rem] bg-white px-6 py-14 text-slate-900 shadow-[0_20px_70px_rgba(15,118,255,0.08)] sm:px-12">
-          <div className="absolute inset-0 bg-gradient-to-br from-sky-100 via-white to-white opacity-90" />
+        <div className="relative overflow-hidden rounded-[2rem] bg-white dark:bg-[#12151c] text-slate-900 dark:text-white border border-slate-100 dark:border-[#222732] px-5 py-10 sm:px-8 sm:py-14 md:px-12 shadow-sm">
+          <div className="absolute inset-0 bg-gradient-to-br from-sky-100 via-white to-white dark:from-sky-950/30 dark:via-[#12151c] dark:to-[#12151c] opacity-90" />
           <div className="relative mx-auto max-w-xl space-y-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-600">Tu próximo par te está esperando</p>
-                <h2 className="mt-3 text-4xl font-black text-slate-900 sm:text-5xl">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-600 dark:text-sky-400">Tu próximo par te está esperando</p>
+                <h2 className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 dark:text-white">
                   Encuentra el par que define tu estilo.
                 </h2>
-                <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600">
+                <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 dark:text-slate-400">
                   Selección curada de zapatillas premium, envíos express y atención VIP para que no pierdas el paso.
                 </p>
               </div>
@@ -540,7 +540,7 @@ export default function HomePage() {
               <input
                 type="email"
                 placeholder="tu@correo.com"
-                className="h-12 flex-1 rounded-full border border-slate-200 bg-white px-5 text-sm text-slate-700 placeholder:text-slate-400 outline-none focus:border-sky-400"
+                className="h-12 flex-1 rounded-full border border-slate-200 dark:border-[#222732] bg-white dark:bg-[#171a22] px-5 text-sm text-slate-700 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-sky-400"
               />
               <Link
                 to="/catalogo"
@@ -563,14 +563,14 @@ function ProductCard({ product: p }: { product: ProductSummary }) {
   const isAvailable = p.estado === "disponible" || (p.tallasDisponibles && p.tallasDisponibles.length > 0);
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-3xl border border-blue-100 bg-white transition-shadow hover:shadow-xl hover:shadow-blue-600/10">
-      <div className="relative aspect-square overflow-hidden bg-blue-50/40">
+    <article className="group flex flex-col overflow-hidden rounded-3xl border border-blue-100 dark:border-[#222732] bg-white dark:bg-[#12151c] transition-shadow hover:shadow-xl hover:shadow-blue-600/10">
+      <div className="relative aspect-square overflow-hidden bg-blue-50/40 dark:bg-[#171a22]">
         {!isAvailable && (
           <span className="absolute left-3 top-3 z-10 rounded-full bg-gray-400 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
             Agotado
           </span>
         )}
-        <div className="absolute right-3 top-3 z-10 flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 text-[11px] font-bold text-gray-800 backdrop-blur shadow-sm">
+        <div className="absolute right-3 top-3 z-10 flex items-center gap-1 rounded-full bg-white/90 dark:bg-[#12151c]/90 px-2 py-1 text-[11px] font-bold text-gray-800 dark:text-white backdrop-blur shadow-sm border border-slate-100 dark:border-[#222732]">
           <Star className="h-3 w-3 fill-blue-500 text-blue-500" />
           4.9
         </div>
@@ -582,10 +582,10 @@ function ProductCard({ product: p }: { product: ProductSummary }) {
         />
       </div>
       <div className="flex flex-1 flex-col p-4">
-        <h3 className="font-display text-base font-bold text-gray-900 line-clamp-1">{p.nombre}</h3>
-        <p className="mt-0.5 text-xs text-gray-400">{p.marca}</p>
+        <h3 className="font-display text-base font-bold text-gray-900 dark:text-white line-clamp-1">{p.nombre}</h3>
+        <p className="mt-0.5 text-xs text-gray-400 dark:text-slate-400">{p.marca}</p>
         <div className="mt-4 flex items-center justify-between">
-          <span className="font-display text-lg font-black text-gray-900">
+          <span className="font-display text-lg font-black text-gray-900 dark:text-white">
             {formatCurrency(p.precioBase)}
           </span>
           <Link
@@ -604,26 +604,26 @@ function ProductCard({ product: p }: { product: ProductSummary }) {
 /* ─── Demo card (fallback when no products) ─────────────────── */
 function DemoCard({ name, price, tag }: { name: string; price: string; tag?: string }) {
   return (
-    <article className="group flex flex-col overflow-hidden rounded-3xl border border-blue-100 bg-white transition-shadow hover:shadow-xl hover:shadow-blue-600/10">
-      <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-blue-50 to-sky-100">
+    <article className="group flex flex-col overflow-hidden rounded-3xl border border-blue-100 dark:border-[#222732] bg-white dark:bg-[#12151c] transition-shadow hover:shadow-xl hover:shadow-blue-600/10">
+      <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-blue-50 to-sky-100 dark:from-slate-900 dark:to-slate-800">
         {tag && (
           <span className="absolute left-3 top-3 z-10 rounded-full bg-blue-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
             {tag}
           </span>
         )}
-        <div className="absolute right-3 top-3 z-10 flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 text-[11px] font-bold text-gray-800 backdrop-blur">
+        <div className="absolute right-3 top-3 z-10 flex items-center gap-1 rounded-full bg-white/90 dark:bg-[#12151c]/90 px-2 py-1 text-[11px] font-bold text-gray-800 dark:text-white backdrop-blur border border-slate-100 dark:border-[#222732]">
           <Star className="h-3 w-3 fill-blue-500 text-blue-500" />
           4.9
         </div>
         <div className="flex h-full items-center justify-center">
-          <div className="h-24 w-24 rounded-full bg-blue-200/50" />
+          <div className="h-24 w-24 rounded-full bg-blue-200/50 dark:bg-slate-800" />
         </div>
       </div>
       <div className="flex flex-1 flex-col p-4">
-        <h3 className="font-display text-base font-bold text-gray-900">{name}</h3>
-        <p className="mt-0.5 text-xs text-gray-400">Edición cápsula</p>
+        <h3 className="font-display text-base font-bold text-gray-900 dark:text-white">{name}</h3>
+        <p className="mt-0.5 text-xs text-gray-400 dark:text-slate-400">Edición cápsula</p>
         <div className="mt-4 flex items-center justify-between">
-          <span className="font-display text-lg font-black text-gray-900">{price}</span>
+          <span className="font-display text-lg font-black text-gray-900 dark:text-white">{price}</span>
           <Link
             to="/catalogo"
             className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-white shadow-[0_4px_12px_rgba(37,99,235,0.35)] transition-transform hover:scale-110"

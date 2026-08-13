@@ -32,10 +32,10 @@ export function ProductCard({ product }: { product: ProductSummary }) {
   return (
     <Link
       to={`/producto/${product.id}`}
-      className="group relative flex flex-col overflow-hidden rounded-[24px] border border-blue-100/80 bg-white shadow-[0_10px_35px_-20px_rgba(37,99,235,0.28)] transition-all duration-300 hover:-translate-y-1 hover:border-sky-300/70 hover:shadow-[0_16px_40px_-20px_rgba(14,165,233,0.35)]"
+      className="group relative flex flex-col overflow-hidden rounded-[24px] border border-blue-100/80 bg-white shadow-sm dark:border-[#222732] dark:bg-[#12151c] transition-all duration-300 hover:-translate-y-1 hover:border-sky-300/70 dark:hover:border-sky-500/50"
     >
       {/* Image */}
-      <div className="relative aspect-square overflow-hidden bg-[linear-gradient(135deg,#f8fbff_0%,#eef6ff_100%)]">
+      <div className="relative aspect-square overflow-hidden bg-[linear-gradient(135deg,#f8fbff_0%,#eef6ff_100%)] dark:bg-[#171a22]">
         {img ? (
           <img
             src={img}
@@ -45,7 +45,7 @@ export function ProductCard({ product }: { product: ProductSummary }) {
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center dot-pattern">
-            <span className="font-display text-4xl font-black tracking-tighter text-blue-100">
+            <span className="font-display text-4xl font-black tracking-tighter text-blue-100 dark:text-slate-800">
               DD
             </span>
           </div>
@@ -70,19 +70,19 @@ export function ProductCard({ product }: { product: ProductSummary }) {
 
         {/* Hover overlay actions */}
         <div className="absolute bottom-3 left-3 right-3 flex gap-2 translate-y-3 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
-          <div className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-white/95 px-3 py-2 text-xs font-semibold text-slate-900 shadow-md">
+          <div className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-white/95 dark:bg-[#12151c]/95 px-3 py-2 text-xs font-semibold text-slate-900 dark:text-white shadow-md">
             <Eye className="h-3.5 w-3.5" />
             Ver producto
           </div>
           <button
             onClick={handleFavoriteClick}
-            className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white/95 shadow-md transition-colors ${
-              favorited ? "text-sky-600" : "text-slate-700 hover:text-sky-600"
+            className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white/95 dark:bg-[#12151c]/95 shadow-md transition-colors ${
+              favorited ? "text-sky-600 dark:text-sky-400" : "text-slate-700 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400"
             }`}
             aria-label="Favorito"
           >
             <Heart
-              className={`h-3.5 w-3.5 ${favorited ? "fill-sky-600 text-sky-600" : ""}`}
+              className={`h-3.5 w-3.5 ${favorited ? "fill-sky-600 text-sky-600 dark:fill-sky-400 dark:text-sky-400" : ""}`}
             />
           </button>
         </div>
@@ -90,10 +90,10 @@ export function ProductCard({ product }: { product: ProductSummary }) {
 
       {/* Info */}
       <div className="flex flex-1 flex-col gap-1 p-4">
-        <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-blue-600">
+        <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-blue-600 dark:text-sky-400">
           {product.marca}
         </span>
-        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-slate-900">
+        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-slate-900 dark:text-white">
           {product.nombre}
         </h3>
 
@@ -102,14 +102,14 @@ export function ProductCard({ product }: { product: ProductSummary }) {
             {product.tallasDisponibles.slice(0, 4).map((t) => (
               <span
                 key={t}
-                className="rounded-md border border-blue-100 bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium text-slate-700"
+                className="rounded-md border border-blue-100 dark:border-[#222732] bg-sky-50 dark:bg-[#171a22] px-1.5 py-0.5 text-[10px] font-medium text-slate-700 dark:text-slate-300"
               >
                 {t}
               </span>
             ))}
             {product.tallasDisponibles.length > 4 && (
-              <span className="rounded-md border border-theme bg-surf2 px-1.5 py-0.5 text-[10px] font-medium text-muted-t">
-+{product.tallasDisponibles.length - 4}
+              <span className="rounded-md border border-slate-200 dark:border-[#222732] bg-slate-50 dark:bg-[#171a22] px-1.5 py-0.5 text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                +{product.tallasDisponibles.length - 4}
               </span>
             )}
           </div>

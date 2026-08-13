@@ -72,29 +72,29 @@ export default function OrderDetailPage() {
   const isWaitingForReview = order.estado === "COMPROBANTE_ENVIADO" || order.estado === "PAGO_EN_REVISION";
 
   return (
-    <div className="container-app py-8 lg:py-12">
-      <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <div className="container-app py-6 sm:py-8 lg:py-12 text-slate-900 dark:text-white">
+      <div className="mb-6 sm:mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display text-3xl">Pedido {order.numero}</h1>
-          <p className="text-sm text-ink/50">{formatDate(order.creadoEn)}</p>
+          <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">Pedido {order.numero}</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{formatDate(order.creadoEn)}</p>
         </div>
-        <Badge tone={orderStatusTone(order.estado)} className="w-fit">
+        <Badge tone={orderStatusTone(order.estado)} className="w-fit text-xs px-3 py-1.5 rounded-full">
           {orderStatusLabel(order.estado)}
         </Badge>
       </div>
 
       {currentStepIndex >= 0 && order.estado !== "CANCELADO" && order.estado !== "PAGO_RECHAZADO" && (
-        <div className="mb-10 hidden gap-1 sm:flex">
+        <div className="mb-8 flex gap-1 overflow-x-auto no-scrollbar pb-2">
           {ORDER_STEPS.map((step, i) => (
-            <div key={step} className="flex-1">
-              <div className={`h-1.5 rounded-full ${i <= currentStepIndex ? "bg-ink" : "bg-black/10"}`} />
-              <p className="mt-2 text-[10px] font-semibold uppercase text-ink/40">{orderStatusLabel(step).split(" ")[0]}</p>
+            <div key={step} className="flex-1 min-w-[70px]">
+              <div className={`h-1.5 rounded-full ${i <= currentStepIndex ? "bg-blue-600 dark:bg-sky-400" : "bg-slate-200 dark:bg-slate-800"}`} />
+              <p className="mt-2 text-[10px] font-semibold uppercase text-slate-400 dark:text-slate-500 truncate">{orderStatusLabel(step).split(" ")[0]}</p>
             </div>
           ))}
         </div>
       )}
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
+      <div className="grid gap-6 lg:gap-8 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px]">
         <div className="flex flex-col gap-6">
           <section className="rounded-2xl bg-white p-6">
             <h2 className="mb-4 font-display text-xl">Productos</h2>

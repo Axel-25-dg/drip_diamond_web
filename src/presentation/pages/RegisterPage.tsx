@@ -105,9 +105,9 @@ export default function RegisterPage() {
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-ink/60">
+      <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
         ¿Ya tienes cuenta?{" "}
-        <Link to="/login" className="font-semibold text-ink underline underline-offset-4">
+        <Link to="/login" className="font-semibold text-sky-600 dark:text-sky-400 underline underline-offset-4">
           Inicia sesión
         </Link>
       </p>

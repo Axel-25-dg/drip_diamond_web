@@ -9,25 +9,25 @@ type Tone = "neutral" | "success" | "warning" | "danger" | "info" | "accent" | "
  */
 const tones: Record<Tone, string> = {
   neutral:
-    "bg-gray-100 text-gray-700 border border-gray-200",
+    "bg-gray-100 text-gray-700 border border-gray-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700",
 
   info:
-    "bg-sky-50 text-sky-700 border border-sky-200",
+    "bg-sky-50 text-sky-700 border border-sky-200 dark:bg-sky-950/60 dark:text-sky-300 dark:border-sky-800/80",
 
   accent:
-    "bg-blue-50 text-blue-700 border border-blue-200",
+    "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/60 dark:text-sky-300 dark:border-blue-800/80",
 
   success:
-    "bg-emerald-50 text-emerald-700 border border-emerald-200",
+    "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/80",
 
   warning:
-    "bg-amber-50 text-amber-700 border border-amber-200",
+    "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/80",
 
   danger:
-    "bg-red-50 text-red-700 border border-red-200",
+    "bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/60 dark:text-red-300 dark:border-red-800/80",
 
   gold:
-    "bg-amber-50 text-amber-800 border border-amber-200",
+    "bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950/70 dark:text-amber-200 dark:border-amber-700/80",
 };
 
 export function Badge({

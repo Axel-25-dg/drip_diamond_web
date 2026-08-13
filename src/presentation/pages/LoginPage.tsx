@@ -64,13 +64,13 @@ export default function LoginPage() {
         <button
           type="button"
           onClick={() => setShowPassword((v) => !v)}
-          className="-mt-2 self-start text-xs font-semibold text-ink/50 hover:text-ink"
+          className="-mt-2 self-start text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
         >
           {showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
         </button>
 
         <div className="flex justify-end">
-          <Link to="/recuperar-password" className="text-xs font-semibold underline underline-offset-4">
+          <Link to="/recuperar-password" className="text-xs font-semibold text-sky-600 dark:text-sky-400 underline underline-offset-4">
             ¿Olvidaste tu contraseña?
           </Link>
         </div>
@@ -80,9 +80,9 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-ink/60">
+      <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
         ¿No tienes cuenta?{" "}
-        <Link to="/registro" className="font-semibold text-ink underline underline-offset-4">
+        <Link to="/registro" className="font-semibold text-sky-600 dark:text-sky-400 underline underline-offset-4">
           Regístrate
         </Link>
       </p>

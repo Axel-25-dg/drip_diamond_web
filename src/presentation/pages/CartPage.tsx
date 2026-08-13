@@ -49,18 +49,18 @@ export default function CartPage() {
   }
 
   return (
-    <div className="container-app py-8 lg:py-12">
-      <h1 className="font-display text-4xl">Tu carrito</h1>
+    <div className="container-app py-6 sm:py-8 lg:py-12 text-slate-900 dark:text-white">
+      <h1 className="font-display text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white">Tu carrito</h1>
 
-      <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_360px]">
-        <ul className="flex flex-col divide-y-2 divide-ink/5">
+      <div className="mt-6 sm:mt-8 grid gap-6 lg:gap-10 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px]">
+        <ul className="flex flex-col divide-y divide-slate-200 dark:divide-[#222732]">
           {cart.items.map((item) => (
             <li key={item.id} className="flex gap-4 py-5">
-              <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-xl bg-black/5 sm:h-28 sm:w-28">
+              <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800 sm:h-28 sm:w-28">
                 {resolveMediaUrl(item.imagenUrl) ? (
                   <img src={resolveMediaUrl(item.imagenUrl)!} alt={item.nombre} className="h-full w-full object-cover" />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center font-display text-xl font-black text-slate-400">
+                  <div className="flex h-full w-full items-center justify-center font-display text-xl font-black text-slate-400 dark:text-slate-500">
                     DD
                   </div>
                 )}
@@ -68,32 +68,32 @@ export default function CartPage() {
               <div className="flex flex-1 flex-col">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <span className="text-xs font-semibold uppercase text-ink/50">{item.marca}</span>
-                    <h3 className="font-semibold leading-snug">{item.nombre}</h3>
-                    <p className="mt-1 text-sm text-ink/60">
+                    <span className="text-xs font-semibold uppercase text-sky-600 dark:text-sky-400">{item.marca}</span>
+                    <h3 className="font-semibold leading-snug text-slate-900 dark:text-white">{item.nombre}</h3>
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                       Talla {item.talla} · {item.color}
                     </p>
                   </div>
-                  <button onClick={() => handleRemove(item.id)} className="text-ink/40 hover:text-danger" aria-label="Quitar">
+                  <button onClick={() => handleRemove(item.id)} className="text-slate-400 hover:text-red-600 dark:hover:text-red-400" aria-label="Quitar">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
                 <div className="mt-auto flex items-center justify-between pt-3">
-                  <span className="text-sm text-ink/60">Cantidad: {item.cantidad}</span>
-                  <span className="font-bold">{formatCurrency(item.precioUnitario * item.cantidad)}</span>
+                  <span className="text-sm text-slate-500 dark:text-slate-400">Cantidad: {item.cantidad}</span>
+                  <span className="font-bold text-slate-900 dark:text-white">{formatCurrency(item.precioUnitario * item.cantidad)}</span>
                 </div>
               </div>
             </li>
           ))}
         </ul>
 
-        <aside className="h-fit rounded-2xl bg-white p-6">
-          <h3 className="font-display text-xl">Resumen</h3>
-          <div className="mt-4 flex items-center justify-between text-sm text-ink/60">
+        <aside className="h-fit rounded-2xl bg-white dark:bg-[#12151c] text-slate-900 dark:text-white p-6 border border-slate-100 dark:border-[#222732] shadow-sm">
+          <h3 className="font-display text-xl font-bold text-slate-900 dark:text-white">Resumen</h3>
+          <div className="mt-4 flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
             <span>Subtotal ({cart.totalItems} artículos)</span>
-            <span className="font-semibold text-ink">{formatCurrency(cart.subtotal)}</span>
+            <span className="font-semibold text-slate-900 dark:text-white">{formatCurrency(cart.subtotal)}</span>
           </div>
-          <p className="mt-2 text-xs text-ink/40">El costo de envío se calcula en el checkout según tu zona.</p>
+          <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">El costo de envío se calcula en el checkout según tu zona.</p>
           <Button size="lg" variant="secondary" fullWidth className="mt-6" onClick={() => navigate("/checkout")}>
             Continuar al pago <ArrowRight className="h-4 w-4" />
           </Button>

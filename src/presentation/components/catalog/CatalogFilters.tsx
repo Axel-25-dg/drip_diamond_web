@@ -92,10 +92,10 @@ export function CatalogFilters({
               key={s.id}
               onClick={() => update({ tallaId: value.tallaId === s.id ? undefined : s.id })}
               className={cn(
-                "flex h-9 min-w-9 items-center justify-center rounded-lg border-2 px-2 text-xs font-semibold transition-colors",
+                "flex h-9 min-w-9 items-center justify-center rounded-lg border px-2 text-xs font-semibold transition-colors",
                 value.tallaId === s.id
                   ? "border-sky-500 bg-sky-500 text-white"
-                  : "border-slate-200 text-slate-600 hover:border-sky-400 hover:text-sky-600"
+                  : "border-slate-200 dark:border-[#222732] bg-white dark:bg-[#12151c] text-slate-600 dark:text-slate-300 hover:border-sky-400 dark:hover:border-sky-400"
               )}
             >
               {s.valor}
@@ -111,15 +111,15 @@ export function CatalogFilters({
             placeholder="Min"
             value={value.precioMin ?? ""}
             onChange={(e) => update({ precioMin: e.target.value ? Number(e.target.value) : undefined })}
-            className="h-10 w-full rounded-lg border-2 border-slate-200 px-3 text-sm outline-none focus:border-sky-400"
+            className="h-10 w-full rounded-lg border border-slate-200 dark:border-[#222732] bg-white dark:bg-[#12151c] px-3 text-sm text-slate-900 dark:text-white outline-none focus:border-sky-400"
           />
-          <span className="text-slate-400">—</span>
+          <span className="text-slate-400 dark:text-slate-500">—</span>
           <input
             type="number"
             placeholder="Max"
             value={value.precioMax ?? ""}
             onChange={(e) => update({ precioMax: e.target.value ? Number(e.target.value) : undefined })}
-            className="h-10 w-full rounded-lg border-2 border-slate-200 px-3 text-sm outline-none focus:border-sky-400"
+            className="h-10 w-full rounded-lg border border-slate-200 dark:border-[#222732] bg-white dark:bg-[#12151c] px-3 text-sm text-slate-900 dark:text-white outline-none focus:border-sky-400"
           />
         </div>
       </FilterGroup>
@@ -130,7 +130,7 @@ export function CatalogFilters({
 function FilterGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h4 className="mb-2 text-xs font-bold uppercase tracking-widest text-slate-400">{title}</h4>
+      <h4 className="mb-2 text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">{title}</h4>
       {children}
     </div>
   );
@@ -142,7 +142,7 @@ function FilterOption({ label, active, onClick }: { label: string; active?: bool
       onClick={onClick}
       className={cn(
         "rounded-lg px-2 py-1.5 text-left text-sm transition-colors",
-        active ? "bg-sky-500 font-semibold text-white" : "text-slate-600 hover:bg-slate-100"
+        active ? "bg-sky-500 font-semibold text-white" : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
       )}
     >
       {label}

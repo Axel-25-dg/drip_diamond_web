@@ -137,15 +137,15 @@ export default function ProductDetailPage() {
   };
 
   return (
-    <div className="container-app py-8 lg:py-12">
-      <div className="grid gap-10 lg:grid-cols-2">
+    <div className="container-app py-6 sm:py-8 lg:py-12 text-slate-900 dark:text-white">
+      <div className="grid gap-6 sm:gap-8 lg:gap-12 lg:grid-cols-2">
         {/* Galería */}
         <div>
-          <div className="aspect-square overflow-hidden rounded-2xl bg-black/5">
+          <div className="aspect-square overflow-hidden rounded-2xl bg-slate-100 dark:bg-slate-800">
             {activeImage ? (
               <img src={activeImage} alt={product.nombre} className="h-full w-full object-cover" />
             ) : (
-              <div className="flex h-full items-center justify-center font-display text-4xl text-ink/20">EC</div>
+              <div className="flex h-full items-center justify-center font-display text-4xl text-slate-400 dark:text-slate-500">EC</div>
             )}
           </div>
           {galleryImages.length > 1 && (
@@ -157,8 +157,8 @@ export default function ProductDetailPage() {
                     key={i}
                     onClick={() => setActiveImage(url)}
                     className={cn(
-                      "h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl border-2",
-                      activeImage === url ? "border-ink" : "border-transparent"
+                      "h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl border-2 transition-all",
+                      activeImage === url ? "border-blue-600 dark:border-sky-400" : "border-transparent opacity-60 hover:opacity-100"
                     )}
                   >
                     <img src={url} alt="" className="h-full w-full object-cover" />
@@ -171,20 +171,20 @@ export default function ProductDetailPage() {
 
         {/* Info */}
         <div>
-          <span className="text-xs font-bold uppercase tracking-widest text-ink/50">{product.marca}</span>
-          <h1 className="mt-1 font-display text-3xl leading-tight sm:text-4xl">{product.nombre}</h1>
-          <p className="mt-1 text-sm text-ink/50">{product.modelo}</p>
+          <span className="text-xs font-bold uppercase tracking-widest text-blue-600 dark:text-sky-400">{product.marca}</span>
+          <h1 className="mt-1 font-display text-3xl font-extrabold leading-tight sm:text-4xl text-slate-900 dark:text-white">{product.nombre}</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{product.modelo}</p>
 
           <div className="mt-5">
             <PriceTag base={product.precioBase} offer={product.precioOferta} size="lg" />
           </div>
 
-          <p className="mt-5 max-w-lg text-sm leading-relaxed text-ink/70">{product.descripcion}</p>
+          <p className="mt-5 max-w-lg text-sm leading-relaxed text-slate-600 dark:text-slate-300">{product.descripcion}</p>
 
           {product.etiquetas.length > 0 && (
             <div className="mt-4 flex flex-wrap gap-2">
               {product.etiquetas.map((tag) => (
-                <span key={tag} className="rounded-full bg-black/5 px-3 py-1 text-xs font-medium text-ink/60">
+                <span key={tag} className="rounded-full bg-slate-100 dark:bg-slate-800 px-3 py-1 text-xs font-medium text-slate-600 dark:text-slate-300">
                   #{tag}
                 </span>
               ))}
@@ -193,7 +193,7 @@ export default function ProductDetailPage() {
 
           {/* Talla */}
           <div className="mt-7">
-            <h4 className="mb-2 text-xs font-bold uppercase tracking-widest text-ink/50">Talla</h4>
+            <h4 className="mb-2 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Talla</h4>
             <div className="flex flex-wrap gap-2">
               {availableSizes.map((size) => (
                 <button
@@ -204,7 +204,9 @@ export default function ProductDetailPage() {
                   }}
                   className={cn(
                     "flex h-11 min-w-11 items-center justify-center rounded-lg border-2 px-3 text-sm font-semibold transition-colors",
-                    selectedSize === size ? "border-ink bg-ink text-white" : "border-ink/15 hover:border-ink"
+                    selectedSize === size
+                      ? "border-blue-600 bg-blue-600 text-white dark:border-sky-500 dark:bg-sky-500"
+                      : "border-slate-200 dark:border-[#222732] bg-white dark:bg-[#12151c] text-slate-700 dark:text-slate-300 hover:border-blue-400 dark:hover:border-sky-400"
                   )}
                 >
                   {size}
@@ -216,7 +218,7 @@ export default function ProductDetailPage() {
           {/* Color (solo visible si este producto tiene más de 1 color real) */}
           {selectedSize && hasMultipleColors && (
             <div className="mt-6">
-              <h4 className="mb-2 text-xs font-bold uppercase tracking-widest text-ink/50">Color</h4>
+              <h4 className="mb-2 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Color</h4>
               <div className="flex flex-wrap gap-2">
                 {availableColors.map((color) => (
                   <button
@@ -224,7 +226,9 @@ export default function ProductDetailPage() {
                     onClick={() => setSelectedColor(color)}
                     className={cn(
                       "rounded-lg border-2 px-4 py-2 text-sm font-semibold transition-colors",
-                      selectedColor === color ? "border-ink bg-ink text-white" : "border-ink/15 hover:border-ink"
+                      selectedColor === color
+                        ? "border-blue-600 bg-blue-600 text-white dark:border-sky-500 dark:bg-sky-500"
+                        : "border-slate-200 dark:border-[#222732] bg-white dark:bg-[#12151c] text-slate-700 dark:text-slate-300 hover:border-blue-400 dark:hover:border-sky-400"
                     )}
                   >
                     {color}
@@ -237,16 +241,16 @@ export default function ProductDetailPage() {
           {/* Cantidad */}
           {selectedVariant && (
             <div className="mt-6">
-              <h4 className="mb-2 text-xs font-bold uppercase tracking-widest text-ink/50">
+              <h4 className="mb-2 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
                 Cantidad
                 {maxStock < 9999 && maxStock > 0 && (
-                  <span className="normal-case text-ink/40"> · {maxStock} disponibles</span>
+                  <span className="normal-case text-slate-400"> · {maxStock} disponibles</span>
                 )}
                 {isOutOfStock && (
                   <span className="normal-case text-rose-500 ml-2">· Sin stock</span>
                 )}
               </h4>
-              <div className="flex w-32 items-center justify-between rounded-lg border-2 border-ink/15 px-3 py-2">
+              <div className="flex w-32 items-center justify-between rounded-lg border-2 border-slate-200 dark:border-[#222732] bg-white dark:bg-[#12151c] px-3 py-2 text-slate-900 dark:text-white">
                 <button onClick={() => setQuantity((q) => Math.max(1, q - 1))} aria-label="Restar">
                   <Minus className="h-4 w-4" />
                 </button>
@@ -302,12 +306,12 @@ export default function ProductDetailPage() {
             </Button>
           </div>
 
-          <div className="mt-8 flex flex-col gap-3 border-t border-ink/10 pt-6 text-sm text-ink/60">
+          <div className="mt-8 flex flex-col gap-3 border-t border-slate-200 dark:border-[#222732] pt-6 text-sm text-slate-500 dark:text-slate-400">
             <div className="flex items-center gap-2">
-              <Truck className="h-4 w-4" /> Envíos a todo Quito, costo según tu zona
+              <Truck className="h-4 w-4 text-sky-500" /> Envíos a todo Quito, costo según tu zona
             </div>
             <div className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4" /> Producto verificado
+              <ShieldCheck className="h-4 w-4 text-emerald-500" /> Producto verificado
             </div>
           </div>
         </div>
@@ -315,13 +319,13 @@ export default function ProductDetailPage() {
 
       {/* ── Zapatillas Relacionadas / Recomendadas ── */}
       {relatedProducts.length > 0 && (
-        <div className="mt-16 border-t border-ink/10 pt-12">
+        <div className="mt-16 border-t border-slate-200 dark:border-[#222732] pt-12">
           <div className="mb-6 flex items-center justify-between">
             <div>
               <span className="text-xs font-bold uppercase tracking-widest text-sky-500 flex items-center gap-1">
                 <Sparkles className="h-3.5 w-3.5" /> Recomendados
               </span>
-              <h2 className="font-display text-2xl sm:text-3xl text-primary mt-1">
+              <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-1">
                 Más opciones para ti
               </h2>
             </div>

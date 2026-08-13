@@ -95,17 +95,17 @@ export function Footer() {
       {/* Línea de acento superior */}
       <div className="h-px w-full bg-gradient-to-r from-transparent via-sky-500/60 to-transparent" />
 
-      <div className="mx-auto grid max-w-6xl gap-12 px-6 py-16 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="container-app grid gap-8 sm:gap-12 py-10 sm:py-16 grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-5">
         {/* Marca */}
-        <div className="lg:col-span-2">
+        <div className="xs:col-span-2 sm:col-span-2 lg:col-span-2">
           <Link to="/" className="inline-flex select-none items-center gap-3">
             <img
               src="/logo_drip.png"
               alt="Logo Drip Diamond"
-              className="h-12 w-auto object-contain drop-shadow-[0_0_12px_rgba(56,189,248,0.35)]"
+              className="h-10 sm:h-12 w-auto object-contain drop-shadow-[0_0_12px_rgba(56,189,248,0.35)]"
             />
             <span className="leading-none">
-              <span className="font-display block text-2xl font-black tracking-tight text-white">
+              <span className="font-display block text-xl sm:text-2xl font-black tracking-tight text-white">
                 DRIP<span className="text-sky-400">DIAMOND</span>
               </span>
               <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-400">
@@ -114,12 +114,12 @@ export function Footer() {
             </span>
           </Link>
 
-          <p className="mt-6 max-w-sm text-sm leading-relaxed text-slate-300">
+          <p className="mt-4 sm:mt-6 max-w-sm text-sm leading-relaxed text-slate-300">
             Sneakers y streetwear de lujo. Entrega verificada a todo Quito con atención
             personalizada.
           </p>
 
-          <ul className="mt-6 space-y-3 text-sm text-slate-300">
+          <ul className="mt-4 sm:mt-6 space-y-3 text-sm text-slate-300">
             <li className="flex items-center gap-3">
               <MapPin className="h-4 w-4 shrink-0 text-sky-400" aria-hidden="true" />
               <span>Quito, Ecuador</span>
@@ -132,7 +132,7 @@ export function Footer() {
             </li>
           </ul>
 
-          <div className="mt-7 flex gap-3">
+          <div className="mt-6 sm:mt-7 flex gap-3">
             {SOCIALS.map(({ Icon, label, href }) => (
               <a
                 key={label}
@@ -153,7 +153,7 @@ export function Footer() {
 
       {/* Barra inferior */}
       <div className="border-t border-white/10">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-6 sm:flex-row">
+        <div className="container-app flex flex-col items-center justify-between gap-4 py-6 sm:flex-row text-center sm:text-left">
           <span className="text-xs text-slate-400">
             © {new Date().getFullYear()} Drip Diamond. Todos los derechos reservados.
           </span>

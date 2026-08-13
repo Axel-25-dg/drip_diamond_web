@@ -65,17 +65,17 @@ export default function CatalogPage() {
   ).length;
 
   return (
-    <div className="container-app py-8 lg:py-12">
-      <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+    <div className="container-app py-6 sm:py-8 lg:py-12 text-slate-900 dark:text-white">
+      <div className="mb-6 sm:mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="font-display text-4xl">Catálogo</h1>
-          <p className="mt-1 text-sm text-ink/50">{isLoading ? "Cargando..." : `${total} resultados`}</p>
+          <h1 className="font-display text-3xl sm:text-4xl xl:text-5xl font-extrabold text-slate-900 dark:text-white">Catálogo</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{isLoading ? "Cargando..." : `${total} resultados`}</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setMobileFiltersOpen(true)}
-            className="flex items-center gap-2 rounded-full border-2 border-ink/15 px-4 py-2 text-sm font-semibold lg:hidden"
+            className="flex items-center gap-2 rounded-full border border-slate-200 dark:border-[#222732] bg-white dark:bg-[#12151c] px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-200 lg:hidden"
           >
             <SlidersHorizontal className="h-4 w-4" />
             Filtros {activeFilterCount > 0 && `(${activeFilterCount})`}
@@ -83,7 +83,7 @@ export default function CatalogPage() {
           <select
             value={filters.ordering ?? ""}
             onChange={(e) => setFilters({ ordering: e.target.value || undefined })}
-            className="h-10 rounded-full border-2 border-ink/15 bg-white px-4 text-sm font-semibold outline-none"
+            className="h-10 rounded-full border border-slate-200 dark:border-[#222732] bg-white dark:bg-[#12151c] px-4 text-sm font-semibold text-slate-900 dark:text-white outline-none focus:border-sky-500"
           >
             <option value="">Ordenar por</option>
             {SORT_OPTIONS.map((o) => (
@@ -95,7 +95,7 @@ export default function CatalogPage() {
         </div>
       </div>
 
-      <div className="grid gap-10 lg:grid-cols-[240px_1fr]">
+      <div className="grid gap-6 lg:gap-10 lg:grid-cols-[260px_1fr] xl:grid-cols-[280px_1fr] 2xl:grid-cols-[300px_1fr]">
         <aside className="hidden lg:block">
           <CatalogFilters brands={brands} categories={categories} sizes={sizes} value={filters} onChange={setFilters} />
         </aside>
@@ -104,7 +104,7 @@ export default function CatalogPage() {
           <ProductGrid products={products} isLoading={isLoading} />
 
           {totalPages > 1 && (
-            <div className="mt-10 flex items-center justify-center gap-2">
+            <div className="mt-8 sm:mt-10 flex flex-wrap items-center justify-center gap-2">
               {Array.from({ length: totalPages }).map((_, i) => {
                 const page = i + 1;
                 return (
@@ -112,8 +112,10 @@ export default function CatalogPage() {
                     key={page}
                     onClick={() => setFilters({ page })}
                     className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold transition-colors",
-                      (filters.page ?? 1) === page ? "bg-ink text-white" : "hover:bg-black/5"
+                      "flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full text-sm font-semibold transition-colors",
+                      (filters.page ?? 1) === page
+                        ? "bg-blue-600 text-white"
+                        : "border border-slate-200 dark:border-[#222732] bg-white dark:bg-[#12151c] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                     )}
                   >
                     {page}
@@ -128,11 +130,11 @@ export default function CatalogPage() {
       {/* Filtros mobile */}
       {mobileFiltersOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-ink/50" onClick={() => setMobileFiltersOpen(false)} />
-          <div className="absolute right-0 top-0 h-full w-full max-w-xs overflow-y-auto bg-paper p-5">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileFiltersOpen(false)} />
+          <div className="absolute right-0 top-0 h-full w-full sm:max-w-xs overflow-y-auto bg-white dark:bg-[#12151c] text-slate-900 dark:text-white p-4 sm:p-5 shadow-2xl">
             <div className="mb-5 flex items-center justify-between">
-              <h3 className="font-display text-xl">Filtros</h3>
-              <button onClick={() => setMobileFiltersOpen(false)}>
+              <h3 className="font-display text-xl font-bold">Filtros</h3>
+              <button onClick={() => setMobileFiltersOpen(false)} className="rounded-lg p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
                 <X className="h-5 w-5" />
               </button>
             </div>

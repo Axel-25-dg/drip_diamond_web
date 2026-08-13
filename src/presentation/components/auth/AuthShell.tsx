@@ -59,13 +59,13 @@ export function AuthShell({ title, subtitle, children }: {
       </div>
 
       {/* RIGHT — form panel */}
-      <div className="flex items-center justify-center px-6 py-12" style={{ background: "var(--bg-surface)" }}>
+      <div className="flex items-center justify-center px-4 sm:px-6 py-6 sm:py-12 bg-[#f8faff] dark:bg-[#0a0c10]">
         <div className="w-full max-w-[480px]">
           {/* Mobile: no static logo or project public images per user request */}
 
-          <div className="rounded-2xl bg-white p-8 shadow-lg" style={{ border: "1px solid rgba(15,23,42,0.04)" }}>
-            <h1 className="font-display text-2xl mb-1" style={{ color: "var(--text-primary)" }}>{title}</h1>
-            {subtitle && <p className="text-sm text-slate-500 mb-6">{subtitle}</p>}
+          <div className="rounded-2xl bg-white dark:bg-[#12151c] text-slate-900 dark:text-white p-5 sm:p-8 shadow-lg border border-slate-100 dark:border-[#222732]">
+            <h1 className="font-display text-2xl font-bold mb-1 text-slate-900 dark:text-white">{title}</h1>
+            {subtitle && <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">{subtitle}</p>}
             <div>{children}</div>
           </div>
         </div>

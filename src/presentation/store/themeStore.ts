@@ -8,20 +8,41 @@ interface ThemeState {
   setTheme: (t: Theme) => void;
 }
 
-const applyTheme = () => {
-  const root = document.documentElement;
-  root.classList.remove("dark");
+const getSavedTheme = (): Theme => {
+  if (typeof window !== "undefined") {
+    const saved = localStorage.getItem("theme");
+    if (saved === "dark" || saved === "light") return saved;
+  }
+  return "dark"; // Default to dark for liquidaciones dashboard or light if preferred
 };
 
-export const useThemeStore = create<ThemeState>()(() => {
-  applyTheme();
-  return {
-    theme: "light",
-    toggleTheme: () => {
-      applyTheme();
-    },
-    setTheme: () => {
-      applyTheme();
-    },
-  };
-});
+const applyThemeToDom = (t: Theme) => {
+  if (typeof document !== "undefined") {
+    const root = document.documentElement;
+    if (t === "dark") {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+    localStorage.setItem("theme", t);
+  }
+};
+
+const initialTheme = getSavedTheme();
+applyThemeToDom(initialTheme);
+
+export const useThemeStore = create<ThemeState>()((set) => ({
+  theme: initialTheme,
+  toggleTheme: () => {
+    set((state) => {
+      const nextTheme = state.theme === "light" ? "dark" : "light";
+      applyThemeToDom(nextTheme);
+      return { theme: nextTheme };
+    });
+  },
+  setTheme: (t: Theme) => {
+    applyThemeToDom(t);
+    set({ theme: t });
+  },
+}));
+
