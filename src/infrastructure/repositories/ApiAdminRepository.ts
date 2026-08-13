@@ -538,21 +538,26 @@ export class ApiAdminRepository implements AdminRepositoryPort {
   }
 
   async getResumenGlobalVendedores(): Promise<import("@/domain/ports/AdminRepositoryPort").ResumenVendedor[]> {
-    const { data } = await httpClient.get<any>("/liquidaciones/resumen-global/");
-    const raw = safeUnwrap<any>(data);
-    const items: any[] = Array.isArray(raw) ? raw : raw?.results ?? [];
-    return items.map((v: any) => ({
-      vendedorId: v.vendedor_id,
-      vendedorNombre: v.vendedor_nombre || "",
-      vendedorEmail: v.vendedor_email || "",
-      totalParesMes: Number(v.total_pares_mes ?? 0),
-      totalComisionesMes: Number(v.total_comisiones_mes ?? 0),
-      totalComisionesHistorico: Number(v.total_comisiones_historico ?? 0),
-      liquidacionId: v.liquidacion_id ?? null,
-      liquidacionPagada: Boolean(v.liquidacion_pagada),
-      fechaPago: v.fecha_pago ?? null,
-      comprobantePagoUrl: v.comprobante_pago_url ?? null,
-    }));
+    try {
+      const { data } = await httpClient.get<any>("/liquidaciones/resumen-global/");
+      const raw = safeUnwrap<any>(data);
+      const items: any[] = Array.isArray(raw) ? raw : raw?.results ?? [];
+      return items.map((v: any) => ({
+        vendedorId: v.vendedor_id,
+        vendedorNombre: v.vendedor_nombre || "",
+        vendedorEmail: v.vendedor_email || "",
+        totalParesMes: Number(v.total_pares_mes ?? 0),
+        totalComisionesMes: Number(v.total_comisiones_mes ?? 0),
+        totalComisionesHistorico: Number(v.total_comisiones_historico ?? 0),
+        liquidacionId: v.liquidacion_id ?? null,
+        liquidacionPagada: Boolean(v.liquidacion_pagada),
+        fechaPago: v.fecha_pago ?? null,
+        comprobantePagoUrl: v.comprobante_pago_url ?? null,
+      }));
+    } catch (err: any) {
+      console.error("Error fetching resumen global de vendedores:", err);
+      return [];
+    }
   }
 
   async getLiquidacionDetalle(liquidacionId: number): Promise<import("@/domain/ports/AdminRepositoryPort").Liquidacion> {

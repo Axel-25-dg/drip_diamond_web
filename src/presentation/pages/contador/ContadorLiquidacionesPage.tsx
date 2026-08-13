@@ -44,6 +44,8 @@ export default function ContadorLiquidacionesPage() {
   const [historial, setHistorial] = useState<Liquidacion[]>([]);
   const [historialLoading, setHistorialLoading] = useState(false);
   const [tab, setTab] = useState<"actual" | "historial">("actual");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "paid">("all");
 
   // Modal detalle de ventas
   const [detalleVendedor, setDetalleVendedor] = useState<{ nombre: string; liq: Liquidacion } | null>(null);
@@ -235,101 +237,109 @@ export default function ContadorLiquidacionesPage() {
               <p className="font-display text-xl">No hay vendedores registrados</p>
             </div>
           ) : (
-            <div className="overflow-hidden rounded-2xl border border-theme bg-surf shadow-card">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="border-b border-theme text-xs font-bold uppercase tracking-wider text-muted-t">
-                    <tr>
-                      <th className="px-5 py-4">Vendedor</th>
-                      <th className="px-5 py-4">Pares del mes</th>
-                      <th className="px-5 py-4">Comisión del mes</th>
-                      <th className="px-5 py-4">Histórico total</th>
-                      <th className="px-5 py-4">Estado</th>
-                      <th className="px-5 py-4 text-right">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-theme">
-                    {vendedores.map((v) => {
-                      const tienePago = v.liquidacionPagada;
-                      const tieneComision = v.totalComisionesMes > 0;
-                      // Allow paying even if a liquidacion record wasn't generated yet.
-                      const puedeAPagar = ventana && tieneComision && !tienePago;
+            <div>
+              {/* Controls: search + filter */}
+              <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                  <input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Buscar vendedor por nombre o email"
+                    className="h-10 w-full max-w-md rounded-full border border-theme px-4 text-sm outline-none"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value as any)}
+                    className="h-10 rounded-full border border-theme bg-white px-3 text-sm"
+                  >
+                    <option value="all">Todos</option>
+                    <option value="pending">Pendientes</option>
+                    <option value="paid">Pagados</option>
+                  </select>
+                </div>
+              </div>
 
-                      return (
-                        <tr key={v.vendedorId} className="hover:bg-surf2 transition-colors">
-                          <td className="px-5 py-4">
-                            <p className="font-semibold text-primary">{v.vendedorNombre}</p>
-                            <p className="text-xs text-muted-t">{v.vendedorEmail}</p>
-                          </td>
-                          <td className="px-5 py-4 font-mono font-bold text-primary">
-                            {v.totalParesMes > 0 ? `${v.totalParesMes} par(es)` : <span className="text-muted-t">—</span>}
-                          </td>
-                          <td className="px-5 py-4 font-mono font-bold text-purple-600 dark:text-purple-400">
-                            {tieneComision ? formatCurrency(v.totalComisionesMes) : <span className="text-muted-t">$0.00</span>}
-                          </td>
-                          <td className="px-5 py-4 font-mono text-secondary">
-                            {formatCurrency(v.totalComisionesHistorico)}
-                          </td>
-                          <td className="px-5 py-4">
-                            {tienePago ? (
-                              <Badge tone="success">
-                                <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                                Pagado
-                              </Badge>
-                            ) : tieneComision ? (
-                              <Badge tone="warning">Pendiente</Badge>
-                            ) : (
-                              <Badge tone="neutral">Sin ventas</Badge>
-                            )}
-                          </td>
-                          <td className="px-5 py-4 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              {/* Ver detalle de ventas */}
-                              {v.liquidacionId && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  isLoading={detalleLoading}
-                                  onClick={() => openDetalle(v)}
-                                >
-                                  Ver detalle
-                                </Button>
-                              )}
-
-                              {/* Ver comprobante si ya se pagó */}
-                              {tienePago && v.comprobantePagoUrl && (
-                                <a
-                                  href={resolveMediaUrl(v.comprobantePagoUrl) ?? "#"}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="inline-flex items-center gap-1 rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-600 hover:bg-sky-100"
-                                >
-                                  <ExternalLink className="h-3 w-3" /> Comprobante
-                                </a>
-                              )}
-
-                              {/* Botón pagar — solo en ventana, con comisión, sin pago previo */}
-                              {puedeAPagar && (
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  onClick={() => { setPagoVendedor(v); setFileName(""); }}
-                                >
-                                  <DollarSign className="h-3.5 w-3.5" /> Pagar
-                                </Button>
-                              )}
-
-                              {/* Fuera de ventana con comisión pendiente */}
-                              {!tienePago && tieneComision && !ventana && (
-                                <span className="text-xs text-muted-t italic">Disponible día 26</span>
-                              )}
+              {/* Cards grid */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {vendedores
+                  .filter((v) => {
+                    if (statusFilter === "pending") return !v.liquidacionPagada && v.totalComisionesMes > 0;
+                    if (statusFilter === "paid") return v.liquidacionPagada;
+                    return true;
+                  })
+                  .filter((v) => {
+                    if (!searchQuery) return true;
+                    const q = searchQuery.toLowerCase();
+                    return (v.vendedorNombre || "").toLowerCase().includes(q) || (v.vendedorEmail || "").toLowerCase().includes(q);
+                  })
+                  .map((v) => {
+                    const tienePago = v.liquidacionPagada;
+                    const tieneComision = v.totalComisionesMes > 0;
+                    const puedeAPagar = ventana && tieneComision && !tienePago;
+                    return (
+                      <div key={v.vendedorId} className="rounded-2xl overflow-hidden shadow-lg">
+                        <div className="p-0">
+                          <div className="bg-gradient-to-r from-sky-600 to-blue-500 px-4 py-3 text-white">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <p className="font-semibold text-white">{v.vendedorNombre}</p>
+                                <p className="text-xs text-sky-100">{v.vendedorEmail}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xs text-sky-200">Pares</p>
+                                <p className="font-mono font-bold text-white">{v.totalParesMes || 0}</p>
+                              </div>
                             </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                          </div>
+                          <div className="bg-white p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-xs text-sky-500">Comisión mes</p>
+                                <p className="mt-1 font-display text-lg font-extrabold text-sky-700">{formatCurrency(v.totalComisionesMes)}</p>
+                                <p className="text-xs text-sky-500 mt-1">Histórico: {formatCurrency(v.totalComisionesHistorico)}</p>
+                              </div>
+                              <div className="flex flex-col items-end gap-2">
+                                {tienePago ? (
+                                  <Badge tone="success">Pagado</Badge>
+                                ) : tieneComision ? (
+                                  <Badge tone="warning">Pendiente</Badge>
+                                ) : (
+                                  <Badge tone="neutral">Sin ventas</Badge>
+                                )}
+
+                                <div className="mt-2 flex items-center gap-2">
+                                  {v.liquidacionId && (
+                                    <Button variant="ghost" size="sm" isLoading={detalleLoading} onClick={() => openDetalle(v)}>
+                                      Ver detalle
+                                    </Button>
+                                  )}
+
+                                  {tienePago && v.comprobantePagoUrl && (
+                                    <a
+                                      href={resolveMediaUrl(v.comprobantePagoUrl) ?? "#"}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="inline-flex items-center gap-1 rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-600 hover:bg-sky-100"
+                                    >
+                                      <ExternalLink className="h-3 w-3" />
+                                    </a>
+                                  )}
+
+                                  {puedeAPagar && (
+                                    <Button variant="secondary" size="sm" onClick={() => { setPagoVendedor(v); setFileName(""); }}>
+                                      <DollarSign className="h-3.5 w-3.5" /> Pagar
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             </div>
           )}

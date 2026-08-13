@@ -77,6 +77,7 @@ httpClient.interceptors.response.use(
     const isAuthEndpoint = originalRequest?.url?.includes("/auth/login") || originalRequest?.url?.includes("/auth/refresh");
 
     if (status === 429 && originalRequest) {
+      console.warn(`Rate limited (429): ${originalRequest.method ?? 'GET'} ${originalRequest.url}`);
       const attempt = (retryCounts.get(originalRequest) ?? 0) + 1;
       if (attempt <= 2) {
         retryCounts.set(originalRequest, attempt);
@@ -118,6 +119,14 @@ httpClient.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${newAccess}`;
         return httpClient(originalRequest);
       } catch (refreshError) {
+        const rStatus = (refreshError as AxiosError)?.response?.status;
+        if (rStatus === 429) {
+          console.warn("Auth refresh endpoint rate-limited (429). Expiring session to avoid loops.");
+          resolveQueue(null);
+          tokenStorage.clear();
+          window.dispatchEvent(new CustomEvent("auth:session-expired"));
+          return Promise.reject(normalizeError(error));
+        }
         resolveQueue(null);
         tokenStorage.clear();
         window.dispatchEvent(new CustomEvent("auth:session-expired"));
@@ -141,4 +150,23 @@ function normalizeError(error: AxiosError<ApiEnvelope<unknown>>): ApiError {
 /** Desempaqueta el sobre {success, message, data} devolviendo directamente `data`. */
 export function unwrap<T>(envelope: ApiEnvelope<T>): T {
   return envelope.data as T;
+}
+
+// GET deduplication wrapper: reuse in-flight Promise for identical GET requests
+try {
+  const _originalGet = httpClient.get.bind(httpClient) as any;
+  httpClient.get = function (url: string, config?: InternalAxiosRequestConfig) {
+    const key = `get:${url}:${config?.params ? JSON.stringify(config.params) : ""}`;
+    const existing = inFlightRequests.get(key) as Promise<any> | undefined;
+    if (existing) {
+      return existing;
+    }
+    const promise = _originalGet(url, config).finally(() => {
+      inFlightRequests.delete(key);
+    });
+    inFlightRequests.set(key, promise);
+    return promise;
+  } as any;
+} catch (e) {
+  // ignore if binding fails
 }

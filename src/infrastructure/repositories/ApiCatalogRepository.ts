@@ -30,7 +30,28 @@ function safeUnwrap<T>(data: any): T {
 }
 
 export class ApiCatalogRepository implements CatalogRepositoryPort {
+  // Short in-memory cache to avoid bursts of identical GET requests (key -> {expires, data})
+  private static _cache = new Map<string, { expires: number; data: any }>();
+  private static _cacheTtl = 5000; // ms
+
+  private _getCached<T>(key: string): T | null {
+    const entry = ApiCatalogRepository._cache.get(key);
+    if (!entry) return null;
+    if (Date.now() > entry.expires) {
+      ApiCatalogRepository._cache.delete(key);
+      return null;
+    }
+    return entry.data as T;
+  }
+
+  private _setCache(key: string, data: any) {
+    ApiCatalogRepository._cache.set(key, { expires: Date.now() + ApiCatalogRepository._cacheTtl, data });
+  }
+
   async getProducts(filters: ProductFilters): Promise<PaginatedResult<ProductSummary>> {
+    const cacheKey = `products:${JSON.stringify(filters || {})}`;
+    const cached = this._getCached<PaginatedResult<ProductSummary>>(cacheKey);
+    if (cached) return cached;
     // Build params — send each filter with both possible names for max backend compatibility
     const params: Record<string, unknown> = {};
     if (filters.search) params.search = filters.search;
@@ -123,13 +144,15 @@ export class ApiCatalogRepository implements CatalogRepositoryPort {
     const pageSize = filters.pageSize || 12;
     const totalPages = serverTotalPages ?? Math.max(1, Math.ceil(total / pageSize));
 
-    return {
+    const result = {
       items,
       total,
       page: filters.page || 1,
       pageSize,
       totalPages,
     };
+    this._setCache(cacheKey, result);
+    return result;
   }
 
 
@@ -139,24 +162,39 @@ export class ApiCatalogRepository implements CatalogRepositoryPort {
   }
 
   async getBrands(): Promise<Brand[]> {
+    const cacheKey = "brands";
+    const cached = this._getCached<Brand[]>(cacheKey);
+    if (cached) return cached;
     const { data } = await httpClient.get<any>("/marcas/");
     const payload = safeUnwrap<any>(data);
     const list: any[] = Array.isArray(payload) ? payload : payload?.results ?? [];
-    return list.map(toBrand);
+    const result = list.map(toBrand);
+    this._setCache(cacheKey, result);
+    return result;
   }
 
   async getCategories(): Promise<Category[]> {
+    const cacheKey = "categories";
+    const cached = this._getCached<Category[]>(cacheKey);
+    if (cached) return cached;
     const { data } = await httpClient.get<any>("/categorias/");
     const payload = safeUnwrap<any>(data);
     const list: any[] = Array.isArray(payload) ? payload : payload?.results ?? [];
-    return list.map(toCategory);
+    const result = list.map(toCategory);
+    this._setCache(cacheKey, result);
+    return result;
   }
 
   async getSizes(): Promise<Size[]> {
+    const cacheKey = "sizes";
+    const cached = this._getCached<Size[]>(cacheKey);
+    if (cached) return cached;
     const { data } = await httpClient.get<any>("/tallas/");
     const payload = safeUnwrap<any>(data);
     const list: any[] = Array.isArray(payload) ? payload : payload?.results ?? [];
-    return list.map(toSize);
+    const result = list.map(toSize);
+    this._setCache(cacheKey, result);
+    return result;
   }
 
   async getPromotions(): Promise<Promotion[]> {
