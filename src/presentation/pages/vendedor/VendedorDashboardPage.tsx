@@ -32,6 +32,8 @@ export default function VendedorDashboardPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [commissions, setCommissions] = useState<CommissionReport[]>([]);
   const [liquidaciones, setLiquidaciones] = useState<Liquidacion[]>([]);
+  const [pendingComisiones, setPendingComisiones] = useState<import("@/domain/ports/AdminRepositoryPort").ComisionItem[]>([]);
+  const [activeTab, setActiveTab] = useState<"ventas" | "por_liquidar" | "pagadas">("ventas");
   const [commissionSummary, setCommissionSummary] = useState<{
     totalComisiones: number;
     comisionesPendientes: number;
@@ -44,6 +46,7 @@ export default function VendedorDashboardPage() {
   const [selectedStatus, setSelectedStatus] = useState<string>("TODOS");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [expandedLiq, setExpandedLiq] = useState<number | null>(null);
+  const [uploadingLiqId, setUploadingLiqId] = useState<number | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -58,6 +61,13 @@ export default function VendedorDashboardPage() {
         setCommissions(cRes);
         setCommissionSummary(summaryRes);
         setLiquidaciones(liqRes);
+        // fetch pending comisiones separately
+        try {
+          const pend = await useCases.getComisionesPendientes.execute(user?.id);
+          setPendingComisiones(pend || []);
+        } catch (err) {
+          setPendingComisiones([]);
+        }
       } catch {
         setOrders([]);
         setCommissions([]);
@@ -68,6 +78,28 @@ export default function VendedorDashboardPage() {
       }
     })();
   }, [user?.id]);
+
+  // Helper: compute delivered orders that are not yet included in any comision record
+  const allComisionPedidoIds = new Set<number>();
+  liquidaciones.forEach((l) => l.comisiones?.forEach((c) => allComisionPedidoIds.add(c.pedidoId)));
+  pendingComisiones.forEach((c) => allComisionPedidoIds.add(c.pedidoId));
+
+  const deliveredUnliquidatedOrders = orders.filter(
+    (o) => o.estado === "ENTREGADO" && !allComisionPedidoIds.has(o.id)
+  );
+
+  const derivedPendingFromOrders = deliveredUnliquidatedOrders.map((o) => ({
+    id: -o.id, // synthetic id (negative to avoid collision)
+    pedidoId: o.id,
+    vendedorId: user?.id || -1,
+    cantidadPares: o.items.reduce((s, it) => s + it.cantidad, 0),
+    montoPorPar: 4,
+    monto: o.items.reduce((s, it) => s + it.cantidad, 0) * 4,
+    estado: "PENDIENTE" as const,
+    generadaEn: o.creadoEn || new Date().toISOString(),
+  }));
+
+  const pendingList = [...pendingComisiones, ...derivedPendingFromOrders];
 
   const deliveredOrders = orders.filter((o) => o.estado === "ENTREGADO");
   const totalPairs = deliveredOrders.reduce(
@@ -113,351 +145,304 @@ export default function VendedorDashboardPage() {
   return (
     <div className="container-app py-10">
       {/* HEADER WITH QUICK VENTA ASISTIDA BUTTON */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between border-b border-slate-200 pb-6">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="rounded-full bg-purple-500/10 px-3 py-1 text-xs font-bold text-purple-600 border border-purple-400/20">
+      <section className="rounded-[32px] border border-slate-200 bg-white p-10 shadow-[0_24px_70px_rgba(15,118,255,0.08)]">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <span className="inline-flex rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-sky-700 border border-sky-200">
               Panel de vendedor profesional
             </span>
-            <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-bold text-sky-400">
-              {user?.nombre} {user?.apellido}
-            </span>
+            <h1 className="mt-4 text-4xl font-semibold text-slate-900 sm:text-5xl">Mis ventas y <span className="text-sky-600">comisiones</span></h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">Controla tus pedidos, comisiones y tus ventas asistidas desde una interfaz clara y fácil de leer.</p>
           </div>
-          <h1 className="mt-2 font-display text-4xl text-slate-900 sm:text-5xl">
-            MIS VENTAS & <span className="text-accent">COMISIONES</span>
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Comisiones de <strong>$4.00 USD por par entregado</strong> · Venta asistida directa.
-          </p>
+          <div className="flex flex-wrap gap-3">
+            <Link to="/catalogo">
+              <Button variant="secondary" size="lg" className="shadow-lg shadow-sky-500/20 font-bold">
+                <Plus className="h-4 w-4" /> Realizar venta asistida
+              </Button>
+            </Link>
+          </div>
         </div>
-
-        <div className="flex flex-wrap gap-3">
-          <Link to="/catalogo">
-            <Button variant="secondary" size="lg" className="shadow-lg shadow-sky-500/20 font-bold">
-              <Plus className="h-4 w-4" /> Realizar venta asistida
-            </Button>
-          </Link>
-        </div>
-      </div>
+      </section>
 
       {/* BANNER: VENTA ASISTIDA INFO & REFERRAL LINK */}
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2 rounded-2xl border border-sky-200 bg-gradient-to-r from-sky-900 to-slate-900 p-6 text-white shadow-xl relative overflow-hidden">
-          <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-sky-400/20 blur-2xl" />
-          <div className="flex items-start gap-3">
-            <div className="rounded-xl bg-sky-500/20 p-2.5 text-sky-300">
-              <Sparkles className="h-6 w-6" />
-            </div>
+        <div className="lg:col-span-2 rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_rgba(15,118,255,0.08)]">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h3 className="font-display text-2xl text-white">¿Cómo realizar Ventas Asistidas?</h3>
-              <p className="mt-1 text-sm text-sky-100 max-w-xl">
-                Al comprar cualquier zapatilla para un cliente estando logueado con tu cuenta de Vendedor,
-                la venta queda asignada automáticamente a ti y **aseguras tu comisión de $4.00 por par**.
-              </p>
+              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-sky-600">Venta asistida</p>
+              <h3 className="mt-3 text-2xl font-semibold text-slate-900">Convierte tus contactos en comisiones</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-500">Cada venta que registras queda asignada a tu cuenta y te acerca a tu meta mensual.</p>
+            </div>
+            <div className="inline-flex items-center gap-3 rounded-3xl bg-sky-50 px-4 py-3 text-sky-700">
+              <Sparkles className="h-5 w-5" />
+              <span className="text-sm font-semibold">+ $4.00 por par</span>
             </div>
           </div>
         </div>
 
         {/* REFERRAL LINK BOX */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Mi Link de Vendedor</span>
-              <Share2 className="h-4 w-4 text-sky-500" />
+        <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_16px_45px_rgba(15,118,255,0.08)]">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Mi link de vendedor</p>
+              <p className="mt-3 text-sm text-slate-700 break-all">{referralLink}</p>
             </div>
-            <p className="mt-2 text-xs text-slate-400 font-mono truncate bg-slate-50 p-2 rounded-lg border border-slate-200">
-              {referralLink}
-            </p>
+            <Share2 className="h-5 w-5 text-sky-500" />
           </div>
-          <Button variant="outline" size="sm" onClick={copyReferral} className="mt-4 w-full justify-center">
-            <Copy className="h-3.5 w-3.5" /> Copiar Link de Referido
+          <Button variant="secondary" size="sm" onClick={copyReferral} className="mt-6 w-full justify-center">
+            <Copy className="h-3.5 w-3.5" /> Copiar link
           </Button>
         </div>
       </div>
 
       {/* KPI STATS */}
-      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-purple-100 bg-purple-50/60 p-6">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-purple-600">Saldo por cobrar</span>
-            <div className="rounded-xl bg-purple-100 p-2.5">
-              <DollarSign className="h-6 w-6 text-purple-600" />
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          { label: "Saldo por cobrar", value: formatCurrency(totalCommissions), note: `${totalPairs} pares entregados`, icon: <DollarSign className="h-6 w-6 text-sky-600" /> },
+          { label: "Ya cobrado", value: formatCurrency(comisionesPagadas), note: "Liquidaciones pagadas", icon: <CheckCircle2 className="h-6 w-6 text-emerald-600" /> },
+          { label: "Por liquidar", value: formatCurrency(comisionesPendientes), note: `${pendingPairs} pares en camino`, icon: <TrendingUp className="h-6 w-6 text-sky-600" /> },
+          { label: "Pedidos asignados", value: orders.length.toString(), note: `${deliveredOrders.length} finalizados`, icon: <ShoppingBag className="h-6 w-6 text-sky-500" /> },
+        ].map((card) => (
+          <div key={card.label} className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_18px_45px_rgba(15,118,255,0.06)]">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">{card.label}</p>
+              <div className="rounded-xl bg-slate-100 p-2.5">{card.icon}</div>
             </div>
+            <p className="mt-5 text-4xl font-semibold text-slate-900">{card.value}</p>
+            <p className="mt-2 text-sm text-slate-500">{card.note}</p>
           </div>
-            <p className="mt-3 font-display text-4xl text-slate-900">{formatCurrency(totalCommissions)}</p>
-          <p className="mt-1 text-xs font-semibold text-purple-600">
-            {totalPairs} pares entregados × $4.00 — solo pedidos <strong>ENTREGADO</strong>
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-6">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-700">Ya cobrado</span>
-            <div className="rounded-xl bg-emerald-100 p-2.5">
-              <CheckCircle2 className="h-6 w-6 text-emerald-600" />
-            </div>
-          </div>
-            <p className="mt-3 font-display text-4xl text-slate-900">{formatCurrency(comisionesPagadas)}</p>
-          <p className="mt-1 text-xs font-semibold text-emerald-700">Liquidaciones pagadas</p>
-        </div>
-
-        <div className="rounded-2xl border border-amber-100 bg-amber-50/60 p-6">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-amber-700">Por liquidar</span>
-            <div className="rounded-xl bg-amber-100 p-2.5">
-              <TrendingUp className="h-6 w-6 text-amber-600" />
-            </div>
-          </div>
-            <p className="mt-3 font-display text-4xl text-slate-900">{formatCurrency(comisionesPendientes)}</p>
-          <p className="mt-1 text-xs font-semibold text-amber-700">
-            {pendingPairs} pares en camino · se acredita al entregar
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-6">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Total Pedidos Asignados</span>
-            <div className="rounded-xl bg-slate-100 p-2.5">
-              <ShoppingBag className="h-6 w-6 text-sky-500" />
-            </div>
-          </div>
-          <p className="mt-3 font-display text-4xl text-slate-900">{orders.length}</p>
-          <p className="mt-1 text-xs font-semibold text-sky-600">{deliveredOrders.length} finalizados</p>
-        </div>
-
-        {/* MONTHLY TARGET PROGRESS */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Meta Mensual (50 Pares)</span>
-            <Target className="h-5 w-5 text-emerald-500" />
-          </div>
-          <p className="mt-3 font-display text-4xl text-slate-900">{progressPercent}%</p>
-          <div className="mt-2 h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-            <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${progressPercent}%` }} />
-          </div>
-          <p className="mt-1 text-[11px] text-slate-400">{totalPairs} de {monthlyGoal} pares alcanzados</p>
-        </div>
+        ))}
       </div>
 
-      {/* ORDERS LIST */}
-      <div className="mt-10">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="font-display text-2xl text-slate-900">Mis Pedidos & Clientes Asignados</h2>
-
-          {/* FILTERS & SEARCH */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative w-full sm:w-64">
+      {/* MAIN: show different tables depending on selected tab */}
+      <section className="mt-10 rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_rgba(15,118,255,0.08)]">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="text-2xl font-semibold text-slate-900">Mis ventas y comisiones</h2>
+            <p className="mt-2 text-sm text-slate-500">Filtra y revisa tus ventas según estado o liquidación.</p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <div className="relative w-full sm:w-72">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Buscar cliente, ciudad o ID..."
-                className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-xs outline-none focus:border-sky-500"
+                className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm text-slate-700 outline-none focus:border-sky-500"
               />
             </div>
-
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
-              className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold outline-none focus:border-sky-500"
+              className="h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 outline-none focus:border-sky-500"
             >
-              <option value="TODOS">Todos los Estados</option>
-              <option value="ENTREGADO">Entregados (Comisión Liquidada)</option>
-              <option value="PENDIENTE">En Camino / Pendientes</option>
+              <option value="TODOS">Todos los estados</option>
+              <option value="ENTREGADO">Entregados</option>
+              <option value="PENDIENTE">En camino / pendientes</option>
             </select>
           </div>
         </div>
 
-        <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          {isLoading ? (
-            <div className="p-12 text-center text-slate-400">Cargando pedidos asignados...</div>
-          ) : filteredOrders.length === 0 ? (
-            <div className="p-12 text-center text-slate-400">
-              <ShoppingBag className="mx-auto h-12 w-12 text-slate-300" />
-              <p className="mt-3 font-display text-xl text-slate-700">No hay pedidos que coincidan</p>
-              <p className="text-xs">Usa la venta asistida para registrar pedidos a nombre de tus clientes.</p>
+        <div className="mt-6 overflow-hidden rounded-[28px] border border-slate-200 bg-slate-50">
+          <div className="p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setActiveTab("ventas")}
+                  className={`rounded-full px-4 py-2 ${activeTab === "ventas" ? "bg-sky-600 text-white" : "bg-white text-slate-700 border"}`}
+                >
+                  Ventas totales ({orders.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab("por_liquidar")}
+                  className={`rounded-full px-4 py-2 ${activeTab === "por_liquidar" ? "bg-sky-600 text-white" : "bg-white text-slate-700 border"}`}
+                >
+                  Ventas por liquidar ({pendingList.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab("pagadas")}
+                  className={`rounded-full px-4 py-2 ${activeTab === "pagadas" ? "bg-sky-600 text-white" : "bg-white text-slate-700 border"}`}
+                >
+                  Ventas pagadas ({liquidaciones.filter((l) => l.pagada).length})
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-500">Total por liquidar:</span>
+                <span className="font-semibold">{formatCurrency(pendingList.reduce((s, c) => s + c.monto, 0))}</span>
+              </div>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-slate-600">
-                <thead className="border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-500">
-                  <tr>
-                    <th className="px-6 py-4">Pedido ID</th>
-                    <th className="px-6 py-4">Cliente & Ubicación</th>
-                    <th className="px-6 py-4">Pares Comprados</th>
-                    <th className="px-6 py-4">Total Venta</th>
-                    <th className="px-6 py-4">Estado Pedido</th>
-                    <th className="px-6 py-4">Comisión ($4.00/par)</th>
-                    <th className="px-6 py-4 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredOrders.map((o) => {
-                    const orderPairs = o.items.reduce((sum, item) => sum + item.cantidad, 0);
-                    const commission = orderPairs * 4;
-                    const cleanPhone = o.telefonoContacto ? o.telefonoContacto.replace(/\D/g, "") : "";
-                    const whatsappUrl = cleanPhone
-                      ? `https://wa.me/593${cleanPhone.startsWith("0") ? cleanPhone.slice(1) : cleanPhone}?text=${encodeURIComponent(
-                          `¡Hola ${o.clienteNombre || ""}! Te saludo de Drip Diamond sobre tu pedido #${o.id}.`
-                        )}`
-                      : null;
+            <p className="mt-2 text-xs text-slate-500">Vista de solo lectura: el contador se encarga de generar y pagar liquidaciones.</p>
+          </div>
 
-                    return (
-                      <tr key={o.id} className="hover:bg-slate-50/50">
-                        <td className="px-6 py-4 font-mono font-bold text-slate-900">#{o.id}</td>
-                        <td className="px-6 py-4">
-                          <p className="font-semibold text-slate-900">{o.clienteNombre || "Cliente Drip"}</p>
-                          <p className="text-xs text-slate-400">{o.ciudad ? `${o.ciudad}, ${o.provincia || ""}` : "Ecuador"}</p>
-                          <p className="mt-1 text-xs text-slate-500">{o.telefonoContacto || "Sin teléfono registrado"}</p>
-                        </td>
-                        <td className="px-6 py-4 font-mono text-slate-700 font-medium">
-                          {orderPairs} par(es)
-                        </td>
-                        <td className="px-6 py-4 font-mono font-bold text-slate-900">
-                          {formatCurrency(o.total ?? o.montoTotal ?? 0)}
-                        </td>
-                        <td className="px-6 py-4">
-                          <Badge tone={o.estado === "ENTREGADO" ? "success" : "info"}>{o.estado}</Badge>
-                        </td>
-                        <td className="px-6 py-4 font-mono font-bold text-purple-700">
-                          {o.estado === "ENTREGADO" ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2.5 py-1 text-xs font-bold text-sky-700 border border-sky-100">
-                              <CheckCircle2 className="h-3.5 w-3.5 text-sky-700" /> +{formatCurrency(commission)} acreditado
+          {isLoading && (
+            <div className="flex min-h-[260px] items-center justify-center p-12 text-slate-500">Cargando datos...</div>
+          )}
+
+          {!isLoading && activeTab === "ventas" && (
+            (filteredOrders.length === 0) ? (
+              <div className="flex min-h-[260px] flex-col items-center justify-center gap-4 p-12 text-center text-slate-500">
+                <ShoppingBag className="h-12 w-12 text-slate-300" />
+                <p className="text-xl font-semibold text-slate-900">No hay pedidos que coincidan</p>
+                <p className="text-sm">Usa la venta asistida para registrar pedidos a nombre de tus clientes.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left text-sm text-slate-600">
+                  <thead className="bg-white text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
+                    <tr>
+                      <th className="px-6 py-4">Pedido ID</th>
+                      <th className="px-6 py-4">Cliente</th>
+                      <th className="px-6 py-4">Pares</th>
+                      <th className="px-6 py-4">Total</th>
+                      <th className="px-6 py-4">Estado</th>
+                      <th className="px-6 py-4">Comisión</th>
+                      <th className="px-6 py-4 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 bg-slate-50">
+                    {filteredOrders.map((o) => {
+                      const orderPairs = o.items.reduce((sum, item) => sum + item.cantidad, 0);
+                      const commission = orderPairs * 4;
+                      const cleanPhone = o.telefonoContacto ? o.telefonoContacto.replace(/\D/g, "") : "";
+                      const whatsappUrl = cleanPhone
+                        ? `https://wa.me/593${cleanPhone.startsWith("0") ? cleanPhone.slice(1) : cleanPhone}?text=${encodeURIComponent(
+                            `¡Hola ${o.clienteNombre || ""}! Te saludo de Drip Diamond sobre tu pedido #${o.id}.`
+                          )}`
+                        : null;
+
+                      return (
+                        <tr key={o.id} className="hover:bg-slate-100/80">
+                          <td className="px-6 py-4 font-mono font-semibold text-slate-900">#{o.id}</td>
+                          <td className="px-6 py-4">
+                            <p className="font-semibold text-slate-900">{o.clienteNombre || "Cliente Drip"}</p>
+                            <p className="text-xs text-slate-500">{o.ciudad ? `${o.ciudad}, ${o.provincia || ""}` : "Ecuador"}</p>
+                            <p className="mt-1 text-xs text-slate-400">{o.telefonoContacto || "Sin teléfono registrado"}</p>
+                          </td>
+                          <td className="px-6 py-4 font-medium text-slate-700">{orderPairs} par(es)</td>
+                          <td className="px-6 py-4 font-mono font-semibold text-slate-900">{formatCurrency(o.total ?? o.montoTotal ?? 0)}</td>
+                          <td className="px-6 py-4"><Badge tone={o.estado === "ENTREGADO" ? "success" : "info"}>{o.estado}</Badge></td>
+                          <td className="px-6 py-4">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 border border-sky-100">
+                              {o.estado === "ENTREGADO" ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
+                              {formatCurrency(commission)}
                             </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700 border border-sky-100">
-                              <Clock className="h-3.5 w-3.5 text-sky-700" /> +{formatCurrency(commission)} al entregar
-                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              {whatsappUrl && (
+                                <a
+                                  href={whatsappUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+                                  title="Contactar por WhatsApp"
+                                >
+                                  <MessageCircle className="h-4 w-4" />
+                                </a>
+                              )}
+                              <Button variant="ghost" size="sm" onClick={() => setSelectedOrder(o)}>
+                                Ver Detalle
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )
+          )}
+
+          {!isLoading && activeTab === "por_liquidar" && (
+            <div className="grid gap-4 p-4">
+              {liquidaciones.filter((l) => !l.pagada).length > 0 && (
+                <div className="space-y-3">
+                  {liquidaciones.filter((l) => !l.pagada).map((liq) => (
+                    <article key={liq.id} className="overflow-hidden rounded-[12px] border border-slate-200 bg-white p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-semibold">{["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"][liq.periodoMes - 1]} {liq.periodoAnio}</div>
+                          <div className="text-sm text-slate-600">{liq.totalPares} pares · {formatCurrency(liq.totalComisiones)}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {liq.comprobanteUrl && (
+                            <a href={resolveMediaUrl(liq.comprobanteUrl) ?? "#"} target="_blank" rel="noreferrer" className="text-sm text-sky-600 underline">Ver comprobante</a>
                           )}
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {whatsappUrl && (
-                              <a
-                                href={whatsappUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
-                                title="Contactar por WhatsApp"
-                              >
-                                <MessageCircle className="h-4 w-4" />
-                              </a>
-                            )}
-                            <Button variant="ghost" size="sm" onClick={() => setSelectedOrder(o)}>
-                              Ver Detalle
-                            </Button>
-                          </div>
-                        </td>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+
+              {pendingList.length === 0 ? (
+                <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-6 text-center text-slate-500">No hay comisiones pendientes por liquidar.</div>
+              ) : (
+                <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-50">
+                  <table className="min-w-full text-left text-sm">
+                    <thead className="bg-white text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
+                      <tr>
+                        <th className="px-6 py-3">Pedido</th>
+                        <th className="px-6 py-3">Pares</th>
+                        <th className="px-6 py-3">$/par</th>
+                        <th className="px-6 py-3">Comisión</th>
+                        <th className="px-6 py-3">Origen</th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 bg-slate-50">
+                      {pendingList.map((c) => (
+                        <tr key={c.id} className="hover:bg-slate-100/80">
+                          <td className="px-6 py-3 font-mono">#{c.pedidoId}</td>
+                          <td className="px-6 py-3">{c.cantidadPares}</td>
+                          <td className="px-6 py-3 font-mono">{formatCurrency(c.montoPorPar)}</td>
+                          <td className="px-6 py-3 font-semibold">{formatCurrency(c.monto)}</td>
+                          <td className="px-6 py-3 text-xs text-slate-500">{c.id < 0 ? "Venta reciente" : "Sistema"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {!isLoading && activeTab === "pagadas" && (
+            <div className="grid gap-4 p-4">
+              {liquidaciones.filter((l) => l.pagada).length === 0 ? (
+                <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-6 text-center text-slate-500">No hay liquidaciones pagadas aún.</div>
+              ) : (
+                <>
+                  {liquidaciones.filter((l) => l.pagada).map((liq) => (
+                    <article key={liq.id} className="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-50 shadow-sm p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-semibold">{["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"][liq.periodoMes - 1]} {liq.periodoAnio}</div>
+                          <div className="text-sm text-slate-600">{liq.totalPares} pares · {formatCurrency(liq.totalComisiones)}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {liq.comprobanteUrl ? (
+                            <a href={resolveMediaUrl(liq.comprobanteUrl) ?? "#"} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:bg-sky-100">
+                              <ExternalLink className="h-4 w-4" /> Ver comprobante
+                            </a>
+                          ) : (
+                            <span className="text-xs text-muted-t">—</span>
+                          )}
+                        </div>
+                      </div>
+                      {liq.comisiones && liq.comisiones.length > 0 && (
+                        <div className="mt-3 text-sm text-slate-600">{liq.comisiones.length} pedido(s) incluidos</div>
+                      )}
+                    </article>
+                  ))}
+                </>
+              )}
             </div>
           )}
         </div>
-      </div>
+      </section>
 
-      {/* ── LIQUIDACIONES ── */}
-      <div className="mt-12 border-t border-theme pt-10">
-        <h2 className="font-display text-2xl text-primary mb-1">Mis liquidaciones</h2>
-        <p className="text-sm text-secondary mb-5">
-          El contador genera la liquidación mensual. Cuando realizan la transferencia la marcan como <strong>Pagada</strong> y recibes una notificación.
-        </p>
-
-        {liquidaciones.length === 0 ? (
-          <div className="rounded-2xl border border-theme bg-surf p-10 text-center text-secondary">
-            <DollarSign className="mx-auto h-10 w-10 text-muted-t mb-3" />
-            <p className="font-display text-xl">Aún no tienes liquidaciones</p>
-            <p className="text-sm mt-1 text-muted-t">
-              El contador generará tu primera liquidación al cerrar el mes.
-            </p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {liquidaciones.map((liq) => (
-              <div key={liq.id} className="overflow-hidden rounded-2xl border border-theme bg-surf shadow-card">
-                <div className="flex flex-wrap items-center gap-4 px-5 py-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-semibold text-primary">
-                        {["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"][liq.periodoMes - 1]} {liq.periodoAnio}
-                      </span>
-                      {liq.pagada ? (
-                        <Badge tone="success" className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4" /> Pagada</Badge>
-                      ) : (
-                        <Badge tone="warning">Pendiente de pago</Badge>
-                      )}
-                    </div>
-                    <div className="mt-1 flex flex-wrap gap-4 text-sm">
-                      <span className="text-muted-t">{liq.totalPares} pares entregados</span>
-                      <span className="font-mono font-bold text-primary">{formatCurrency(liq.totalComisiones)}</span>
-                      {liq.fechaPago && (
-                        <span className="text-xs text-emerald-600">
-                          Pagado el {new Date(liq.fechaPago).toLocaleDateString("es-EC")}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    {liq.comprobanteUrl && (
-                      <a
-                        href={resolveMediaUrl(liq.comprobanteUrl) ?? "#"}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-600 hover:bg-sky-100 transition-colors"
-                      >
-                        <ExternalLink className="h-3 w-3" /> Ver comprobante
-                      </a>
-                    )}
-                    {(liq.comisiones?.length ?? 0) > 0 && (
-                      <button
-                        onClick={() => setExpandedLiq(expandedLiq === liq.id ? null : liq.id)}
-                        className="flex items-center gap-1 rounded-lg border border-theme px-2 py-1.5 text-xs text-muted-t hover:bg-surf2 transition-colors"
-                      >
-                        {expandedLiq === liq.id ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                        {liq.comisiones?.length} pedidos
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {expandedLiq === liq.id && liq.comisiones && liq.comisiones.length > 0 && (
-                  <div className="border-t border-theme bg-surf2 px-5 py-4">
-                    <table className="w-full text-sm">
-                      <thead className="text-xs font-bold uppercase tracking-wider text-muted-t">
-                        <tr>
-                          <th className="pb-2 text-left">Pedido</th>
-                          <th className="pb-2 text-left">Pares</th>
-                          <th className="pb-2 text-left">$/par</th>
-                          <th className="pb-2 text-right">Comisión</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-theme">
-                        {liq.comisiones.map((c) => (
-                          <tr key={c.id}>
-                            <td className="py-2 font-mono text-primary">#{c.pedidoId}</td>
-                            <td className="py-2 text-secondary">{c.cantidadPares}</td>
-                            <td className="py-2 font-mono text-secondary">{formatCurrency(c.montoPorPar)}</td>
-                            <td className="py-2 text-right font-mono font-bold text-primary">{formatCurrency(c.monto)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                      <tfoot>
-                        <tr className="border-t-2 border-theme">
-                          <td colSpan={3} className="pt-2 text-xs font-bold text-muted-t">Total</td>
-                          <td className="pt-2 text-right font-mono font-bold text-primary">{formatCurrency(liq.totalComisiones)}</td>
-                        </tr>
-                      </tfoot>
-                    </table>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Removed duplicate 'Mis liquidaciones' section: views are integrated into the main tabbed area above. */}
 
       {/* ORDER DETAIL MODAL */}
       {selectedOrder && (

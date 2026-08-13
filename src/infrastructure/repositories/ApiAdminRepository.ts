@@ -442,6 +442,20 @@ export class ApiAdminRepository implements AdminRepositoryPort {
   }
 
   private _mapLiquidacion(l: any): import("@/domain/ports/AdminRepositoryPort").Liquidacion {
+    const comisiones = (l.comisiones ?? []).map((c: any) => ({
+      id: c.id,
+      pedidoId: c.pedido_id ?? c.pedido ?? 0,
+      vendedorId: typeof c.vendedor === "object" ? c.vendedor?.id : c.vendedor,
+      cantidadPares: Number(c.cantidad_pares ?? 0),
+      montoPorPar: Number(c.monto_por_par ?? 4),
+      monto: Number(c.monto ?? 0),
+      estado: c.estado ?? "PENDIENTE",
+      generadaEn: c.generada_en ?? "",
+    }));
+
+    const derivedTotalPares = comisiones.reduce((s: number, c: any) => s + (c.cantidadPares ?? 0), 0);
+    const derivedTotalComisiones = comisiones.reduce((s: number, c: any) => s + (c.monto ?? 0), 0);
+
     return {
       id: l.id,
       vendedorId: typeof l.vendedor === "object" ? l.vendedor?.id : l.vendedor,
@@ -451,23 +465,15 @@ export class ApiAdminRepository implements AdminRepositoryPort {
           : undefined,
       periodoAnio: l.periodo_anio,
       periodoMes: l.periodo_mes,
-      totalPares: Number(l.total_pares ?? 0),
-      totalComisiones: Number(l.total_comisiones ?? 0),
+      // Prefer derived totals from the comisiones array to avoid inconsistencies from the backend
+      totalPares: derivedTotalPares,
+      totalComisiones: derivedTotalComisiones,
       pagada: Boolean(l.pagada),
       fechaPago: l.fecha_pago ?? null,
       comprobanteUrl: l.comprobante_pago ?? null,
-      comisiones: (l.comisiones ?? []).map((c: any) => ({
-        id: c.id,
-        pedidoId: c.pedido_id ?? c.pedido ?? 0,
-        vendedorId: typeof c.vendedor === "object" ? c.vendedor?.id : c.vendedor,
-        cantidadPares: Number(c.cantidad_pares ?? 0),
-        montoPorPar: Number(c.monto_por_par ?? 4),
-        monto: Number(c.monto ?? 0),
-        estado: c.estado ?? "PENDIENTE",
-        generadaEn: c.generada_en ?? "",
-      })),
+      comisiones,
       creadaEn: l.creada_en ?? "",
-    };
+    } as any;
   }
 
   async getLiquidaciones(vendedorId?: number): Promise<import("@/domain/ports/AdminRepositoryPort").Liquidacion[]> {

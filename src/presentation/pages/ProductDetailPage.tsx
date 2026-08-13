@@ -304,10 +304,10 @@ export default function ProductDetailPage() {
 
           <div className="mt-8 flex flex-col gap-3 border-t border-ink/10 pt-6 text-sm text-ink/60">
             <div className="flex items-center gap-2">
-              <Truck className="h-4 w-4" /> Envíos a todo Ecuador, costo según tu zona
+              <Truck className="h-4 w-4" /> Envíos a todo Quito, costo según tu zona
             </div>
             <div className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4" /> Producto verificado 100% original
+              <ShieldCheck className="h-4 w-4" /> Producto verificado
             </div>
           </div>
         </div>

@@ -10,7 +10,7 @@ import { useCartStore } from "@/presentation/store/cartStore";
 import { Input } from "@/presentation/components/ui/Input";
 import { Button } from "@/presentation/components/ui/Button";
 import { Spinner } from "@/presentation/components/ui/Spinner";
-import { formatCurrency } from "@/presentation/utils/format";
+import { formatCurrency, resolveMediaUrl } from "@/presentation/utils/format";
 
 interface CheckoutForm {
   tipoEntrega: "DOMICILIO" | "RETIRO_LOCAL";
@@ -162,7 +162,7 @@ export default function CheckoutPage() {
     <div className="container-app py-8 lg:py-12">
       <h1 className="font-display text-4xl">Checkout</h1>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="mt-8 grid gap-10 lg:grid-cols-[1fr_360px]">
+      <form onSubmit={handleSubmit(onSubmit)} className="mt-8 grid gap-10 lg:grid-cols-[1fr_380px]">
         <div className="flex flex-col gap-8">
 
           {/* ── Shipping data ── */}
@@ -173,7 +173,7 @@ export default function CheckoutPage() {
                 <label className="mb-2 block text-sm font-medium text-ink/70">Tipo de entrega</label>
                 <select
                   {...register("tipoEntrega", { required: "Requerido" })}
-                  className="h-12 w-full rounded-xl border-2 border-ink/15 bg-white px-4 text-sm outline-none focus:border-ink dark:bg-slate-900 dark:border-slate-700 dark:text-white"
+                  className="h-12 w-full rounded-xl border border-blue-100 bg-white px-4 text-sm outline-none focus:border-sky-400"
                 >
                   <option value="DOMICILIO">Domicilio</option>
                   <option value="RETIRO_LOCAL">Retiro local</option>
@@ -223,7 +223,7 @@ export default function CheckoutPage() {
               Si alguien te atendió, selecciónalo para que reciba su comisión ($4 por par entregado).
             </p>
 
-            <div className="max-w-xl rounded-2xl border border-theme bg-surf p-4 shadow-sm">
+            <div className="max-w-xl rounded-2xl border border-blue-100 bg-white p-4 shadow-sm">
               {sellersLoading ? (
                 <div className="flex items-center gap-2 py-3 text-sm text-muted-t">
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-sky-400 border-t-transparent" />
@@ -252,7 +252,7 @@ export default function CheckoutPage() {
                       value={sellerSearch}
                       onChange={(e) => setSellerSearch(e.target.value)}
                       placeholder="Buscar por nombre o correo..."
-                      className="h-11 w-full rounded-xl border border-theme bg-surf2 pl-9 pr-3 text-sm text-primary placeholder:text-muted-t outline-none focus:border-sky-400"
+                      className="h-11 w-full rounded-xl border border-blue-100 bg-slate-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-muted-t outline-none focus:border-sky-400"
                     />
                   </div>
 
@@ -290,7 +290,7 @@ export default function CheckoutPage() {
           </section>
 
           {/* ── Bank info ── */}
-          <section className="rounded-3xl border border-sky-200 bg-white p-6 shadow-sm dark:border-sky-900 dark:bg-slate-900">
+          <section className="rounded-3xl border border-blue-100 bg-white p-6 shadow-md">
             <div className="flex items-center gap-3 mb-4">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 shadow-sm dark:bg-sky-950">
                 <CreditCard className="h-5 w-5" />
@@ -301,7 +301,7 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 rounded-2xl bg-slate-50 p-4 text-sm dark:bg-slate-800">
+            <div className="grid gap-3 sm:grid-cols-2 rounded-2xl bg-slate-50 p-4 text-sm">
               <div>
                 <span className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-ink/60">Banco</span>
                 <span className="mt-1 block font-semibold text-ink">Banco Pichincha</span>
@@ -316,7 +316,7 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <div className="mt-4 rounded-xl border border-sky-100 bg-sky-50 p-4 text-sm leading-relaxed dark:border-sky-900 dark:bg-sky-950/40">
+            <div className="mt-4 rounded-xl border border-blue-100 bg-sky-50 p-4 text-sm leading-relaxed">
               <p className="flex items-center gap-2 font-bold text-ink">
                 <MessageSquare className="h-4 w-4 text-sky-600" /> Pasos para confirmar tu pedido:
               </p>
@@ -344,25 +344,29 @@ export default function CheckoutPage() {
               {...register("notas")}
               rows={3}
               placeholder="Indicaciones adicionales para tu pedido"
-              className="w-full rounded-xl border-2 border-ink/15 bg-white p-4 text-sm outline-none focus:border-ink dark:bg-slate-900 dark:border-slate-700 dark:text-white"
+              className="w-full rounded-xl border border-blue-100 bg-white p-4 text-sm outline-none focus:border-sky-400"
             />
           </section>
         </div>
-
         {/* ── Order summary ── */}
-        <aside className="h-fit rounded-2xl bg-white p-6 shadow-sm dark:bg-slate-900">
+        <aside className="h-fit rounded-2xl bg-white p-6 shadow-lg sticky top-20">
           <h3 className="font-display text-xl">Resumen del pedido</h3>
-          <ul className="mt-4 flex flex-col gap-2 text-sm">
+          <ul className="mt-4 flex flex-col gap-3 text-sm">
             {cart?.items.map((item) => (
-              <li key={item.id} className="flex justify-between text-ink/70">
-                <span className="truncate pr-3">
-                  {item.nombre} <span className="text-ink/40">×{item.cantidad}</span>
-                </span>
-                <span className="flex-shrink-0 font-medium">{formatCurrency(item.precioUnitario * item.cantidad)}</span>
+              <li key={item.id} className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <img src={resolveMediaUrl(item.imagenUrl) ?? "/placeholder.svg"} alt={item.nombre}
+                    className="h-12 w-12 rounded-lg object-contain bg-slate-50 p-2" onError={(e)=>{(e.currentTarget as HTMLImageElement).src="/placeholder.svg"}} />
+                  <div className="truncate">
+                    <div className="text-sm font-medium truncate">{item.nombre}</div>
+                    <div className="text-xs text-ink/60">x{item.cantidad}</div>
+                  </div>
+                </div>
+                <div className="font-medium">{formatCurrency(item.precioUnitario * item.cantidad)}</div>
               </li>
             ))}
           </ul>
-          <div className="mt-4 flex flex-col gap-2 border-t border-ink/10 pt-4 text-sm">
+          <div className="mt-6 flex flex-col gap-2 border-t border-ink/10 pt-4 text-sm">
             <div className="flex justify-between text-ink/60">
               <span>Subtotal</span>
               <span className="font-semibold text-ink">{formatCurrency(subtotal)}</span>
@@ -381,11 +385,9 @@ export default function CheckoutPage() {
 
           {/* Selected seller summary */}
           {watch("vendedorId") && (
-            <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs dark:border-sky-900 dark:bg-sky-950/30">
-              <p className="font-semibold text-sky-700 dark:text-sky-300">
-                Vendedor seleccionado:
-              </p>
-              <p className="text-sky-600 dark:text-sky-400">
+            <div className="mt-4 rounded-xl border border-blue-100 bg-sky-50 px-4 py-3 text-xs">
+              <p className="font-semibold text-sky-700">Vendedor seleccionado:</p>
+              <p className="text-sky-600">
                 {sellers.find((s) => String(s.id) === watch("vendedorId"))
                   ? `${sellers.find((s) => String(s.id) === watch("vendedorId"))!.nombre} ${sellers.find((s) => String(s.id) === watch("vendedorId"))!.apellido}`
                   : `ID #${watch("vendedorId")}`}
@@ -395,7 +397,7 @@ export default function CheckoutPage() {
 
           <Button
             type="submit"
-            variant="secondary"
+            variant="primary"
             size="lg"
             fullWidth
             className="mt-6"
@@ -404,9 +406,7 @@ export default function CheckoutPage() {
           >
             Confirmar pedido
           </Button>
-          <p className="mt-3 text-center text-xs text-ink/40">
-            Después de confirmar, subirás tu comprobante de pago.
-          </p>
+          <p className="mt-3 text-center text-xs text-ink/40">Después de confirmar, subirás tu comprobante de pago.</p>
         </aside>
       </form>
     </div>

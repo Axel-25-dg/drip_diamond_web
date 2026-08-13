@@ -77,6 +77,7 @@ export function Navbar() {
       <div className="container-app flex h-16 items-center justify-between gap-4 lg:h-[68px]">
 
         {/* ── Logo ── */}
+        
         <div className="flex items-center gap-3">
           <button
             className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-500 hover:bg-blue-50 transition-colors lg:hidden"
@@ -86,16 +87,14 @@ export function Navbar() {
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
 
-          <Link to="/" className="flex items-center gap-2.5 select-none group">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 transition-all group-hover:bg-blue-700">
-              <Gem className="h-4 w-4 text-white" />
-            </div>
+          <Link to="/" className="flex items-center gap-3 select-none">
+            <img src="/logo_drip.png" alt="Logo Drip Diamond" className="h-15 w-auto object-contain" />
             <div className="leading-none">
-              <span className="font-display text-[15px] font-extrabold tracking-tight text-gray-900">
-                DRIP<span className="text-blue-600">DIAMOND</span>
+              <span className="font-display text-[16px] font-extrabold tracking-tight text-gray-900">
+                <span className="text-blue-600">DIAMOND</span>
               </span>
               <span className="block mt-0.5 text-[9px] tracking-[0.25em] font-semibold uppercase text-gray-400">
-                Luxury Sneakers
+                Calidad Sneakers
               </span>
             </div>
           </Link>

@@ -94,14 +94,33 @@ export default function ContadorLiquidacionesPage() {
   }, [tab]);
 
   const openDetalle = async (v: ResumenVendedor) => {
-    if (!v.liquidacionId) {
-      toast.info("Este vendedor no tiene liquidación generada aún este mes.");
-      return;
-    }
     setDetalleLoading(true);
     try {
-      const liq = await useCases.getLiquidacionDetalle.execute(v.liquidacionId);
-      setDetalleVendedor({ nombre: v.vendedorNombre, liq });
+      if (v.liquidacionId) {
+        const liq = await useCases.getLiquidacionDetalle.execute(v.liquidacionId);
+        setDetalleVendedor({ nombre: v.vendedorNombre, liq });
+      } else {
+        // Fallback: fetch pending comisiones to show recent sales when no liquidacion exists yet
+        try {
+          const pend = await useCases.getComisionesPendientes.execute(v.vendedorId);
+          const pseudoLiq: Liquidacion = {
+            id: -1,
+            vendedorId: v.vendedorId,
+            vendedorNombre: v.vendedorNombre,
+            periodoMes: mes,
+            periodoAnio: anio,
+            totalPares: pend.reduce((s, p) => s + (p.cantidadPares ?? 0), 0),
+            totalComisiones: pend.reduce((s, p) => s + (p.monto ?? 0), 0),
+            totalParesHistorico: 0,
+            totalComisionesHistorico: 0,
+            comisiones: pend,
+            pagada: false,
+          } as any;
+          setDetalleVendedor({ nombre: v.vendedorNombre, liq: pseudoLiq });
+        } catch {
+          toast.info("No hay detalle disponible para este vendedor.");
+        }
+      }
     } catch {
       toast.error("No se pudo cargar el detalle.");
     } finally {
@@ -110,10 +129,15 @@ export default function ContadorLiquidacionesPage() {
   };
 
   const handlePago = async (file: File) => {
-    if (!pagoVendedor?.liquidacionId) return;
+    if (!pagoVendedor) return;
     setIsPaying(true);
     try {
-      await useCases.marcarLiquidacionPagada.execute(pagoVendedor.liquidacionId, file);
+      let liquidacionId = pagoVendedor.liquidacionId;
+      if (!liquidacionId) {
+        const created = await useCases.generarLiquidacion.execute(pagoVendedor.vendedorId, anio, mes);
+        liquidacionId = created.id;
+      }
+      await useCases.marcarLiquidacionPagada.execute(liquidacionId, file);
       toast.success(`Pago registrado para ${pagoVendedor.vendedorNombre}. Se notificó al vendedor.`);
       setPagoVendedor(null);
       setFileName("");
@@ -228,7 +252,8 @@ export default function ContadorLiquidacionesPage() {
                     {vendedores.map((v) => {
                       const tienePago = v.liquidacionPagada;
                       const tieneComision = v.totalComisionesMes > 0;
-                      const puedeAPagar = ventana && tieneComision && !tienePago && v.liquidacionId != null;
+                      // Allow paying even if a liquidacion record wasn't generated yet.
+                      const puedeAPagar = ventana && tieneComision && !tienePago;
 
                       return (
                         <tr key={v.vendedorId} className="hover:bg-surf2 transition-colors">

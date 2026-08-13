@@ -125,249 +125,195 @@ export default function ContadorDashboardPage() {
   );
 
   return (
-    <div className="container-app py-10">
-      {/* Header */}
-      <div className="border-b border-theme pb-6">
-        <span className="inline-block rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-600 border border-emerald-400/20">
-          Panel de contabilidad y despacho
-        </span>
-        <h1 className="mt-2 font-display text-4xl sm:text-5xl text-primary">
-          Verificación & <span className="text-gradient-brand">Despacho</span>
-        </h1>
-        <p className="mt-1 text-sm text-secondary">
-          Aprueba comprobantes y avanza los pedidos hasta la entrega. La comisión
-          se acredita al vendedor al marcar <strong>Entregado</strong>.
-        </p>
-        <div className="mt-4">
-          <a
-            href="/contador/liquidaciones"
-            className="inline-flex items-center gap-2 rounded-xl border border-purple-200 bg-purple-50 px-4 py-2 text-sm font-semibold text-purple-700 transition-colors hover:bg-purple-100 dark:border-purple-800 dark:bg-purple-950/30 dark:text-purple-300"
-          >
-            <DollarSign className="h-4 w-4" />
-            Gestionar liquidaciones y pagos a vendedores →
-          </a>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="mt-8 flex gap-1 border-b border-theme">
-        {(
-          [
-            { key: "COMPROBANTES", label: "Comprobantes de Pago", icon: <FileText className="h-4 w-4" />, count: pendingCount },
-            { key: "PEDIDOS", label: "Despacho de Pedidos", icon: <PackageCheck className="h-4 w-4" />, count: actionableOrders.length },
-          ] as const
-        ).map(({ key, label, icon, count }) => (
-          <button
-            key={key}
-            onClick={() => setActiveTab(key)}
-            className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${
-              activeTab === key
-                ? "border-sky-500 text-sky-600 dark:text-sky-400"
-                : "border-transparent text-secondary hover:text-primary"
-            }`}
-          >
-            {icon}
-            {label}
-            {count > 0 && (
-              <span className="ml-1 rounded-full bg-sky-500 px-2 py-0.5 text-[10px] font-bold text-white">
-                {count}
+    <div className="min-h-screen bg-sky-50">
+      <div className="container-app py-10">
+        <section className="rounded-[32px] border border-blue-100 bg-white p-8 shadow-[0_24px_70px_rgba(14,165,233,0.08)]">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-3xl">
+              <span className="inline-flex rounded-full bg-sky-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.24em] text-sky-700 border border-sky-200">
+                Panel de contabilidad y despacho
               </span>
-            )}
-          </button>
-        ))}
+              <h1 className="mt-4 font-display text-4xl font-extrabold text-slate-900">Verificación & <span className="text-blue-600">Despacho</span></h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">Aprueba comprobantes y avanza los pedidos hasta la entrega con un diseño fresco, limpio y fácil de usar.</p>
+            </div>
+            <a
+              href="/contador/liquidaciones"
+              className="inline-flex h-11 items-center gap-2 rounded-2xl border border-blue-100 bg-slate-50 px-4 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-white"
+            >
+              <DollarSign className="h-4 w-4 text-sky-500" />
+              Ir a liquidaciones
+            </a>
+          </div>
+
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              { label: "Pendientes", value: pendingCount, helper: "Comprobantes a revisar" },
+              { label: "Pedidos activos", value: actionableOrders.length, helper: "Solicitudes en proceso" },
+              { label: "Pagos aprobados", value: payments.filter((p) => p.estado === "VERIFICADO").length, helper: "Aprobados" },
+              { label: "Pagos rechazados", value: payments.filter((p) => p.estado === "RECHAZADO").length, helper: "Rechazos" },
+            ].map((item) => (
+              <div key={item.label} className="rounded-[28px] border border-blue-100 bg-slate-50 p-5 shadow-[0_18px_45px_rgba(14,165,233,0.08)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">{item.label}</p>
+                <p className="mt-3 text-4xl font-extrabold text-slate-900">{item.value}</p>
+                <p className="mt-2 text-sm text-slate-500">{item.helper}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-10 rounded-[28px] border border-blue-100 bg-slate-50 p-6 shadow-[0_18px_45px_rgba(14,165,233,0.08)]">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h2 className="font-display text-2xl font-bold text-slate-900">Panel operativo</h2>
+                <p className="mt-2 text-sm text-slate-500">Cambia rápidamente entre comprobantes y despacho de pedidos.</p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                {(
+                  [
+                    { key: "COMPROBANTES", label: "Comprobantes" },
+                    { key: "PEDIDOS", label: "Pedidos" },
+                  ] as const
+                ).map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => setActiveTab(key)}
+                    className={`rounded-2xl px-5 py-3 text-sm font-semibold transition ${
+                      activeTab === key
+                        ? "bg-blue-600 text-white shadow-lg shadow-sky-500/20"
+                        : "bg-white text-slate-700 border border-blue-100 hover:border-blue-200"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {activeTab === "COMPROBANTES" && (
+            <div className="mt-8 overflow-hidden rounded-[28px] border border-blue-100 bg-white shadow-[0_18px_45px_rgba(14,165,233,0.08)]">
+              {isLoading ? (
+                <div className="flex min-h-[260px] items-center justify-center p-12 text-slate-500">Cargando comprobantes...</div>
+              ) : payments.length === 0 ? (
+                <div className="flex min-h-[260px] flex-col items-center justify-center gap-4 p-12 text-center text-slate-500">
+                  <CheckCircle className="h-12 w-12 text-sky-400" />
+                  <p className="text-xl font-semibold text-slate-900">¡Al día! Sin comprobantes pendientes</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm text-slate-600">
+                    <thead className="bg-sky-50 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      <tr>
+                        <th className="px-6 py-4">Pedido</th>
+                        <th className="px-6 py-4">Cliente</th>
+                        <th className="px-6 py-4">Monto</th>
+                        <th className="px-6 py-4">Banco / Referencia</th>
+                        <th className="px-6 py-4">Estado</th>
+                        <th className="px-6 py-4 text-right">Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {payments.map((p) => (
+                        <tr key={p.id} className="hover:bg-slate-50">
+                          <td className="px-6 py-4 font-mono font-semibold text-slate-900">#{p.pedidoId}</td>
+                          <td className="px-6 py-4 text-slate-800">{p.clienteNombre}</td>
+                          <td className="px-6 py-4 font-mono font-bold text-blue-700">{formatCurrency(p.montoDeclarado ?? p.monto)}</td>
+                          <td className="px-6 py-4">
+                            <div className="font-semibold text-slate-900">{p.bancoOrigen || "—"}</div>
+                            <div className="mt-1 text-xs text-slate-500 font-mono">Ref: {p.numeroReferencia || "—"}</div>
+                          </td>
+                          <td className="px-6 py-4"><Badge tone={p.estado === "VERIFICADO" ? "success" : p.estado === "RECHAZADO" ? "danger" : "warning"}>{p.estado}</Badge></td>
+                          <td className="px-6 py-4 text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => { setSelectedProof(p); setObservacion(p.observacion || ""); }}
+                            >
+                              Revisar
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === "PEDIDOS" && (
+            <div className="mt-8 overflow-hidden rounded-[28px] border border-blue-100 bg-white shadow-[0_18px_45px_rgba(14,165,233,0.08)]">
+              {isLoading ? (
+                <div className="flex min-h-[260px] items-center justify-center p-12 text-slate-500">Cargando pedidos...</div>
+              ) : orders.length === 0 ? (
+                <div className="flex min-h-[260px] items-center justify-center p-12 text-slate-500">No hay pedidos en proceso de despacho.</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm text-slate-600">
+                    <thead className="bg-sky-50 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      <tr>
+                        <th className="px-6 py-4">Pedido</th>
+                        <th className="px-6 py-4">Cliente</th>
+                        <th className="px-6 py-4">Vendedor</th>
+                        <th className="px-6 py-4">Total</th>
+                        <th className="px-6 py-4">Guía</th>
+                        <th className="px-6 py-4">Estado</th>
+                        <th className="px-6 py-4 text-right">Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {orders.map((o) => (
+                        <tr key={o.id} className="hover:bg-slate-50">
+                          <td className="px-6 py-4 font-mono font-semibold text-slate-900">{o.numero || `#${o.id}`}</td>
+                          <td className="px-6 py-4 text-slate-800">{o.clienteNombre || "—"}</td>
+                          <td className="px-6 py-4 text-slate-600">{o.vendedorNombre || "—"}</td>
+                          <td className="px-6 py-4 font-mono font-bold text-slate-900">{formatCurrency(o.total || 0)}</td>
+                          <td className="px-6 py-4 text-xs text-slate-500 font-mono">{o.numeroGuia || "—"}</td>
+                          <td className="px-6 py-4"><Badge tone={orderStatusTone(o.estado)}>{orderStatusLabel(o.estado)}</Badge></td>
+                          <td className="px-6 py-4 text-right">
+                            {o.estado === "PAGO_APROBADO" && (
+                              <Button variant="outline" size="sm" isLoading={actionLoading === o.id} onClick={() => advance(o.id, "PREPARANDO_PEDIDO")}>Preparar pedido</Button>
+                            )}
+                            {o.estado === "PREPARANDO_PEDIDO" && (
+                              <Button variant="outline" size="sm" isLoading={actionLoading === o.id} onClick={() => { setShipModal(o); setGuiaInput(""); }}>Marcar enviado</Button>
+                            )}
+                            {o.estado === "ENVIADO" && (
+                              <Button variant="secondary" size="sm" isLoading={actionLoading === o.id} onClick={() => advance(o.id, "ENTREGADO")}>Confirmar entrega</Button>
+                            )}
+                            {o.estado === "ENTREGADO" && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">Entregado</span>
+                            )}
+                            {!["PAGO_APROBADO", "PREPARANDO_PEDIDO", "ENVIADO", "ENTREGADO"].includes(o.estado) && (
+                              <span className="text-xs text-slate-400">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
       </div>
 
-      {/* ── TAB 1: Comprobantes ── */}
-      {activeTab === "COMPROBANTES" && (
-        <div className="mt-6 overflow-hidden rounded-2xl border border-theme bg-surf shadow-card">
-          {isLoading ? (
-            <div className="p-12 text-center text-secondary">Cargando comprobantes...</div>
-          ) : payments.length === 0 ? (
-            <div className="p-12 text-center">
-              <CheckCircle className="mx-auto h-12 w-12 text-emerald-400" />
-              <p className="mt-3 font-display text-xl text-primary">
-                ¡Al día! Sin comprobantes pendientes
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-theme text-xs font-bold uppercase tracking-wider text-muted-t">
-                  <tr>
-                    <th className="px-6 py-4">Pedido</th>
-                    <th className="px-6 py-4">Cliente</th>
-                    <th className="px-6 py-4">Monto</th>
-                    <th className="px-6 py-4">Banco / Referencia</th>
-                    <th className="px-6 py-4">Estado</th>
-                    <th className="px-6 py-4 text-right">Acción</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-theme">
-                  {payments.map((p) => (
-                    <tr key={p.id} className="hover:bg-surf2 transition-colors">
-                      <td className="px-6 py-4 font-mono font-bold text-primary">#{p.pedidoId}</td>
-                      <td className="px-6 py-4 font-semibold text-primary">{p.clienteNombre}</td>
-                      <td className="px-6 py-4 font-mono font-bold text-sky-600">
-                        {formatCurrency(p.montoDeclarado ?? p.monto)}
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="font-semibold text-primary">{p.bancoOrigen || "—"}</p>
-                        <p className="text-xs text-muted-t font-mono">Ref: {p.numeroReferencia || "—"}</p>
-                      </td>
-                      <td className="px-6 py-4">
-                        <Badge tone={p.estado === "VERIFICADO" ? "success" : p.estado === "RECHAZADO" ? "danger" : "warning"}>
-                          {p.estado}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => { setSelectedProof(p); setObservacion(p.observacion || ""); }}
-                        >
-                          Revisar
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── TAB 2: Despacho ── */}
-      {activeTab === "PEDIDOS" && (
-        <div className="mt-6 overflow-hidden rounded-2xl border border-theme bg-surf shadow-card">
-          {isLoading ? (
-            <div className="p-12 text-center text-secondary">Cargando pedidos...</div>
-          ) : orders.length === 0 ? (
-            <div className="p-12 text-center text-secondary">
-              No hay pedidos en proceso de despacho.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-theme text-xs font-bold uppercase tracking-wider text-muted-t">
-                  <tr>
-                    <th className="px-5 py-4">Pedido</th>
-                    <th className="px-5 py-4">Cliente</th>
-                    <th className="px-5 py-4">Vendedor</th>
-                    <th className="px-5 py-4">Total</th>
-                    <th className="px-5 py-4">Guía</th>
-                    <th className="px-5 py-4">Estado actual</th>
-                    <th className="px-5 py-4 text-right">Siguiente paso</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-theme">
-                  {orders.map((o) => (
-                    <tr key={o.id} className="hover:bg-surf2 transition-colors">
-                      <td className="px-5 py-4 font-mono font-bold text-primary">
-                        {o.numero || `#${o.id}`}
-                      </td>
-                      <td className="px-5 py-4">
-                        <p className="font-semibold text-primary">{o.clienteNombre || "—"}</p>
-                        <p className="text-xs text-muted-t">{o.ciudad || ""}</p>
-                      </td>
-                      <td className="px-5 py-4 text-secondary">
-                        {o.vendedorNombre || <span className="text-muted-t">—</span>}
-                      </td>
-                      <td className="px-5 py-4 font-mono font-bold text-primary">
-                        {formatCurrency(o.total || 0)}
-                      </td>
-                      <td className="px-5 py-4 text-xs font-mono text-muted-t">
-                        {o.numeroGuia || "—"}
-                      </td>
-                      <td className="px-5 py-4">
-                        <Badge tone={orderStatusTone(o.estado)}>
-                          {orderStatusLabel(o.estado)}
-                        </Badge>
-                      </td>
-                      <td className="px-5 py-4 text-right">
-                        {o.estado === "PAGO_APROBADO" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            isLoading={actionLoading === o.id}
-                            onClick={() => advance(o.id, "PREPARANDO_PEDIDO")}
-                            className="flex items-center gap-1.5"
-                          >
-                            <Boxes className="h-3.5 w-3.5" />
-                            Preparar pedido
-                          </Button>
-                        )}
-                        {o.estado === "PREPARANDO_PEDIDO" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            isLoading={actionLoading === o.id}
-                            onClick={() => { setShipModal(o); setGuiaInput(""); }}
-                            className="flex items-center gap-1.5"
-                          >
-                            <Truck className="h-3.5 w-3.5" />
-                            Marcar enviado
-                          </Button>
-                        )}
-                        {o.estado === "ENVIADO" && (
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            isLoading={actionLoading === o.id}
-                            onClick={() => advance(o.id, "ENTREGADO")}
-                            className="flex items-center gap-1.5"
-                          >
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                            Confirmar entrega
-                          </Button>
-                        )}
-                        {o.estado === "ENTREGADO" && (
-                          <span className="text-xs font-bold text-emerald-600 inline-flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" /> Entregado</span>
-                        )}
-                        {!["PAGO_APROBADO", "PREPARANDO_PEDIDO", "ENVIADO", "ENTREGADO"].includes(o.estado) && (
-                          <span className="text-xs text-muted-t">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Proof modal ── */}
       {selectedProof && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-2xl border border-theme bg-paper p-6 shadow-2xl">
-            <div className="flex items-start justify-between border-b border-theme pb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-[28px] border border-blue-100 bg-white p-6 shadow-[0_24px_70px_rgba(14,165,233,0.18)]">
+            <div className="flex items-start justify-between border-b border-slate-100 pb-4">
               <div>
-                <h3 className="font-display text-2xl text-primary">
-                  Comprobante #{selectedProof.id}
-                </h3>
-                <p className="text-xs text-muted-t">
-                  Pedido #{selectedProof.pedidoId} · {selectedProof.clienteNombre}
-                </p>
+                <h3 className="font-display text-2xl font-bold text-slate-900">Comprobante #{selectedProof.id}</h3>
+                <p className="text-xs text-slate-500">Pedido #{selectedProof.pedidoId} · {selectedProof.clienteNombre}</p>
               </div>
-              <button
-                onClick={() => setSelectedProof(null)}
-                className="rounded-lg p-1 text-muted-t hover:bg-surf2"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <button onClick={() => setSelectedProof(null)} className="rounded-2xl p-2 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button>
             </div>
 
             <div className="mt-4 space-y-4">
-              <div className="aspect-video w-full overflow-hidden rounded-xl border border-theme bg-surf2 flex items-center justify-center">
+              <div className="aspect-video w-full overflow-hidden rounded-2xl border border-blue-100 bg-slate-50 flex items-center justify-center">
                 {resolveMediaUrl(selectedProof.comprobanteUrl) ? (
-                  <img
-                    src={resolveMediaUrl(selectedProof.comprobanteUrl)!}
-                    alt="Comprobante"
-                    className="h-full w-full object-contain"
-                  />
+                  <img src={resolveMediaUrl(selectedProof.comprobanteUrl)!} alt="Comprobante" className="h-full w-full object-contain" />
                 ) : (
-                  <div className="text-center text-muted-t">
+                  <div className="text-center text-slate-400">
                     <FileText className="mx-auto h-8 w-8" />
                     <p className="mt-1 text-xs">Sin imagen adjunta</p>
                   </div>
@@ -376,98 +322,61 @@ export default function ContadorDashboardPage() {
 
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <span className="text-xs text-muted-t">Monto declarado</span>
-                  <p className="font-mono font-bold text-sky-600">
-                    {formatCurrency(selectedProof.montoDeclarado ?? selectedProof.monto)}
-                  </p>
+                  <span className="text-xs text-slate-500">Monto declarado</span>
+                  <p className="mt-1 font-mono font-bold text-blue-700">{formatCurrency(selectedProof.montoDeclarado ?? selectedProof.monto)}</p>
                 </div>
                 <div>
-                  <span className="text-xs text-muted-t">Referencia</span>
-                  <p className="font-mono font-bold text-primary">
-                    {selectedProof.numeroReferencia || "—"}
-                  </p>
+                  <span className="text-xs text-slate-500">Referencia</span>
+                  <p className="mt-1 font-mono font-bold text-slate-900">{selectedProof.numeroReferencia || "—"}</p>
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-semibold uppercase tracking-wider text-muted-t">
-                  Observación
-                </label>
+                <label className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Observación</label>
                 <input
                   value={observacion}
                   onChange={(e) => setObservacion(e.target.value)}
                   placeholder="Ej. Depósito verificado en Pichincha Ahorros"
-                  className="mt-1 h-10 w-full rounded-xl border border-theme bg-surf2 px-3 text-sm text-primary outline-none focus:border-sky-400"
+                  className="mt-2 h-11 w-full rounded-2xl border border-blue-100 bg-slate-50 px-4 text-sm text-slate-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-sky-100"
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-2">
-                <Button
-                  variant="danger"
-                  isLoading={isVerifying}
-                  onClick={() => handleVerify("RECHAZADO")}
-                >
-                  <XCircle className="h-4 w-4" /> Rechazar
-                </Button>
-                <Button
-                  variant="secondary"
-                  isLoading={isVerifying}
-                  onClick={() => handleVerify("VERIFICADO")}
-                >
-                  <CheckCircle className="h-4 w-4" /> Aprobar pago
-                </Button>
+              <div className="flex flex-wrap justify-end gap-3 pt-2">
+                <Button variant="ghost" className="text-slate-600" onClick={() => setSelectedProof(null)}>Cancelar</Button>
+                <Button variant="secondary" isLoading={isVerifying} onClick={() => handleVerify("VERIFICADO")}>Aprobar pago</Button>
+                <Button variant="outline" isLoading={isVerifying} onClick={() => handleVerify("RECHAZADO")}>Rechazar</Button>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Ship modal ── */}
       {shipModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-theme bg-paper p-6 shadow-2xl">
-            <div className="flex items-start justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[28px] border border-blue-100 bg-white p-6 shadow-[0_24px_70px_rgba(14,165,233,0.18)]">
+            <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="font-display text-2xl text-primary">Marcar como Enviado</h3>
-                <p className="text-xs text-muted-t">
-                  Pedido {shipModal.numero || `#${shipModal.id}`} ·{" "}
-                  {shipModal.clienteNombre}
-                </p>
+                <h3 className="font-display text-2xl font-bold text-slate-900">Marcar como Enviado</h3>
+                <p className="text-sm text-slate-500">Pedido {shipModal.numero || `#${shipModal.id}`} · {shipModal.clienteNombre}</p>
               </div>
-              <button
-                onClick={() => setShipModal(null)}
-                className="rounded-lg p-1 text-muted-t hover:bg-surf2"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <button onClick={() => setShipModal(null)} className="rounded-2xl p-2 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button>
             </div>
 
-            <div className="mt-5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-t">
-                Número de guía (opcional)
-              </label>
+            <div className="mt-6">
+              <label className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Número de guía (opcional)</label>
               <input
                 autoFocus
                 value={guiaInput}
                 onChange={(e) => setGuiaInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleShipConfirm()}
                 placeholder="Ej. SERVIENTREGA-001234"
-                className="mt-2 h-11 w-full rounded-xl border border-theme bg-surf2 px-4 text-sm text-primary outline-none focus:border-sky-400"
+                className="mt-3 h-12 w-full rounded-2xl border border-blue-100 bg-slate-50 px-4 text-sm text-slate-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-sky-100"
               />
             </div>
 
-            <div className="mt-6 flex justify-end gap-3">
-              <Button variant="ghost" size="lg" onClick={() => setShipModal(null)}>
-                Cancelar
-              </Button>
-              <Button
-                variant="secondary"
-                size="lg"
-                isLoading={actionLoading === shipModal.id}
-                onClick={handleShipConfirm}
-              >
-                <Truck className="h-4 w-4" /> Confirmar envío
-              </Button>
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
+              <Button variant="ghost">Cancelar</Button>
+              <Button variant="secondary" isLoading={actionLoading === shipModal.id} onClick={handleShipConfirm}>Confirmar envío</Button>
             </div>
           </div>
         </div>

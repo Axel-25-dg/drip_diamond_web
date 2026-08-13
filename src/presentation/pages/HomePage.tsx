@@ -1,17 +1,203 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Truck, ShieldCheck, CreditCard, ChevronRight } from "lucide-react";
+import {
+  ArrowRight, ArrowUpRight, Plus, Star,
+  Sparkles, Truck, ShieldCheck, RefreshCw,
+} from "lucide-react";
 import { useCases } from "@/infrastructure/factories/useCases.factory";
 import type { ProductSummary, Brand, Category } from "@/domain/entities/Product";
-import { ProductGrid } from "@/presentation/components/catalog/ProductGrid";
-import { Button } from "@/presentation/components/ui/Button";
-import { resolveMediaUrl } from "@/presentation/utils/format";
+import { resolveMediaUrl, formatCurrency } from "@/presentation/utils/format";
 
+/* ─── Static data ──────────────────────────────────────────── */
+const SHOES_DEMO = [
+  { id: "s1", name: 'Azul High "Cloud"',  price: "$129", tag: "Nuevo"  },
+  { id: "s2", name: "Celeste Runner",      price: "$109", tag: "Top"    },
+  { id: "s3", name: "Court Blue Pro",      price: "$149", tag: undefined },
+  { id: "s4", name: "Skate Ice Suede",     price: "$99",  tag: "Oferta" },
+];
+
+const MARQUEE_WORDS = [
+  "Drip Diamond","Luxury Sneakers","Ecuador","Envío rápido",
+  "Ediciones limitadas","Estilo urbano","100% Verificados",
+];
+
+const CATEGORY_IMAGE_MAP: Record<string, string> = {
+  casual: "/categoria_e_imagenes/casual.webp",
+  urbano: "/categoria_e_imagenes/urbano.webp",
+  urbano_uy: "/categoria_e_imagenes/urbano.webp",
+  runing: "/categoria_e_imagenes/runing.webp",
+  running: "/categoria_e_imagenes/runing.webp",
+  jordan: "/categoria_e_imagenes/jordan.jpg",
+};
+
+const HERO_SHOES = [
+  "/zapatillas/jordan_11.png",
+  "/zapatillas/adidas_bad.png",
+  "/zapatillas/puma_zap.png",
+];
+
+function getCategoryImage(category: Category): string | null {
+  const normalized = category.nombre?.toLowerCase().replace(/\s+/g, "") ?? "";
+  if (!normalized) return null;
+  if (normalized in CATEGORY_IMAGE_MAP) return CATEGORY_IMAGE_MAP[normalized as keyof typeof CATEGORY_IMAGE_MAP];
+  if (normalized.includes("casual")) return CATEGORY_IMAGE_MAP.casual;
+  if (normalized.includes("urbano") || normalized.includes("urban")) return CATEGORY_IMAGE_MAP.urbano;
+  if (normalized.includes("run") || normalized.includes("jog")) return CATEGORY_IMAGE_MAP.runing;
+  if (normalized.includes("jordan")) return CATEGORY_IMAGE_MAP.jordan;
+  return null;
+}
+
+const BENEFITS = [
+  { Icon: Truck,        title: "Envío express",     text: "Entrega en 48h con seguimiento en tiempo real hasta tu puerta." },
+  { Icon: ShieldCheck,  title: "Pares verificados", text: "Revisamos cada sneaker antes de enviarla para asegurar su calidad." },
+  { Icon: RefreshCw,    title: "Cambios sin líos",  text: "30 días para cambiar tu talla o modelo sin costos ocultos." },
+];
+
+/* ─── Sneaker 3D component ─────────────────────────────────── */
+function Sneaker3D({ products }: { products: ProductSummary[] }) {
+  const [active, setActive]   = useState(0);
+  const [paused, setPaused]   = useState(false);
+  const [tilt,   setTilt]     = useState({ x: 0, y: 0 });
+  const frameRef              = useRef<HTMLDivElement>(null);
+
+  /* Use real products if available, otherwise fall back to demo labels */
+  const desiredCount = HERO_SHOES.length;
+  let items = products.length > 0 ? products.slice(0, desiredCount) : SHOES_DEMO;
+  if (products.length > 0 && items.length < desiredCount) {
+    const pads = Array.from({ length: desiredCount - items.length }).map((_, i) => ({ id: `pad-${i}` }));
+    items = [...items, ...pads] as any[];
+  }
+
+  useEffect(() => {
+    if (paused) return;
+    const id = setInterval(() => setActive((i) => (i + 1) % items.length), 3800);
+    return () => clearInterval(id);
+  }, [paused, items.length]);
+
+  const handleMove = useCallback((e: React.MouseEvent) => {
+    const el = frameRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width  - 0.5;
+    const py = (e.clientY - rect.top)  / rect.height - 0.5;
+    setTilt({ x: -py * 16, y: px * 26 });
+  }, []);
+
+  const item = items[active];
+  const imgSrc = HERO_SHOES[active % HERO_SHOES.length];
+  const price =
+    (item as any).precioBase
+      ? formatCurrency((item as any).precioBase)
+      : (item as any).price ?? "$—";
+
+  return (
+    <div className="relative select-none">
+      <div
+        ref={frameRef}
+        onMouseMove={handleMove}
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => { setPaused(false); setTilt({ x: 0, y: 0 }); }}
+        className="relative mx-auto flex aspect-square w-full max-w-[520px] items-center justify-center"
+        style={{ perspective: "1400px" }}
+      >
+        {/* Celeste glow */}
+        <div
+          className="absolute inset-8 rounded-full blur-3xl"
+          style={{ background: "radial-gradient(circle at 50% 45%, rgba(14,165,233,0.28) 0%, transparent 68%)" }}
+          aria-hidden
+        />
+
+        {/* Dashed rings */}
+        <div
+          className="absolute inset-6 rounded-full border-2 border-dashed border-blue-300/30"
+          style={{ animation: "ring-spin 32s linear infinite" }}
+          aria-hidden
+        />
+        <div
+          className="absolute inset-16 rounded-full border border-blue-200/20"
+          style={{ animation: "ring-spin 24s linear infinite reverse" }}
+          aria-hidden
+        />
+
+        {/* Ghost number */}
+        <span
+          className="pointer-events-none absolute font-display text-[7rem] font-black leading-none text-blue-600/5 sm:text-[9rem]"
+          aria-hidden
+        >
+          {String(active + 1).padStart(2, "0")}
+        </span>
+
+        {/* 3D shoe */}
+        <div
+          className="relative h-[78%] w-[78%]"
+          style={{
+            transformStyle: "preserve-3d",
+            transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
+            transition: "transform 0.25s ease-out",
+          }}
+        >
+          <div
+            className="absolute inset-0"
+            style={{
+              transformStyle: "preserve-3d",
+              animation: paused ? "none" : "shoe-float 6s ease-in-out infinite",
+            }}
+          >
+            <img
+              key={(item as any).id}
+              src={imgSrc}
+              alt={(item as any).nombre ?? (item as any).name}
+              className="h-full w-full object-contain drop-shadow-[0_45px_45px_rgba(2,132,199,0.22)]"
+              style={{ animation: "shoe-enter 0.7s cubic-bezier(0.22,1,0.36,1)" }}
+              onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/placeholder.svg"; }}
+            />
+          </div>
+        </div>
+
+        {/* Ground shadow */}
+        <div className="absolute bottom-[12%] h-5 w-2/5 rounded-[100%] bg-blue-600/20 blur-xl" aria-hidden />
+
+        {/* Price chip */}
+        <div className="absolute right-2 top-6 rounded-2xl border border-blue-100 bg-white/90 px-4 py-3 shadow-lg backdrop-blur sm:right-6">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Desde</p>
+          <p className="font-display text-xl font-extrabold text-gray-900">{price}</p>
+        </div>
+      </div>
+
+      {/* Thumbnails */}
+      <div className="mt-4 flex items-center justify-center gap-3">
+        {items.map((s, i) => {
+          const thumb = HERO_SHOES[i % HERO_SHOES.length];
+          return (
+            <button
+              key={(s as any).id}
+              onClick={() => setActive(i)}
+              aria-label={`Ver ${(s as any).nombre ?? (s as any).name}`}
+              aria-pressed={i === active}
+              className={`relative h-14 w-14 overflow-hidden rounded-xl border bg-white transition-all sm:h-16 sm:w-16 ${
+                i === active
+                  ? "border-blue-500 ring-2 ring-blue-400/30"
+                  : "border-gray-200 opacity-60 hover:opacity-100"
+              }`}
+            >
+              <img src={thumb} alt="" className="h-full w-full object-contain p-1"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).src = HERO_SHOES[i % HERO_SHOES.length]; }} />
+            </button>
+          );
+        })}
+      </div>
+
+      {/* name hidden by request */}
+    </div>
+  );
+}
+
+/* ─── HomePage ─────────────────────────────────────────────── */
 export default function HomePage() {
-  const [featured, setFeatured] = useState<ProductSummary[]>([]);
-  const [brands, setBrands] = useState<Brand[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [featured,    setFeatured]    = useState<ProductSummary[]>([]);
+  const [brands,      setBrands]      = useState<Brand[]>([]);
+  const [categories,  setCategories]  = useState<Category[]>([]);
+  const [isLoading,   setIsLoading]   = useState(true);
 
   useEffect(() => {
     let active = true;
@@ -25,194 +211,304 @@ export default function HomePage() {
         setFeatured(products.items);
         setBrands(filters.brands);
         setCategories(filters.categories);
-      } catch {
-        // Backend offline — page still renders
-      } finally {
-        if (active) setIsLoading(false);
-      }
+      } catch { /* offline — page still renders */ }
+      finally { if (active) setIsLoading(false); }
     })();
     return () => { active = false; };
   }, []);
 
+  const marqueeRow = [...MARQUEE_WORDS, ...MARQUEE_WORDS];
+
   return (
-    <div style={{ overflow: "hidden" }}>
-      {/* ─── HERO ─────────────────────────────────────────────────── */}
-      <section
-        className="relative overflow-hidden"
-        style={{ background: "#ffffff", borderBottom: "1px solid #e2e8f0" }}
-      >
-        <div className="container-app relative z-10 grid items-center gap-6 py-8 lg:grid-cols-[1.05fr_360px] lg:py-10">
+    <main className="min-h-screen bg-[#f8faff]">
+
+      {/* ══════════════════════════════════════════════════════════
+          HERO
+      ══════════════════════════════════════════════════════════ */}
+      <section className="relative overflow-hidden bg-white">
+        {/* Celeste wash */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{ background: "radial-gradient(120% 90% at 85% 10%, rgba(14,165,233,0.14) 0%, transparent 55%)" }}
+          aria-hidden
+        />
+
+        <div className="container-app relative grid items-center gap-10 py-14 lg:grid-cols-[1.05fr_1fr] lg:py-20">
+
           {/* LEFT */}
-          <div className="space-y-5">
+          <div className="space-y-7">
             {/* Badge */}
-            <div
-              className="inline-flex items-center gap-2 rounded-full px-3 py-1.5"
-              style={{ border: "1px solid #bae6fd", background: "#f0f9ff" }}
-            >
-              <div className="h-1.5 w-1.5 rounded-full bg-sky-500" />
-              <span className="text-[11px] font-bold tracking-[0.14em] text-sky-600 uppercase">
-                Drip Diamond — Sneakers de Lujo
+            <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-blue-500" />
+              <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-blue-600">
+                Nueva temporada · Drip Diamond Ecuador
               </span>
             </div>
 
             {/* Headline */}
-            <div>
-              <h1 className="font-display leading-[0.9]">
-                <span className="block text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900">PISA</span>
-                <span className="block text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900">FUERTE.</span>
-                <span
-                  className="block text-3xl sm:text-4xl lg:text-5xl font-black mt-1"
-                  style={{
-                    background: "linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%)",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    backgroundClip: "text",
-                  }}
+            <h1 className="font-display text-5xl font-black leading-[0.92] tracking-tight text-gray-900 text-balance sm:text-6xl lg:text-7xl">
+              Camina con{" "}
+              <span className="relative whitespace-nowrap text-blue-600">
+                drip diamond
+                <svg
+                  className="absolute -bottom-2 left-0 w-full text-sky-400"
+                  viewBox="0 0 200 12"
+                  fill="none"
+                  aria-hidden
                 >
-                  DIAMOND
-                </span>
-                <span
-                  className="block text-3xl sm:text-4xl lg:text-5xl font-black"
-                  style={{
-                    background: "linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%)",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    backgroundClip: "text",
-                  }}
-                >
-                  DRIP.
-                </span>
-              </h1>
-            </div>
+                  <path d="M2 9C40 3 160 3 198 9" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+                </svg>
+              </span>
+              <br />
+              siente la diferencia.
+            </h1>
 
             {/* Description */}
-            <p className="max-w-sm text-sm leading-relaxed text-slate-500">
-              Las sneakers más exclusivas de Ecuador. 100% originales, verificadas y
-              entregadas a todo el país con seguimiento en tiempo real.
+            <p className="max-w-md text-base leading-relaxed text-gray-500">
+              Las sneakers más exclusivas de Ecuador. Verificadas y
+              entregadas a todo el país. Gira, explora y descubre el par que combina con tu ritmo.
             </p>
-
-            {/* Stats */}
-            <div className="flex flex-wrap gap-px rounded-xl overflow-hidden border border-slate-200 bg-slate-50 w-fit">
-              {[
-                { value: "500+", label: "Estilos únicos" },
-                { value: "100%", label: "Pares verificados" },
-                { value: "48h", label: "Entrega express" },
-              ].map((stat, i) => (
-                <div
-                  key={stat.label}
-                  className="px-5 py-3 text-center"
-                  style={{ borderLeft: i > 0 ? "1px solid #e2e8f0" : "none" }}
-                >
-                  <p className="font-display text-lg font-black text-sky-600">{stat.value}</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">{stat.label}</p>
-                </div>
-              ))}
-            </div>
 
             {/* CTAs */}
             <div className="flex flex-wrap gap-3">
-              <Link to="/catalogo">
-                <button
-                  className="h-11 px-7 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
-                  style={{ background: "linear-gradient(135deg, #0ea5e9, #38bdf8)" }}
-                >
-                  Explorar Catálogo →
-                </button>
-              </Link>
-              <Link to="/catalogo?ordering=-reciente">
-                <button className="h-11 px-7 rounded-xl text-sm font-semibold border-2 border-slate-200 text-slate-700 hover:border-sky-300 hover:text-sky-600 transition-all bg-white">
-                  Nuevos Ingresos
-                </button>
-              </Link>
-            </div>
-          </div>
-
-          {/* RIGHT — sneaker image */}
-          <div className="relative mx-auto flex w-full max-w-[360px] items-center justify-center">
-            <div
-              className="absolute inset-4 rounded-[2rem] blur-3xl"
-              style={{ background: "radial-gradient(circle, rgba(14,165,233,0.22) 0%, rgba(255,255,255,0) 70%)" }}
-            />
-            <div className="relative w-full rounded-[2rem] border border-slate-200 bg-white/80 p-3 shadow-[0_20px_70px_-20px_rgba(15,23,42,0.25)] backdrop-blur">
-              <img
-                src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=80"
-                alt="Zapatilla Drip Diamond"
-                className="hero-sneaker-float relative z-10 w-full rounded-[1.5rem] object-cover"
-                style={{ aspectRatio: "4/3" }}
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src =
-                    "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?auto=format&fit=crop&w=900&q=80";
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── BENEFICIOS BAR ───────────────────────────────────────── */}
-      <section style={{ borderBottom: "1px solid #e2e8f0", background: "#f8fafc" }}>
-        <div className="container-app grid grid-cols-1 divide-y sm:grid-cols-3 sm:divide-x sm:divide-y-0" style={{ "--tw-divide-color": "#e2e8f0" } as any}>
-          <BenefitItem icon={<Truck className="h-5 w-5 text-sky-500" />} title="Envíos a todo Ecuador" text="Calculamos el costo según tu zona y transportista" />
-          <BenefitItem icon={<ShieldCheck className="h-5 w-5 text-emerald-500" />} title="100% Verificados" text="Inspeccionamos cada par antes del despacho" />
-          <BenefitItem icon={<CreditCard className="h-5 w-5 text-purple-500" />} title="Pago por transferencia" text="Sube tu comprobante y te confirmamos en 1–2h" />
-        </div>
-      </section>
-
-      {/* ─── CATEGORÍAS ───────────────────────────────────────────── */}
-      {categories.length > 0 && (
-        <section className="container-app py-16">
-          <SectionHeader eyebrow="Explorar" title="Comprar por Categoría" href="/catalogo" linkLabel="Ver catálogo completo" />
-          <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {categories.slice(0, 8).map((c) => (
               <Link
-                key={c.id}
-                to={`/catalogo?categoria=${c.id}`}
-                className="group relative flex aspect-[4/3] items-end overflow-hidden rounded-2xl"
-                style={{ background: "#0a0c12" }}
+                to="/catalogo"
+                className="group inline-flex h-12 items-center gap-2 rounded-full bg-blue-600 px-7 text-sm font-bold text-white shadow-[0_4px_16px_rgba(37,99,235,0.35)] transition-all hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-[0_8px_24px_rgba(37,99,235,0.45)]"
               >
-                {resolveMediaUrl(c.imagenUrl) ? (
-                  <img
-                    src={resolveMediaUrl(c.imagenUrl)!}
-                    alt={c.nombre}
-                    className="absolute inset-0 h-full w-full object-cover opacity-60 transition-all duration-500 group-hover:scale-105 group-hover:opacity-70"
-                  />
-                ) : (
-                  <div className="absolute inset-0" style={{ background: "#0d1120" }} />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                <div className="relative z-10 p-4 w-full flex items-end justify-between">
-                  <span className="font-display text-lg text-white">{c.nombre}</span>
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 backdrop-blur text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                    <ArrowRight className="h-3.5 w-3.5" />
+                Explorar catálogo
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Link>
+              <Link
+                to="/catalogo?ordering=-reciente"
+                className="inline-flex h-12 items-center rounded-full border border-blue-200 bg-white px-7 text-sm font-semibold text-gray-700 transition-all hover:border-blue-400 hover:text-blue-700"
+              >
+                Ver novedades
+              </Link>
+            </div>
+
+            {/* Stats */}
+            <div className="flex flex-wrap items-center gap-10 pt-2">
+              {[
+                { v: "48h",  l: "Entrega express" },
+                { v: "+500", l: "Modelos únicos" },
+                { v: "4.9/5", l: "Valoración media" },
+              ].map((s) => (
+                <div key={s.l}>
+                  <p className="font-display text-2xl font-black text-gray-900">{s.v}</p>
+                  <p className="text-xs text-gray-400">{s.l}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* RIGHT — 3D shoe */}
+          <div className="order-first lg:order-last">
+            <Sneaker3D products={featured.slice(0, 4)} />
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════
+          MARQUEE
+      ══════════════════════════════════════════════════════════ */}
+      <div className="border-y border-blue-600 bg-blue-600 text-white">
+        <div className="flex overflow-hidden py-3">
+          {[0, 1].map((k) => (
+            <div
+              key={k}
+              className="animate-marquee flex shrink-0 items-center gap-8 pr-8"
+              aria-hidden={k === 1}
+            >
+              {marqueeRow.map((w, i) => (
+                <span key={i} className="flex items-center gap-8">
+                  <span className="font-display text-sm font-bold uppercase tracking-[0.18em]">{w}</span>
+                  <span className="text-white/50">◆</span>
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════
+          CATEGORÍAS
+      ══════════════════════════════════════════════════════════ */}
+      <section className="container-app py-16" id="categorias">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-500">Explorar</p>
+            <h2 className="mt-1 font-display text-3xl font-black tracking-tight text-gray-900 sm:text-4xl">
+              Compra por categoría
+            </h2>
+          </div>
+          <Link to="/catalogo" className="hidden text-sm font-semibold text-gray-400 transition-colors hover:text-gray-900 sm:block">
+            Ver todo →
+          </Link>
+        </div>
+
+        {categories.length > 0 ? (
+          <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {categories.slice(0, 4).map((c, idx) => {
+              const isUrbano = /urbano|urban/i.test(String(c.nombre ?? ""));
+              return (
+                <Link
+                  key={c.id}
+                  to={`/catalogo?categoria=${c.id}`}
+                  className={`group relative flex min-h-[320px] flex-col justify-end overflow-hidden rounded-3xl border border-blue-100 bg-blue-50 ${isUrbano ? "md:col-span-2 lg:col-span-2" : ""}`}
+                >
+                <img
+                  src={getCategoryImage(c) ?? resolveMediaUrl(c.imagenUrl) ?? `/zapatillas/shoe-${(idx % 4) + 1}.svg`}
+                  alt={c.nombre}
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-gray-900/20 to-transparent" />
+                <div className="relative z-10 p-5">
+                  <h3 className="font-display text-2xl font-black text-white">{c.nombre}</h3>
+                  <p className="mt-2 max-w-xs text-sm text-white/80">Explora los mejores pares de esta categoría.</p>
+                </div>
+                <div className="absolute right-5 bottom-5 flex h-11 w-11 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur transition-transform group-hover:rotate-45">
+                  <ArrowUpRight className="h-5 w-5" />
+                </div>
+              </Link>
+              )
+            })}
+          </div>
+        ) : (
+          /* Placeholder categories cuando no hay datos */
+          <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {["Running","Urbano","Basket","Casual"].map((name, idx) => (
+              <Link
+                key={name}
+                to="/catalogo"
+                className={`group relative flex items-end overflow-hidden rounded-3xl ${
+                  idx === 0 ? "aspect-[4/5] md:col-span-2 lg:min-h-[320px]" : idx === 1 ? "aspect-[4/5] md:col-span-2 lg:min-h-[320px]" : "aspect-[4/5] lg:min-h-[320px]"
+                } ${["bg-blue-100","bg-sky-100","bg-blue-50","bg-indigo-100"][idx]}`}
+              >
+                <div className={`absolute inset-0 bg-gradient-to-br ${["from-blue-400 to-blue-600","from-sky-400 to-sky-600","from-blue-300 to-sky-400","from-indigo-400 to-blue-500"][idx]}`} />
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 to-transparent" />
+                <div className="relative z-10 flex w-full items-end justify-between p-5">
+                  <div>
+                    <h3 className="font-display text-2xl font-black text-white">{name}</h3>
                   </div>
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur transition-transform group-hover:rotate-45">
+                    <ArrowUpRight className="h-5 w-5" />
+                  </span>
                 </div>
               </Link>
             ))}
           </div>
-        </section>
-      )}
+        )}
+      </section>
 
-      {/* ─── PRODUCTOS DESTACADOS ─────────────────────────────────── */}
-      <section style={{ background: "#f8fafc", padding: "64px 0" }}>
+      {/* ══════════════════════════════════════════════════════════
+          FEATURED PRODUCTS
+      ══════════════════════════════════════════════════════════ */}
+      <section className="bg-blue-50/60 py-16" id="novedades">
         <div className="container-app">
-          <SectionHeader eyebrow="Colección" title="Recién Llegados" href="/catalogo" linkLabel="Ver todo el catálogo" />
-          <div className="mt-8">
-            <ProductGrid products={featured} isLoading={isLoading} />
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-500">Colección</p>
+              <h2 className="mt-1 font-display text-3xl font-black tracking-tight text-gray-900 sm:text-4xl">
+                Recién llegados
+              </h2>
+            </div>
+            <Link to="/catalogo" className="hidden text-sm font-semibold text-gray-400 transition-colors hover:text-gray-900 sm:block">
+              Ver catálogo →
+            </Link>
+          </div>
+
+          <div id="catalogo" className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {isLoading
+              ? Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="flex flex-col overflow-hidden rounded-3xl border border-blue-100 bg-white">
+                    <div className="aspect-square animate-pulse bg-blue-100" />
+                    <div className="p-4 space-y-2">
+                      <div className="h-4 rounded-lg bg-blue-100 animate-pulse w-3/4" />
+                      <div className="h-3 rounded-lg bg-blue-50 animate-pulse w-1/2" />
+                    </div>
+                  </div>
+                ))
+              : featured.length > 0
+                ? featured.slice(0, 8).map((p) => (
+                    <ProductCard key={p.id} product={p} />
+                  ))
+                : SHOES_DEMO.map((s) => (
+                    <DemoCard key={s.id} name={s.name} price={s.price} tag={s.tag} />
+                  ))
+            }
           </div>
         </div>
       </section>
 
-      {/* ─── MARCAS ───────────────────────────────────────────────── */}
+      {/* ══════════════════════════════════════════════════════════
+          BENEFITS
+      ══════════════════════════════════════════════════════════ */}
+      <section className="container-app py-14">
+        <div className="grid gap-4 sm:grid-cols-3">
+          {BENEFITS.map(({ Icon, title, text }) => (
+            <div key={title} className="flex gap-4 rounded-2xl border border-blue-100 bg-white p-5 shadow-[0_2px_12px_rgba(37,99,235,0.06)]">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                <Icon className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="font-display text-sm font-bold text-gray-900">{title}</p>
+                <p className="mt-1 text-sm leading-relaxed text-gray-500">{text}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════
+          DETAIL BAND
+      ══════════════════════════════════════════════════════════ */}
+      <section className="container-app py-16">
+        <div className="relative grid overflow-hidden rounded-[2rem] border border-blue-100 bg-white shadow-[0_4px_32px_rgba(37,99,235,0.08)] md:grid-cols-2">
+          <div className="flex flex-col justify-center gap-5 p-8 sm:p-12">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-500">
+              Detalle &amp; materiales
+            </p>
+            <h2 className="font-display text-3xl font-black leading-tight tracking-tight text-gray-900 text-balance sm:text-4xl">
+              Cada puntada, pensada para durar.
+            </h2>
+            <p className="max-w-md text-base leading-relaxed text-gray-500 text-pretty">
+              Tejidos técnicos, costuras en celeste y suelas amortiguadas. Un acabado limpio
+              en blanco y azul que se siente tan bien como se ve.
+            </p>
+            <Link
+              to="/catalogo"
+              className="group inline-flex w-fit items-center gap-2 text-sm font-bold text-blue-600"
+            >
+              Descubre la colección
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </Link>
+          </div>
+          <div className="relative min-h-[280px] overflow-hidden bg-gradient-to-br from-blue-50 to-sky-100">
+                <img
+                  src="/categoria_e_imagenes/jordan.jpg"
+                  alt="Detalle Jordan"
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent" />
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════
+          BRANDS
+      ══════════════════════════════════════════════════════════ */}
       {brands.length > 0 && (
-        <section style={{ borderTop: "1px solid #e2e8f0", background: "#fff", padding: "48px 0" }}>
+        <section className="border-y border-blue-50 bg-white py-12">
           <div className="container-app">
-            <p className="mb-8 text-center text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Marcas Disponibles</p>
-            <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-5">
+            <p className="mb-8 text-center text-[11px] font-bold uppercase tracking-[0.22em] text-gray-400">
+              Marcas Disponibles
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-4">
               {brands.map((b) => (
                 <Link
                   key={b.id}
                   to={`/catalogo?marca=${b.id}`}
-                  className="font-display text-lg font-black tracking-tight text-slate-400 hover:text-slate-900 transition-colors"
+                  className="font-display text-lg font-black tracking-tight text-gray-300 transition-colors hover:text-blue-600"
                 >
                   {b.nombre}
                 </Link>
@@ -222,68 +518,120 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* ─── CTA BAND ─────────────────────────────────────────────── */}
-      <section className="py-16" style={{ background: "#0a0c12" }}>
-        <div className="container-app text-center space-y-5">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-sky-400">Exclusivo Drip Diamond</p>
-          <h2
-            className="font-display text-4xl sm:text-5xl"
-            style={{
-              background: "linear-gradient(135deg, #f8fafc 0%, #cbd5e1 50%, #94a3b8 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-            }}
-          >
-            Tu estilo, en tus pies.
-          </h2>
-          <p className="mx-auto max-w-md text-sm leading-relaxed text-slate-500">
-            Más de 500 modelos disponibles. Entrega garantizada a todo Ecuador con soporte personalizado.
-          </p>
-          <div className="pt-2">
-            <Link to="/catalogo">
-              <Button variant="secondary" size="xl">
-                Descubrir colección
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
+      {/* ══════════════════════════════════════════════════════════
+          CTA BAND
+      ══════════════════════════════════════════════════════════ */}
+      <section className="container-app pb-16 pt-4">
+        <div className="relative overflow-hidden rounded-[2rem] bg-white px-6 py-14 text-slate-900 shadow-[0_20px_70px_rgba(15,118,255,0.08)] sm:px-12">
+          <div className="absolute inset-0 bg-gradient-to-br from-sky-100 via-white to-white opacity-90" />
+          <div className="relative mx-auto max-w-xl space-y-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-600">Tu próximo par te está esperando</p>
+                <h2 className="mt-3 text-4xl font-black text-slate-900 sm:text-5xl">
+                  Encuentra el par que define tu estilo.
+                </h2>
+                <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600">
+                  Selección curada de zapatillas premium, envíos express y atención VIP para que no pierdas el paso.
+                </p>
+              </div>
+            </div>
+            <div className="mx-auto flex max-w-md flex-col gap-3 pt-2 sm:flex-row">
+              <input
+                type="email"
+                placeholder="tu@correo.com"
+                className="h-12 flex-1 rounded-full border border-slate-200 bg-white px-5 text-sm text-slate-700 placeholder:text-slate-400 outline-none focus:border-sky-400"
+              />
+              <Link
+                to="/catalogo"
+                className="flex h-12 items-center justify-center rounded-full bg-blue-600 px-7 text-sm font-bold text-white transition-transform hover:-translate-y-0.5"
+              >
+                Explorar ahora
+              </Link>
+            </div>
           </div>
         </div>
       </section>
-    </div>
+
+    </main>
   );
 }
 
-function BenefitItem({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
+/* ─── Product card (real data) ─────────────────────────────── */
+function ProductCard({ product: p }: { product: ProductSummary }) {
+  const imgSrc = resolveMediaUrl(p.imagenPrincipal) ?? "/placeholder.svg";
+  const isAvailable = p.estado === "disponible" || (p.tallasDisponibles && p.tallasDisponibles.length > 0);
+
   return (
-    <div className="flex items-center gap-4 px-8 py-5">
-      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white border border-slate-200">
-        {icon}
+    <article className="group flex flex-col overflow-hidden rounded-3xl border border-blue-100 bg-white transition-shadow hover:shadow-xl hover:shadow-blue-600/10">
+      <div className="relative aspect-square overflow-hidden bg-blue-50/40">
+        {!isAvailable && (
+          <span className="absolute left-3 top-3 z-10 rounded-full bg-gray-400 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
+            Agotado
+          </span>
+        )}
+        <div className="absolute right-3 top-3 z-10 flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 text-[11px] font-bold text-gray-800 backdrop-blur shadow-sm">
+          <Star className="h-3 w-3 fill-blue-500 text-blue-500" />
+          4.9
+        </div>
+        <img
+          src={imgSrc}
+          alt={p.nombre}
+          className="h-full w-full object-contain p-4 transition-transform duration-500 group-hover:-rotate-6 group-hover:scale-110"
+          onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/placeholder.svg"; }}
+        />
       </div>
-      <div>
-        <p className="text-sm font-semibold text-slate-800">{title}</p>
-        <p className="text-xs mt-0.5 text-slate-500">{text}</p>
+      <div className="flex flex-1 flex-col p-4">
+        <h3 className="font-display text-base font-bold text-gray-900 line-clamp-1">{p.nombre}</h3>
+        <p className="mt-0.5 text-xs text-gray-400">{p.marca}</p>
+        <div className="mt-4 flex items-center justify-between">
+          <span className="font-display text-lg font-black text-gray-900">
+            {formatCurrency(p.precioBase)}
+          </span>
+          <Link
+            to={`/producto/${p.id}`}
+            aria-label={`Ver ${p.nombre}`}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-white shadow-[0_4px_12px_rgba(37,99,235,0.35)] transition-transform hover:scale-110"
+          >
+            <Plus className="h-4 w-4" />
+          </Link>
+        </div>
       </div>
-    </div>
+    </article>
   );
 }
 
-function SectionHeader({ eyebrow, title, href, linkLabel }: {
-  eyebrow: string; title: string; href: string; linkLabel: string;
-}) {
+/* ─── Demo card (fallback when no products) ─────────────────── */
+function DemoCard({ name, price, tag }: { name: string; price: string; tag?: string }) {
   return (
-    <div className="flex items-end justify-between gap-4">
-      <div>
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky-500">{eyebrow}</p>
-        <h2 className="mt-1 font-display text-3xl sm:text-4xl text-slate-900">{title}</h2>
+    <article className="group flex flex-col overflow-hidden rounded-3xl border border-blue-100 bg-white transition-shadow hover:shadow-xl hover:shadow-blue-600/10">
+      <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-blue-50 to-sky-100">
+        {tag && (
+          <span className="absolute left-3 top-3 z-10 rounded-full bg-blue-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
+            {tag}
+          </span>
+        )}
+        <div className="absolute right-3 top-3 z-10 flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 text-[11px] font-bold text-gray-800 backdrop-blur">
+          <Star className="h-3 w-3 fill-blue-500 text-blue-500" />
+          4.9
+        </div>
+        <div className="flex h-full items-center justify-center">
+          <div className="h-24 w-24 rounded-full bg-blue-200/50" />
+        </div>
       </div>
-      <Link
-        to={href}
-        className="hidden sm:flex items-center gap-1.5 text-sm font-semibold text-slate-400 hover:text-slate-900 transition-colors whitespace-nowrap"
-      >
-        {linkLabel}
-        <ChevronRight className="h-4 w-4" />
-      </Link>
-    </div>
+      <div className="flex flex-1 flex-col p-4">
+        <h3 className="font-display text-base font-bold text-gray-900">{name}</h3>
+        <p className="mt-0.5 text-xs text-gray-400">Edición cápsula</p>
+        <div className="mt-4 flex items-center justify-between">
+          <span className="font-display text-lg font-black text-gray-900">{price}</span>
+          <Link
+            to="/catalogo"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-white shadow-[0_4px_12px_rgba(37,99,235,0.35)] transition-transform hover:scale-110"
+          >
+            <Plus className="h-4 w-4" />
+          </Link>
+        </div>
+      </div>
+    </article>
   );
 }

@@ -1,5 +1,4 @@
-import type { ReactNode } from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useState, type ReactNode } from "react";
 import { Gem, ShieldCheck, Truck, Star } from "lucide-react";
 
 export function AuthShell({ title, subtitle, children }: {
@@ -7,113 +6,68 @@ export function AuthShell({ title, subtitle, children }: {
   subtitle?: string;
   children: ReactNode;
 }) {
+  const CAROUSEL_IMAGES = [
+    "https://images.asos-media.com/products/zapatillas-bajas-en-azul-y-blanco-air-jordan-1-de-nike/207490884-5?$n_640w$&wid=513&fit=constrain",
+    "https://i.pinimg.com/1200x/4d/a6/80/4da680c1af59a0026b900c2f83d83694.jpg",
+    "https://i.pinimg.com/736x/0b/36/cf/0b36cfb4667038e65f2d5d0f4679c013.jpg",
+  ];
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setIndex((i) => (i + 1) % CAROUSEL_IMAGES.length), 4000);
+    return () => clearInterval(id);
+  }, []);
   return (
-    <div className="grid min-h-[calc(100vh-72px)] lg:grid-cols-[1fr_520px]">
-      {/* LEFT — always dark brand panel */}
-      <div
-        className="relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-between p-12"
-        style={{ background: "#070a14" }}
-      >
-        <div className="pointer-events-none absolute inset-0 line-pattern opacity-25" />
-        <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full blur-[100px]" style={{ background: "rgba(56,189,248,0.08)" }} />
-        <div className="pointer-events-none absolute -right-16 bottom-0 h-80 w-80 rounded-full blur-[80px]" style={{ background: "rgba(100,116,139,0.05)" }} />
-
-        {/* Logo */}
-        <Link to="/" className="relative z-10 inline-flex items-center gap-2.5 select-none">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: "rgba(255,255,255,0.07)" }}>
-            <Gem className="h-5 w-5 text-sky-400" />
-          </div>
-          <div className="leading-none">
-            <span className="font-display text-xl font-black text-white tracking-tight block">
-              DRIP<span className="text-sky-400">DIAMOND</span>
-            </span>
-            <span className="text-[9px] tracking-[0.25em] font-medium uppercase block mt-0.5" style={{ color: "#475569" }}>
-              Luxury Sneakers
-            </span>
-          </div>
-        </Link>
-
-        {/* Main copy */}
-        <div className="relative z-10 space-y-6">
-          <div>
-            <h2
-              className="font-display text-5xl leading-[0.9]"
-              style={{
-                background: "linear-gradient(135deg, #f8fafc 0%, #cbd5e1 50%, #94a3b8 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-              }}
-            >
-              TU ESTILO,
-            </h2>
-            <h2
-              className="font-display text-5xl leading-[0.9] mt-1"
-              style={{
-                background: "linear-gradient(135deg, #7dd3fc 0%, #38bdf8 45%, #0ea5e9 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-              }}
-            >
-              SIN LÍMITES.
-            </h2>
-          </div>
-          <p className="max-w-sm text-sm leading-relaxed" style={{ color: "#475569" }}>
-            Crea tu cuenta y gestiona tus pedidos, sigue el estado de tus envíos y accede a
-            beneficios exclusivos de la comunidad Drip Diamond.
-          </p>
-
-          {/* Trust badges */}
-          <div className="space-y-3">
-            {[
-              { Icon: ShieldCheck, text: "Pagos 100% verificados manualmente" },
-              { Icon: Truck, text: "Envíos a todo Ecuador con guía de rastreo" },
-              { Icon: Star, text: "Pares verificados antes del despacho" },
-            ].map(({ Icon, text }) => (
-              <div key={text} className="flex items-center gap-3">
-                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg" style={{ background: "rgba(56,189,248,0.08)" }}>
-                  <Icon className="h-4 w-4 text-sky-400" />
-                </div>
-                <span className="text-sm" style={{ color: "#334155" }}>{text}</span>
-              </div>
-            ))}
-          </div>
+    <div className="grid min-h-[calc(100vh-72px)] lg:grid-cols-[1fr_560px]">
+      {/* LEFT — hero carousel with brand copy (external images, no local assets or logo) */}
+      <div className="relative hidden lg:flex lg:flex-col lg:justify-between overflow-hidden">
+        <div className="absolute inset-0">
+          <img
+            src={CAROUSEL_IMAGES[index]}
+            alt={`Hero ${index + 1}`}
+            className="h-full w-full object-cover opacity-90 transition-opacity duration-700"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).src = CAROUSEL_IMAGES[(index + 1) % CAROUSEL_IMAGES.length]; }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-tr from-[#021028]/80 via-[#08273a]/50 to-transparent" />
         </div>
 
-        <span className="relative z-10 text-xs" style={{ color: "#1e293b" }}>
-          © {new Date().getFullYear()} Drip Diamond · Ecuador
-        </span>
+        <div className="relative z-10 p-12 flex flex-col justify-between h-full">
+          <div>
+            <div className="mt-8 max-w-lg">
+              <h2 className="font-display text-5xl font-extrabold text-white leading-tight">Encuentra tu próximo par</h2>
+              <p className="mt-4 text-sm text-slate-200">Únete a la comunidad y accede a lanzamientos exclusivos, envíos rápidos y pares verificados.</p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-md bg-white/10 flex items-center justify-center">
+                <ShieldCheck className="h-4 w-4 text-sky-300" />
+              </div>
+              <span className="text-sm text-slate-200">Pagos seguros</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-md bg-white/10 flex items-center justify-center">
+                <Truck className="h-4 w-4 text-sky-300" />
+              </div>
+              <span className="text-sm text-slate-200">Envíos a todo Quito</span>
+            </div>
+          </div>
+
+          <span className="text-xs text-slate-300">© {new Date().getFullYear()} · Quito, Ecuador</span>
+        </div>
       </div>
 
-      {/* RIGHT — form panel (themed) */}
-      <div
-        className="flex items-center justify-center px-6 py-16"
-        style={{ background: "var(--bg-surface)" }}
-      >
-        <div className="w-full max-w-[400px]">
-          {/* Mobile logo */}
-          <Link to="/" className="mb-8 inline-flex items-center gap-2.5 lg:hidden select-none">
-            <div
-              className="flex h-9 w-9 items-center justify-center rounded-xl"
-              style={{ background: "var(--bg-surface2)", border: "1px solid var(--bg-border)" }}
-            >
-              <Gem className="h-4 w-4 text-sky-500" />
-            </div>
-            <span className="font-display text-lg font-black tracking-tight" style={{ color: "var(--text-primary)" }}>
-              DRIP<span className="text-sky-500">DIAMOND</span>
-            </span>
-          </Link>
+      {/* RIGHT — form panel */}
+      <div className="flex items-center justify-center px-6 py-12" style={{ background: "var(--bg-surface)" }}>
+        <div className="w-full max-w-[480px]">
+          {/* Mobile: no static logo or project public images per user request */}
 
-          <h1 className="font-display text-3xl" style={{ color: "var(--text-primary)" }}>
-            {title}
-          </h1>
-          {subtitle && (
-            <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-              {subtitle}
-            </p>
-          )}
-          <div className="mt-8">{children}</div>
+          <div className="rounded-2xl bg-white p-8 shadow-lg" style={{ border: "1px solid rgba(15,23,42,0.04)" }}>
+            <h1 className="font-display text-2xl mb-1" style={{ color: "var(--text-primary)" }}>{title}</h1>
+            {subtitle && <p className="text-sm text-slate-500 mb-6">{subtitle}</p>}
+            <div>{children}</div>
+          </div>
         </div>
       </div>
     </div>

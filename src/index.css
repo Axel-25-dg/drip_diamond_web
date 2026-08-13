@@ -343,6 +343,26 @@
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+
+/* ── HomePage specific ── */
+@keyframes shoe-float {
+  0%, 100% { transform: translateY(-10px) rotateY(-14deg); }
+  50%       { transform: translateY( 10px) rotateY( 14deg); }
+}
+@keyframes shoe-enter {
+  0%   { opacity: 0; transform: rotateY(-95deg) scale(0.86); filter: blur(6px); }
+  100% { opacity: 1; transform: rotateY(0deg)   scale(1);    filter: blur(0);   }
+}
+@keyframes ring-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 28s linear infinite;
+}
 @keyframes heroFloat {
   0%, 100% { transform: translateY(0px) rotate(-1deg); }
   50%       { transform: translateY(-10px) rotate(1deg); }

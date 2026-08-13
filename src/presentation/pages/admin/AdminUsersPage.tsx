@@ -3,9 +3,8 @@ import { Link } from "react-router-dom";
 import { useCases } from "@/infrastructure/factories/useCases.factory";
 import type { User, UserRole } from "@/domain/entities/User";
 import { Button } from "@/presentation/components/ui/Button";
-import { Badge } from "@/presentation/components/ui/Badge";
 import { toast } from "sonner";
-import { ArrowLeft, UserPlus, Users, Search, ShieldCheck, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, UserPlus, Users, Search, Pencil, Trash2, X } from "lucide-react";
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -14,7 +13,6 @@ export default function AdminUsersPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
 
-  // Form state
   const [nombre, setNombre] = useState("");
   const [apellido, setApellido] = useState("");
   const [correo, setCorreo] = useState("");
@@ -26,277 +24,208 @@ export default function AdminUsersPage() {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      // Try fetching all at once first, then per-role as fallback
       let allUsers: User[] = [];
-      try {
-        allUsers = await useCases.getAdminUsers.execute();
-      } catch {
-        allUsers = [];
-      }
-
+      try { allUsers = await useCases.getAdminUsers.execute(); } catch { allUsers = []; }
       if (allUsers.length === 0) {
         const roles = ["CLIENTE", "VENDEDOR", "CONTADOR", "ADMINISTRADOR"] as const;
-        const requests = await Promise.all(
-          roles.map(async (role) => {
-            try { return await useCases.getAdminUsers.execute(role); }
-            catch { return [] as User[]; }
-          })
-        );
-        allUsers = requests.flat();
+        const reqs = await Promise.all(roles.map(async (r) => { try { return await useCases.getAdminUsers.execute(r); } catch { return [] as User[]; } }));
+        allUsers = reqs.flat();
       }
-
-      const merged = Array.from(new Map(allUsers.map((u) => [u.id, u])).values());
-      setUsers(merged);
-    } catch {
-      setUsers([]);
-    } finally {
-      setIsLoading(false);
-    }
+      setUsers(Array.from(new Map(allUsers.map((u) => [u.id, u])).values()));
+    } catch { setUsers([]); }
+    finally { setIsLoading(false); }
   };
-
   useEffect(() => { fetchUsers(); }, []);
 
   const openCreateModal = () => {
     setEditingUser(null);
-    setNombre(""); setApellido(""); setCorreo("");
-    setTelefono(""); setPassword(""); setRol("VENDEDOR");
+    setNombre(""); setApellido(""); setCorreo(""); setTelefono(""); setPassword(""); setRol("VENDEDOR");
     setShowModal(true);
   };
-
   const openEditModal = (u: User) => {
     setEditingUser(u);
-    setNombre(u.nombre); setApellido(u.apellido);
-    setCorreo(u.correo); setTelefono(u.telefono || "");
+    setNombre(u.nombre); setApellido(u.apellido); setCorreo(u.correo); setTelefono(u.telefono || "");
     setPassword(""); setRol((u.rol?.toUpperCase() as UserRole) || "CLIENTE");
     setShowModal(true);
   };
-
   const handleDeleteUser = async (u: User) => {
-    if (!confirm(`¿Eliminar al usuario ${u.nombre} ${u.apellido}? Esta acción no se puede deshacer.`)) return;
-    try {
-      await useCases.deleteUserAdmin.execute(u.id);
-      toast.success("Usuario eliminado");
-      fetchUsers();
-    } catch (err: any) {
-      toast.error(err?.message || "No se pudo eliminar el usuario");
-    }
+    if (!confirm(`¿Eliminar a ${u.nombre} ${u.apellido}? Esta acción no se puede deshacer.`)) return;
+    try { await useCases.deleteUserAdmin.execute(u.id); toast.success("Usuario eliminado"); fetchUsers(); }
+    catch (err: any) { toast.error(err?.message || "No se pudo eliminar"); }
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (editingUser) {
       setIsSubmitting(true);
-      try {
-        await useCases.updateUserAdmin.execute(editingUser.id, { nombre, apellido, telefono, rol: rol as any });
-        toast.success("Usuario actualizado con éxito");
-        setShowModal(false);
-        fetchUsers();
-      } catch (err: any) {
-        toast.error(err?.message || "No se pudo actualizar el usuario");
-      } finally {
-        setIsSubmitting(false);
-      }
+      try { await useCases.updateUserAdmin.execute(editingUser.id, { nombre, apellido, telefono, rol: rol as any }); toast.success("Usuario actualizado"); setShowModal(false); fetchUsers(); }
+      catch (err: any) { toast.error(err?.message || "No se pudo actualizar"); }
+      finally { setIsSubmitting(false); }
       return;
     }
-
-    if (!nombre || !apellido || !correo || !password) {
-      toast.error("Por favor completa los datos obligatorios");
-      return;
-    }
+    if (!nombre || !apellido || !correo || !password) { toast.error("Completa los campos obligatorios"); return; }
     setIsSubmitting(true);
-    try {
-      await useCases.createUserAdmin.execute({ nombre, apellido, correo, telefono, password, rol: rol as any });
-      toast.success(`Usuario con rol ${rol} creado con éxito`);
-      setShowModal(false);
-      fetchUsers();
-    } catch (err: any) {
-      const msg = err?.errors
-        ? Object.values(err.errors).flat().join(", ")
-        : err?.message || "No se pudo crear el usuario";
-      toast.error(msg);
-    } finally {
-      setIsSubmitting(false);
-    }
+    try { await useCases.createUserAdmin.execute({ nombre, apellido, correo, telefono, password, rol: rol as any }); toast.success("Usuario creado"); setShowModal(false); fetchUsers(); }
+    catch (err: any) { toast.error(err?.errors ? Object.values(err.errors).flat().join(", ") : err?.message || "Error al crear"); }
+    finally { setIsSubmitting(false); }
   };
 
-  const filtered = users.filter(
-    (u) =>
-      u.nombre.toLowerCase().includes(search.toLowerCase()) ||
-      u.correo.toLowerCase().includes(search.toLowerCase()) ||
-      u.rol.toLowerCase().includes(search.toLowerCase())
+  const filtered = users.filter((u) =>
+    u.nombre.toLowerCase().includes(search.toLowerCase()) ||
+    u.correo.toLowerCase().includes(search.toLowerCase()) ||
+    u.rol.toLowerCase().includes(search.toLowerCase())
   );
 
-  const roleBadge = (rolValue: string) => {
-    const r = rolValue?.toLowerCase();
-    if (r === "administrador") return <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-3 py-1 text-xs font-bold text-sky-600 border border-sky-400/20">Administrador</span>;
-    if (r === "contador") return <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-600 border border-emerald-400/20">Contador</span>;
-    if (r === "vendedor") return <span className="inline-flex items-center gap-1 rounded-full bg-purple-500/10 px-3 py-1 text-xs font-bold text-purple-600 border border-purple-400/20">Vendedor</span>;
-    return <Badge tone="neutral">Cliente</Badge>;
+  const roleBadge = (r: string) => {
+    const v = r?.toLowerCase();
+    const map: Record<string, { bg: string; text: string; label: string }> = {
+      administrador: { bg: "bg-blue-100", text: "text-blue-700",   label: "Administrador" },
+      contador:      { bg: "bg-sky-100",  text: "text-sky-700",    label: "Contador" },
+      vendedor:      { bg: "bg-indigo-100", text: "text-indigo-700", label: "Vendedor" },
+      cliente:       { bg: "bg-gray-100", text: "text-gray-600",   label: "Cliente" },
+    };
+    const t = map[v] || map.cliente;
+    return <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold ${t.bg} ${t.text}`}>{t.label}</span>;
   };
 
+  const inputCls = "mt-1 h-11 w-full rounded-xl border border-blue-100 bg-blue-50/40 px-4 text-sm text-gray-900 outline-none transition-all focus:border-blue-400 focus:bg-white focus:shadow-[0_0_0_3px_rgba(59,130,246,0.14)]";
+  const labelCls = "text-[11px] font-bold uppercase tracking-wider text-blue-700";
+
   return (
-    <div className="container-app py-10">
-      <Link to="/admin" className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-slate-900">
-        <ArrowLeft className="h-3.5 w-3.5" /> Dashboard
-      </Link>
+    <div className="min-h-screen bg-[#f0f6ff]">
+      <div className="container-app py-10">
 
-      <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-sky-700">
-            <ShieldCheck className="h-3.5 w-3.5" />
-            Administración
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm">
+          <Link to="/admin" className="flex items-center gap-1 font-medium text-gray-500 hover:text-blue-600 transition-colors">
+            <ArrowLeft className="h-3.5 w-3.5" /> Dashboard
+          </Link>
+          <span className="text-gray-300">/</span>
+          <span className="font-semibold text-blue-600">Usuarios & Roles</span>
+        </div>
+
+        {/* Header */}
+        <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="font-display text-3xl font-extrabold text-gray-900 sm:text-4xl">
+              Gestión de <span className="text-blue-600">Usuarios</span>
+            </h1>
+            <p className="mt-1 text-sm text-gray-500">Administra vendedores, contadores, admins y clientes.</p>
           </div>
-          <h1 className="mt-3 font-display text-4xl text-slate-900 sm:text-5xl">
-            Gestión de <span className="text-accent">usuarios y roles</span>
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Administra vendedores, contadores, administradores y clientes registrados.
-          </p>
+          <Button variant="secondary" size="md" onClick={openCreateModal}>
+            <UserPlus className="h-4 w-4" /> Crear usuario
+          </Button>
         </div>
-        <Button variant="secondary" size="lg" onClick={openCreateModal} className="shadow-md shadow-sky-500/20">
-          <UserPlus className="h-4 w-4" /> Crear usuario
-        </Button>
-      </div>
 
-      {/* SEARCH */}
-      <div className="mt-8 flex items-center gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nombre, correo o rol..."
-            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-4 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
-          />
+        {/* Search */}
+        <div className="mt-8">
+          <div className="relative max-w-md">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por nombre, correo o rol..."
+              className="h-11 w-full rounded-xl border border-blue-100 bg-white pl-9 pr-4 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-blue-400 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.14)]"
+            />
+          </div>
         </div>
-      </div>
 
-      {/* TABLE */}
-      <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        {isLoading ? (
-          <div className="p-12 text-center text-slate-400">Cargando usuarios...</div>
-        ) : filtered.length === 0 ? (
-          <div className="p-12 text-center text-slate-400">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
-              <Users className="h-8 w-8" />
+        {/* Table */}
+        <div className="mt-6 overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-[0_2px_12px_rgba(37,99,235,0.07)]">
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center gap-3 p-16 text-center">
+              <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-blue-100 border-t-blue-500" />
+              <p className="text-sm font-medium text-gray-400">Cargando usuarios...</p>
             </div>
-            <p className="mt-4 font-display text-xl text-slate-700">No hay usuarios registrados</p>
-            <p className="mt-1 text-sm text-slate-500">Crea un perfil nuevo desde aquí para empezar a administrar roles.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-slate-600">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-500">
-                <tr>
-                  <th className="px-6 py-4">Usuario</th>
-                  <th className="px-6 py-4">Correo Electrónico</th>
-                  <th className="px-6 py-4">Teléfono</th>
-                  <th className="px-6 py-4">Rol Asignado</th>
-                  <th className="px-6 py-4 text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filtered.map((u) => (
-                  <tr key={u.id} className="hover:bg-slate-50/50">
-                    <td className="px-6 py-4 font-semibold text-slate-900">{u.nombre} {u.apellido}</td>
-                    <td className="px-6 py-4 text-slate-600">{u.correo}</td>
-                    <td className="px-6 py-4 text-slate-500">{u.telefono || "—"}</td>
-                    <td className="px-6 py-4">{roleBadge(u.rol)}</td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => openEditModal(u)}>
-                          <Pencil className="h-3.5 w-3.5" /> Editar
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteUser(u)}
-                          className="text-rose-500 hover:text-rose-700"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </td>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-4 p-16 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-300">
+                <Users className="h-7 w-7" />
+              </div>
+              <div>
+                <p className="font-display text-xl text-gray-700">No hay usuarios</p>
+                <p className="mt-1 text-sm text-gray-400">Crea el primer usuario desde el botón de arriba.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-blue-50 bg-blue-50/60 text-[11px] font-bold uppercase tracking-wider text-gray-500">
+                  <tr>
+                    <th className="px-6 py-3.5">Usuario</th>
+                    <th className="px-6 py-3.5">Correo</th>
+                    <th className="px-6 py-3.5">Teléfono</th>
+                    <th className="px-6 py-3.5">Rol</th>
+                    <th className="px-6 py-3.5 text-right">Acciones</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                </thead>
+                <tbody className="divide-y divide-blue-50">
+                  {filtered.map((u) => (
+                    <tr key={u.id} className="transition-colors hover:bg-blue-50/40">
+                      <td className="px-6 py-4 font-semibold text-gray-900">{u.nombre} {u.apellido}</td>
+                      <td className="px-6 py-4 text-gray-600">{u.correo}</td>
+                      <td className="px-6 py-4 text-gray-500">{u.telefono || "—"}</td>
+                      <td className="px-6 py-4">{roleBadge(u.rol)}</td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => openEditModal(u)}>
+                            <Pencil className="h-3.5 w-3.5" /> Editar
+                          </Button>
+                          <button onClick={() => handleDeleteUser(u)}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* CREATE / EDIT MODAL */}
+      {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <h3 className="font-display text-2xl text-slate-900">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-blue-100 bg-white p-6 shadow-[0_20px_60px_rgba(37,99,235,0.18)]">
+            <div className="flex items-center justify-between border-b border-blue-50 pb-4">
+              <h3 className="font-display text-xl font-bold text-gray-900">
                 {editingUser ? "Editar Usuario" : "Crear Nuevo Usuario"}
               </h3>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+              <button onClick={() => setShowModal(false)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100"><X className="h-4 w-4" /></button>
             </div>
-
-            <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Nombre *</label>
-                  <input required value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Juan"
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-4 text-sm outline-none focus:border-sky-500" />
-                </div>
-                <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Apellido *</label>
-                  <input required value={apellido} onChange={(e) => setApellido(e.target.value)} placeholder="Pérez"
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-4 text-sm outline-none focus:border-sky-500" />
-                </div>
+            <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className={labelCls}>Nombre *</label><input required value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Juan" className={inputCls} /></div>
+                <div><label className={labelCls}>Apellido *</label><input required value={apellido} onChange={(e) => setApellido(e.target.value)} placeholder="Pérez" className={inputCls} /></div>
               </div>
-
               {!editingUser ? (
-                <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Correo Electrónico *</label>
-                  <input required type="email" value={correo} onChange={(e) => setCorreo(e.target.value)}
-                    placeholder="vendedor@dripdiamond.com"
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-4 text-sm outline-none focus:border-sky-500" />
-                </div>
+                <div><label className={labelCls}>Correo *</label><input required type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} placeholder="email@ejemplo.com" className={inputCls} /></div>
               ) : (
                 <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Correo (no editable)</label>
-                  <div className="mt-1 flex h-11 w-full items-center rounded-xl border border-slate-100 bg-slate-50 px-4 text-sm text-slate-500">
-                    {editingUser.correo}
-                  </div>
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Correo (no editable)</label>
+                  <div className="mt-1 flex h-11 w-full items-center rounded-xl border border-gray-100 bg-gray-50 px-4 text-sm text-gray-400">{editingUser.correo}</div>
                 </div>
               )}
-
-              <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Teléfono</label>
-                <input value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="0991234567"
-                  className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-4 text-sm outline-none focus:border-sky-500" />
-              </div>
-
+              <div><label className={labelCls}>Teléfono</label><input value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="09XXXXXXXX" className={inputCls} /></div>
               {!editingUser && (
-                <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Contraseña Inicial *</label>
-                  <input required type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-4 text-sm outline-none focus:border-sky-500" />
-                </div>
+                <div><label className={labelCls}>Contraseña *</label><input required type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className={inputCls} /></div>
               )}
-
               <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Rol a Asignar *</label>
+                <label className={labelCls}>Rol *</label>
                 <select value={rol} onChange={(e) => setRol(e.target.value as any)}
-                  className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-4 text-sm font-bold text-slate-700 outline-none focus:border-sky-500">
+                  className="mt-1 h-11 w-full rounded-xl border border-blue-100 bg-blue-50/40 px-4 text-sm font-semibold text-gray-800 outline-none focus:border-blue-400 focus:bg-white">
                   <option value="VENDEDOR">Vendedor ($4.00 por par)</option>
                   <option value="CONTADOR">Contador (Verificación y entregas)</option>
                   <option value="ADMINISTRADOR">Administrador (Acceso total)</option>
                   <option value="CLIENTE">Cliente (Comprador)</option>
                 </select>
               </div>
-
-              <div className="mt-6 flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-2">
                 <Button type="button" variant="ghost" onClick={() => setShowModal(false)}>Cancelar</Button>
                 <Button type="submit" variant="secondary" isLoading={isSubmitting}>
-                  {editingUser ? "Guardar Cambios" : "Guardar Usuario"}
+                  {editingUser ? "Guardar cambios" : "Crear usuario"}
                 </Button>
               </div>
             </form>
