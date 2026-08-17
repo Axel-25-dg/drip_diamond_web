@@ -100,13 +100,6 @@ function Sneaker3D({ products }: { products: ProductSummary[] }) {
         className="relative mx-auto flex aspect-square w-full max-w-[520px] items-center justify-center"
         style={{ perspective: "1400px" }}
       >
-        {/* Celeste glow */}
-        <div
-          className="absolute inset-8 rounded-full blur-3xl"
-          style={{ background: "radial-gradient(circle at 50% 45%, rgba(14,165,233,0.28) 0%, transparent 68%)" }}
-          aria-hidden
-        />
-
         {/* Dashed rings */}
         <div
           className="absolute inset-6 rounded-full border-2 border-dashed border-blue-300/30"
@@ -155,7 +148,7 @@ function Sneaker3D({ products }: { products: ProductSummary[] }) {
         </div>
 
         {/* Ground shadow */}
-        <div className="absolute bottom-[12%] h-5 w-2/5 rounded-[100%] bg-blue-600/20 blur-xl" aria-hidden />
+        <div className="absolute bottom-[12%] h-5 w-2/5 rounded-[100%] bg-blue-600/10" aria-hidden />
 
         {/* Price chip */}
         <div className="absolute right-2 top-6 rounded-2xl border border-blue-100 bg-white/90 dark:border-[#222732] dark:bg-[#12151c]/90 px-4 py-3 shadow-lg backdrop-blur sm:right-6">

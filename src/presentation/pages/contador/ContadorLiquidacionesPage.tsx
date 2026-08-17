@@ -80,7 +80,7 @@ function VendedorCard({
           <div className="flex items-center gap-3 min-w-0">
             <Avatar name={v.vendedorNombre} />
             <div className="min-w-0">
-              <p className="truncate font-bold text-slate-900 dark:text-white">{v.vendedorNombre}</p>
+              <p className="truncate font-display font-bold text-slate-900 dark:text-white">{v.vendedorNombre}</p>
               <p className="truncate text-xs text-slate-400 dark:text-slate-400">{v.vendedorEmail}</p>
             </div>
           </div>
@@ -91,15 +91,15 @@ function VendedorCard({
         <div className="grid grid-cols-3 gap-2 rounded-xl border border-slate-100 bg-slate-50 p-3 text-center dark:border-[#1e232e] dark:bg-[#171a22]">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Pares</p>
-            <p className="mt-0.5 font-mono text-lg font-black text-slate-900 dark:text-white">{v.totalParesMes}</p>
+            <p className="mt-0.5 font-display text-lg font-black text-slate-900 dark:text-white">{v.totalParesMes}</p>
           </div>
           <div className="border-x border-slate-200 dark:border-[#262b38]">
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Mes</p>
-            <p className="mt-0.5 font-mono text-lg font-black text-[#0084ff] dark:text-[#38bdf8]">{formatCurrency(v.totalComisionesMes)}</p>
+            <p className="mt-0.5 font-display text-lg font-black text-[#0084ff] dark:text-[#38bdf8]">{formatCurrency(v.totalComisionesMes)}</p>
           </div>
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Histórico</p>
-            <p className="mt-0.5 font-mono text-lg font-bold text-slate-500 dark:text-slate-400">{formatCurrency(v.totalComisionesHistorico)}</p>
+            <p className="mt-0.5 font-display text-lg font-bold text-slate-500 dark:text-slate-400">{formatCurrency(v.totalComisionesHistorico)}</p>
           </div>
         </div>
       </div>
@@ -289,7 +289,6 @@ export default function ContadorLiquidacionesPage() {
 
           {/* Destacada con gradiente azul */}
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0062ff] to-[#00aaff] p-6 text-white shadow-xl shadow-blue-500/20 flex flex-col justify-between">
-            <div className="pointer-events-none absolute -right-6 -top-6 h-32 w-32 rounded-full bg-white/10 blur-xl" aria-hidden />
             <div className="relative">
               <div className="flex items-center gap-2">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 text-white">
@@ -297,7 +296,7 @@ export default function ContadorLiquidacionesPage() {
                 </div>
                 <p className="text-xs font-bold uppercase tracking-wider text-white/80">Por pagar este mes</p>
               </div>
-              <p className="mt-3 font-mono text-3xl sm:text-4xl font-black text-white tracking-tight">{formatCurrency(totalPendiente)}</p>
+              <p className="mt-3 font-display text-3xl sm:text-4xl font-black text-white tracking-tight">{formatCurrency(totalPendiente)}</p>
               <p className="mt-1 text-xs sm:text-sm text-white/80 font-medium">
                 {totalVendedoresConComision} vendedor(es) con comisión pendiente
               </p>
@@ -313,7 +312,7 @@ export default function ContadorLiquidacionesPage() {
                 </div>
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Pagados este mes</p>
               </div>
-              <p className="mt-3 font-mono text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">{totalPagados}</p>
+              <p className="mt-3 font-display text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">{totalPagados}</p>
               <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400">vendedor(es) ya liquidados</p>
             </div>
           </div>
@@ -327,7 +326,7 @@ export default function ContadorLiquidacionesPage() {
                 </div>
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total vendedores</p>
               </div>
-              <p className="mt-3 font-mono text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">{vendedores.length}</p>
+              <p className="mt-3 font-display text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">{vendedores.length}</p>
               <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400">registrados en el sistema</p>
             </div>
           </div>

@@ -28,7 +28,7 @@ export function Card({
     >
       {(title || description) && (
         <div className="mb-4 space-y-1">
-          {title && <h3 className="text-base font-semibold tracking-tight text-[#0f172a] dark:text-white">{title}</h3>}
+          {title && <h3 className="font-display text-base font-bold tracking-tight text-slate-900 dark:text-white">{title}</h3>}
           {description && <p className="text-sm leading-6 text-slate-600 dark:text-slate-400">{description}</p>}
         </div>
       )}

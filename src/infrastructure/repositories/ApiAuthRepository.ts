@@ -78,18 +78,21 @@ export class ApiAuthRepository implements AuthRepositoryPort {
   }
 
   async requestPasswordReset(correo: string): Promise<void> {
-    await httpClient.post("/auth/recuperar-password/", { correo });
+    await httpClient.post("/auth/recuperar-password/", { email: correo });
   }
 
   async verifyOtp(correo: string, codigo: string): Promise<{ resetToken: string }> {
-    const { data } = await httpClient.post<any>("/auth/verificar-otp/", { correo, codigo });
+    const { data } = await httpClient.post<any>("/auth/verificar-otp/", { email: correo, codigo });
     const result = safeUnwrap<any>(data);
-    return { resetToken: result?.reset_token ?? "" };
+    // Backend devuelve el email verificado; lo pasamos como resetToken para que la UI lo use en el paso 3
+    return { resetToken: result?.reset_token ?? result?.token ?? result?.email ?? correo };
   }
 
-  async confirmPasswordReset(resetToken: string, nuevaPassword: string): Promise<void> {
+  async confirmPasswordReset(resetToken: string, nuevaPassword: string, codigo?: string): Promise<void> {
+    // resetToken holds the email (returned by verifyOtp), codigo is the verified OTP
     await httpClient.post("/auth/confirmar-password/", {
-      reset_token: resetToken,
+      email: resetToken,
+      codigo: codigo ?? "",
       nueva_password: nuevaPassword,
     });
   }

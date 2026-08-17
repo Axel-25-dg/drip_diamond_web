@@ -90,9 +90,6 @@ export default function AdminTallasPage() {
       </nav>
 
       <header className="animate-slide-up delay-100 mt-6 overflow-hidden rounded-[26px] border border-theme bg-surf shadow-premium relative">
-        <div className="absolute inset-0 dot-pattern opacity-[0.35]" />
-        <div className="absolute -top-24 -right-24 h-64 w-64 rounded-full bg-gradient-to-br from-sky-400/[0.08] to-indigo-500/[0.06] blur-3xl" />
-        <div className="absolute -bottom-20 -left-16 h-48 w-48 rounded-full bg-gradient-to-br from-amber-400/[0.05] to-transparent blur-3xl" />
         <div className="relative flex flex-col gap-6 px-7 py-8 sm:flex-row sm:items-center sm:justify-between gap-6">
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2.5">

@@ -208,7 +208,7 @@ export default function VendedorDashboardPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400">{card.label}</p>
               <div className="rounded-xl bg-slate-100 dark:bg-slate-800 p-2.5">{card.icon}</div>
             </div>
-            <p className="mt-5 text-4xl font-semibold text-slate-900 dark:text-white">{card.value}</p>
+            <p className="mt-5 font-display text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white">{card.value}</p>
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{card.note}</p>
           </div>
         ))}
@@ -218,7 +218,7 @@ export default function VendedorDashboardPage() {
       <section className="mt-10 rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm dark:border-[#222732] dark:bg-[#12151c]">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">Mis ventas y comisiones</h2>
+            <h2 className="font-display text-2xl font-bold text-slate-900 dark:text-white">Mis ventas y comisiones</h2>
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Filtra y revisa tus ventas según estado o liquidación.</p>
           </div>
           <div className="flex flex-wrap gap-3">

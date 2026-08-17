@@ -93,7 +93,7 @@ export function ProductCard({ product }: { product: ProductSummary }) {
         <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-blue-600 dark:text-sky-400">
           {product.marca}
         </span>
-        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-slate-900 dark:text-white">
+        <h3 className="line-clamp-2 font-display text-sm font-bold leading-snug text-slate-900 dark:text-white">
           {product.nombre}
         </h3>
 

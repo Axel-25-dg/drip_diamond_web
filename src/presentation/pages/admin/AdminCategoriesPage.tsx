@@ -254,8 +254,6 @@ export default function AdminCategoriesPage() {
           >
             <div className="h-full w-full rounded-[21px] bg-surf p-0">
               <div className="relative overflow-hidden rounded-t-[21px] border-b border-theme px-7 py-6">
-                <div className="pointer-events-none absolute inset-0 grid-pattern opacity-40" />
-                <div className="pointer-events-none absolute -right-20 -top-20 h-48 w-48 rounded-full bg-gradient-to-br from-sky-500/25 to-purple-500/20 blur-3xl" />
                 <div className="relative flex items-start justify-between">
                   <div className="space-y-2">
                     <div className="inline-flex items-center gap-1.5 rounded-full border border-theme bg-surf2 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-muted-t">
