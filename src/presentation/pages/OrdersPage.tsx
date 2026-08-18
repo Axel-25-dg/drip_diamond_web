@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Package, UploadCloud, ChevronRight, ShoppingBag, MapPin, Calendar } from "lucide-react";
+import { Package, UploadCloud, ChevronRight, ShoppingBag, MapPin, Calendar, Ban, Loader2 } from "lucide-react";
 import { useCases } from "@/infrastructure/factories/useCases.factory";
+import { httpClient } from "@/infrastructure/http/httpClient";
+import { toOrder } from "@/infrastructure/adapters/order.adapter";
 import type { Order } from "@/domain/entities/Order";
 import { Spinner } from "@/presentation/components/ui/Spinner";
 import { Button } from "@/presentation/components/ui/Button";
@@ -125,11 +127,13 @@ export default function OrdersPage() {
 }
 
 /* ─── Compact order card ──────────────────────────────────── */
-function OrderCard({ order }: { order: Order }) {
+function OrderCard({ order, onCancelled }: { order: Order; onCancelled: (id: number) => void }) {
   const canUpload  = order.estado === "PENDIENTE_DE_PAGO" || order.estado === "PAGO_RECHAZADO";
+  const canCancel  = ["PENDIENTE_DE_PAGO", "COMPROBANTE_ENVIADO", "PAGO_RECHAZADO"].includes(order.estado);
   const firstItem  = order.items?.[0];
   const imgSrc     = resolveMediaUrl(firstItem?.imagenUrl);
   const extraItems = (order.items?.length ?? 0) - 1;
+  const [cancelling, setCancelling] = useState(false);
 
   /* Left accent color */
   const accentLeft =

@@ -308,10 +308,11 @@ export default function ProductDetailPage() {
 
           <div className="mt-8 flex flex-col gap-3 border-t border-slate-200 dark:border-[#222732] pt-6 text-sm text-slate-500 dark:text-slate-400">
             <div className="flex items-center gap-2">
-              <Truck className="h-4 w-4 text-sky-500" /> Envíos a todo Quito, costo según tu zona
+              <Truck className="h-4 w-4 text-sky-500" />
+              <span>Envío a domicilio en <strong className="text-slate-700 dark:text-slate-200">Quito</strong> — <strong className="text-blue-600 dark:text-sky-400">$3.00</strong> vía Servientrega</span>
             </div>
             <div className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-emerald-500" /> Producto verificado
+              <ShieldCheck className="h-4 w-4 text-emerald-500" /> Producto verificado antes del despacho
             </div>
           </div>
         </div>

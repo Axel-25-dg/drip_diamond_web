@@ -1,124 +1,260 @@
-import { useEffect, useMemo, useState } from "react";
-import { Search, CreditCard, MessageSquare, UserCheck, AlertCircle } from "lucide-react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import {
+  Search, CreditCard, MessageSquare, UserCheck,
+  AlertCircle, MapPin, Truck, X, Loader2, Navigation, Phone,
+} from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
+import type { LatLngLiteral } from "leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
 import { useCases } from "@/infrastructure/factories/useCases.factory";
 import type { Seller } from "@/domain/entities/User";
-import type { ShippingZone } from "@/domain/entities/Order";
 import { useCartStore } from "@/presentation/store/cartStore";
 import { Input } from "@/presentation/components/ui/Input";
 import { Button } from "@/presentation/components/ui/Button";
 import { Spinner } from "@/presentation/components/ui/Spinner";
 import { formatCurrency, resolveMediaUrl } from "@/presentation/utils/format";
 
-interface CheckoutForm {
-  tipoEntrega: "DOMICILIO" | "RETIRO_LOCAL";
-  direccionEnvio: string;
-  referenciaAdicional: string;
-  provincia: string;
-  ciudad: string;
-  telefonoContacto: string;
-  vendedorId: string;
-  notas: string;
+/* ── Fix leaflet icon in Vite ─────────────────────────────── */
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl:       "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl:     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
+
+const QUITO_CENTER: LatLngLiteral = { lat: -0.1807, lng: -78.4678 };
+const SHIPPING_COST = 3;
+
+/* ── Tipos ────────────────────────────────────────────────── */
+interface NominatimResult {
+  place_id: number;
+  display_name: string;
+  lat: string;
+  lon: string;
 }
 
+/* ── Reverse geocode: coordenadas → dirección legible ──────── */
+async function reverseGeocode(lat: number, lng: number): Promise<string> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=es`,
+      { headers: { "Accept-Language": "es" } }
+    );
+    const data = await res.json();
+    const a = data.address || {};
+    const parts = [
+      a.road || a.pedestrian || a.path || "",
+      a.house_number || "",
+      a.neighbourhood || a.suburb || a.quarter || "",
+    ].filter(Boolean);
+    return parts.join(" ").trim() || data.display_name?.split(",")[0] || "";
+  } catch { return ""; }
+}
+
+/* ── Forward geocode: texto → sugerencias de Quito ────────── */
+async function forwardGeocode(query: string): Promise<NominatimResult[]> {
+  if (!query || query.length < 3) return [];
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ", Quito, Ecuador")}&limit=6&countrycodes=ec&accept-language=es`,
+      { headers: { "Accept-Language": "es" } }
+    );
+    return await res.json();
+  } catch { return []; }
+}
+
+/* ── Componente: mueve el mapa cuando cambia la posición ───── */
+function MapFlyTo({ position }: { position: LatLngLiteral }) {
+  const map = useMap();
+  useEffect(() => { map.flyTo(position, 17, { duration: 1.2 }); }, [position]);
+  return null;
+}
+
+/* ── Componente: captura click en el mapa ─────────────────── */
+function MapClickHandler({ onPick }: { onPick: (lat: number, lng: number) => void }) {
+  useMapEvents({ click(e) { onPick(e.latlng.lat, e.latlng.lng); } });
+  return null;
+}
+
+/* ── Buscador integrado sobre el mapa ─────────────────────── */
+function MapSearchBox({
+  onSelect,
+}: {
+  onSelect: (lat: number, lng: number, label: string) => void;
+}) {
+  const [query,       setQuery]       = useState("");
+  const [results,     setResults]     = useState<NominatimResult[]>([]);
+  const [searching,   setSearching]   = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleChange = (val: string) => {
+    setQuery(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!val.trim()) { setResults([]); setShowResults(false); return; }
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true);
+      const r = await forwardGeocode(val);
+      setResults(r);
+      setShowResults(true);
+      setSearching(false);
+    }, 420);
+  };
+
+  const pick = (r: NominatimResult) => {
+    const label = r.display_name.split(",").slice(0, 3).join(", ");
+    setQuery(label);
+    setShowResults(false);
+    onSelect(parseFloat(r.lat), parseFloat(r.lon), label);
+  };
+
+  return (
+    <div className="relative w-full">
+      {/* Input */}
+      <div className="flex items-center gap-2 rounded-xl border border-blue-200 dark:border-sky-800 bg-[var(--card-bg)] px-3 shadow-[var(--shadow-sm)]">
+        {searching
+          ? <Loader2 className="h-4 w-4 shrink-0 animate-spin text-blue-500" />
+          : <Search className="h-4 w-4 shrink-0 text-gray-400" />
+        }
+        <input
+          value={query}
+          onChange={(e) => handleChange(e.target.value)}
+          placeholder="Busca tu dirección en Quito... (ej: Av. Amazonas N34)"
+          className="h-11 flex-1 bg-transparent text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none"
+        />
+        {query && (
+          <button type="button" onClick={() => { setQuery(""); setResults([]); setShowResults(false); }}>
+            <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+          </button>
+        )}
+      </div>
+
+      {/* Dropdown */}
+      {showResults && results.length > 0 && (
+        <ul className="absolute left-0 right-0 top-full z-50 mt-1 max-h-56 overflow-y-auto rounded-xl border border-blue-100 dark:border-[#222732] bg-[var(--card-bg)] shadow-[var(--shadow-modal)]">
+          {results.map((r) => (
+            <li key={r.place_id}>
+              <button
+                type="button"
+                onClick={() => pick(r)}
+                className="flex w-full items-start gap-2 px-4 py-3 text-left text-sm hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors"
+              >
+                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-500" />
+                <span className="text-[var(--text-secondary)] line-clamp-2">{r.display_name}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {showResults && results.length === 0 && !searching && query.length >= 3 && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-xl border border-blue-100 dark:border-[#222732] bg-[var(--card-bg)] px-4 py-3 text-sm text-[var(--text-muted)] shadow-[var(--shadow-modal)]">
+          No se encontraron resultados en Quito.
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Form type ────────────────────────────────────────────── */
+interface CheckoutForm {
+  tipoEntrega:         "DOMICILIO" | "RETIRO_LOCAL";
+  direccionEnvio:      string;
+  referenciaAdicional: string;
+  provincia:           string;
+  ciudad:              string;
+  telefonoContacto:    string;
+  vendedorId:          string;
+  notas:               string;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CHECKOUT PAGE
+═══════════════════════════════════════════════════════════ */
 export default function CheckoutPage() {
-  const navigate = useNavigate();
+  const navigate   = useNavigate();
   const { cart, fetchCart } = useCartStore();
+  const location   = useLocation();
+  const refParam   = new URLSearchParams(location.search).get("ref");
 
-  const [sellers, setSellers] = useState<Seller[]>([]);
-  const [zones, setZones] = useState<ShippingZone[]>([]);
-  const [sellerSearch, setSellerSearch] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [sellersLoading, setSellersLoading] = useState(true);
-  const [sellersError, setSellersError] = useState(false);
+  const [sellers,            setSellers]            = useState<Seller[]>([]);
+  const [sellerSearch,       setSellerSearch]       = useState("");
+  const [isSubmitting,       setIsSubmitting]       = useState(false);
+  const [isLoading,          setIsLoading]          = useState(true);
+  const [sellersLoading,     setSellersLoading]     = useState(true);
+  const [sellersError,       setSellersError]       = useState(false);
   const [sellersLoadAttempt, setSellersLoadAttempt] = useState(0);
+  const [markerPos,          setMarkerPos]          = useState<LatLngLiteral>(QUITO_CENTER);
+  const [geocoding,          setGeocoding]          = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setValue,
-    formState: { errors },
-  } = useForm<CheckoutForm>({
-    defaultValues: {
-      tipoEntrega: "DOMICILIO",
-      vendedorId: "",
-      provincia: "",
-      referenciaAdicional: "",
-      notas: "",
-    },
-  });
+  const { register, handleSubmit, watch, setValue, formState: { errors } } =
+    useForm<CheckoutForm>({
+      defaultValues: {
+        tipoEntrega: "DOMICILIO",
+        vendedorId: "",
+        provincia: "Pichincha",
+        ciudad: "Quito",
+        referenciaAdicional: "",
+        notas: "",
+      },
+    });
 
-  const location = useLocation();
-  const refParam = new URLSearchParams(location.search).get("ref");
-
-  // ── Load cart + zones (independent of sellers) ──────────────────────────
+  /* Load cart */
   useEffect(() => {
-    Promise.all([
-      useCases.getShippingZones.execute(),
-      fetchCart(),
-    ])
-      .then(([z]) => setZones(z))
-      .catch(() => toast.error("No se pudo cargar la información de envío."))
+    fetchCart()
+      .catch(() => toast.error("No se pudo cargar el carrito."))
       .finally(() => setIsLoading(false));
   }, []);
 
-  // ── Load active sellers — separate request with JWT auto-injected ─────────
+  /* Load sellers */
   useEffect(() => {
     setSellersLoading(true);
     setSellersError(false);
-
-    useCases.getActiveSellers
-      .execute()
+    useCases.getActiveSellers.execute()
       .then((s) => {
         setSellers(s);
-
-        // Auto-select seller from ?ref= URL param
         if (refParam && s.length > 0) {
           const m = refParam.match(/(\d+)$/);
           const selId = m ? Number(m[1]) : null;
           const found = selId
             ? s.find((x) => x.id === selId)
-            : s.find(
-                (x) =>
-                  `${x.id}` === refParam ||
-                  `${x.nombre} ${x.apellido}`.toLowerCase().includes(refParam.toLowerCase()) ||
-                  x.correo?.toLowerCase().includes(refParam.toLowerCase())
+            : s.find((x) =>
+                `${x.id}` === refParam ||
+                `${x.nombre} ${x.apellido}`.toLowerCase().includes(refParam.toLowerCase()) ||
+                x.correo?.toLowerCase().includes(refParam.toLowerCase())
               );
-          if (found) {
-            setValue("vendedorId", String(found.id));
-            toast.info(`Vendedor ${found.nombre} ${found.apellido} preseleccionado.`);
-          }
+          if (found) { setValue("vendedorId", String(found.id)); toast.info(`Vendedor ${found.nombre} preseleccionado.`); }
         }
       })
-      .catch((err) => {
-        // Log para diagnóstico
-        if (import.meta.env.DEV) {
-          console.warn("[CheckoutPage] getActiveSellers error:", err);
-        }
-        setSellersError(true);
-        // Non-fatal: user can still checkout without a seller
-      })
+      .catch(() => setSellersError(true))
       .finally(() => setSellersLoading(false));
   }, [sellersLoadAttempt]);
 
-  const provincia = watch("provincia");
-  const ciudad = watch("ciudad");
+  /* Click en mapa → reverse geocode → llenar campo */
+  const handleMapPick = useCallback(async (lat: number, lng: number) => {
+    setMarkerPos({ lat, lng });
+    setGeocoding(true);
+    const addr = await reverseGeocode(lat, lng);
+    if (addr) { setValue("direccionEnvio", addr, { shouldValidate: true }); toast.success("Dirección detectada. Puedes editarla."); }
+    setGeocoding(false);
+  }, [setValue]);
 
-  const shippingCost = useMemo(() => {
-    const match = zones.find(
-      (z) =>
-        z.provincia.toLowerCase() === (provincia || "").toLowerCase() &&
-        z.ciudad.toLowerCase() === (ciudad || "").toLowerCase()
-    );
-    return match?.costo ?? null;
-  }, [zones, provincia, ciudad]);
+  /* Buscador → mover mapa + llenar campo */
+  const handleSearchSelect = useCallback((lat: number, lng: number, label: string) => {
+    setMarkerPos({ lat, lng });
+    const short = label.split(",").slice(0, 2).join(",").trim();
+    setValue("direccionEnvio", short, { shouldValidate: true });
+    toast.success("Dirección encontrada.");
+  }, [setValue]);
 
-  const subtotal = cart?.subtotal ?? 0;
-  const total = subtotal + (shippingCost ?? 0);
+  const tipoEntrega  = watch("tipoEntrega");
+  const shippingCost = tipoEntrega === "RETIRO_LOCAL" ? 0 : SHIPPING_COST;
+  const subtotal     = cart?.subtotal ?? 0;
+  const total        = subtotal + shippingCost;
 
   const filteredSellers = useMemo(() => {
     const q = sellerSearch.trim().toLowerCase();
@@ -129,23 +265,19 @@ export default function CheckoutPage() {
   }, [sellerSearch, sellers]);
 
   const onSubmit = async (form: CheckoutForm) => {
-    if (!cart || cart.items.length === 0) {
-      toast.error("Tu carrito está vacío.");
-      return;
-    }
+    if (!cart || cart.items.length === 0) { toast.error("Tu carrito está vacío."); return; }
     setIsSubmitting(true);
     try {
       const order = await useCases.createOrder.execute({
-        direccionEnvio: form.direccionEnvio,
+        direccionEnvio:      form.direccionEnvio,
         direccionFormateada: form.direccionEnvio,
-        provincia: form.provincia,
-        ciudad: form.ciudad,
-        telefonoContacto: form.telefonoContacto,
-        // vendedorId is sent as number or null
-        vendedorId: form.vendedorId ? Number(form.vendedorId) : null,
-        notas: form.notas || form.referenciaAdicional,
+        provincia:           "Pichincha",
+        ciudad:              "Quito",
+        telefonoContacto:    form.telefonoContacto,
+        vendedorId:          form.vendedorId ? Number(form.vendedorId) : null,
+        notas:               form.notas || form.referenciaAdicional,
         referenciaAdicional: form.referenciaAdicional || form.notas,
-        tipoEntrega: form.tipoEntrega,
+        tipoEntrega:         form.tipoEntrega,
       });
       toast.success("Pedido creado. Ahora sube tu comprobante de pago.");
       navigate(`/pedidos/${order.id}`);
@@ -159,107 +291,281 @@ export default function CheckoutPage() {
   if (isLoading) return <Spinner full />;
 
   return (
-    <div className="container-app py-6 sm:py-8 lg:py-12 text-slate-900 dark:text-white">
-      <h1 className="font-display text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white">Checkout</h1>
+    <div className="min-h-screen bg-[var(--bg-page)]">
+      <div className="container-app py-6 sm:py-8 lg:py-10">
+        <h1 className="font-display text-3xl font-extrabold text-[var(--text-primary)] sm:text-4xl">
+          Checkout
+        </h1>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="mt-6 sm:mt-8 grid gap-6 lg:gap-10 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px]">
-        <div className="flex flex-col gap-8">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="mt-6 grid gap-6 lg:gap-8 lg:grid-cols-[1fr_380px]"
+        >
+          {/* ════ LEFT ════ */}
+          <div className="flex flex-col gap-6">
 
-          {/* ── Shipping data ── */}
-          <section>
-            <h2 className="mb-4 font-display text-xl font-bold text-slate-900 dark:text-white">Datos de envío</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Tipo de entrega</label>
-                <select
-                  {...register("tipoEntrega", { required: "Requerido" })}
-                  className="h-12 w-full rounded-xl border border-blue-100 dark:border-[#222732] bg-white dark:bg-[#12151c] px-4 text-sm text-slate-900 dark:text-white outline-none focus:border-sky-400"
-                >
-                  <option value="DOMICILIO">Domicilio</option>
-                  <option value="RETIRO_LOCAL">Retiro local</option>
-                </select>
+            {/* ── Tipo de entrega ── */}
+            <section className="rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-6 shadow-[var(--shadow-card)]">
+              <h2 className="mb-4 font-display text-lg font-bold text-[var(--text-primary)]">Tipo de entrega</h2>
+              <div className="grid grid-cols-2 gap-3">
+                {(["DOMICILIO", "RETIRO_LOCAL"] as const).map((opt) => (
+                  <label
+                    key={opt}
+                    className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 p-4 transition-all ${
+                      tipoEntrega === opt
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30"
+                        : "border-[var(--bg-border)] hover:border-blue-300"
+                    }`}
+                  >
+                    <input type="radio" value={opt} {...register("tipoEntrega")} className="hidden" />
+                    <div className={`flex h-4 w-4 items-center justify-center rounded-full border-2 ${tipoEntrega === opt ? "border-blue-600 bg-blue-600" : "border-gray-300"}`}>
+                      {tipoEntrega === opt && <div className="h-2 w-2 rounded-full bg-white" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-[var(--text-primary)]">
+                        {opt === "DOMICILIO" ? "Domicilio" : "Retiro local"}
+                      </p>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {opt === "DOMICILIO" ? `$${SHIPPING_COST}.00 vía Servientrega` : "Gratis"}
+                      </p>
+                    </div>
+                  </label>
+                ))}
               </div>
-              <Input
-                label="Provincia"
-                placeholder="Pichincha"
-                error={errors.provincia?.message}
-                {...register("provincia", { required: "Requerido" })}
-              />
-              <Input
-                label="Ciudad"
-                placeholder="Quito"
-                error={errors.ciudad?.message}
-                {...register("ciudad", { required: "Requerido" })}
-              />
-              <Input
-                label="Dirección exacta"
-                placeholder="Av. Amazonas y Naciones Unidas"
-                className="sm:col-span-2"
-                error={errors.direccionEnvio?.message}
-                {...register("direccionEnvio", { required: "Requerido" })}
-              />
-              <Input
-                label="Referencia adicional"
-                placeholder="Casa azul, junto a la panadería"
-                className="sm:col-span-2"
-                {...register("referenciaAdicional")}
-              />
-              <Input
-                label="Teléfono de contacto"
-                placeholder="09XXXXXXXX"
-                error={errors.telefonoContacto?.message}
-                {...register("telefonoContacto", { required: "Requerido" })}
-              />
-            </div>
-          </section>
+            </section>
 
-          {/* ── Seller selector ── */}
-          <section>
-            <h2 className="mb-1 font-display text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <UserCheck className="h-5 w-5 text-sky-500" />
-              Vendedor
-            </h2>
-            <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">
-              Si alguien te atendió, selecciónalo para que reciba su comisión ($4 por par entregado).
-            </p>
+            {/* ── Mapa con buscador ── */}
+            {tipoEntrega === "DOMICILIO" && (
+              <section className="rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-6 shadow-[var(--shadow-card)]">
+                <div className="mb-3 flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-blue-500" />
+                  <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">
+                    Ubica tu dirección
+                  </h2>
+                </div>
+                <p className="mb-4 text-sm text-[var(--text-muted)]">
+                  Busca tu calle, haz clic en el mapa o usa tu ubicación actual.
+                </p>
 
-            <div className="max-w-xl rounded-2xl border border-blue-100 dark:border-[#222732] bg-white dark:bg-[#12151c] p-4 shadow-sm">
+                {/* ── Buscador FUERA del mapa ── */}
+                <div className="mb-3">
+                  <MapSearchBox onSelect={handleSearchSelect} />
+                </div>
+
+                {/* ── Botón GPS: usar mi ubicación actual ── */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!navigator.geolocation) {
+                      toast.error("Tu navegador no soporta geolocalización.");
+                      return;
+                    }
+                    setGeocoding(true);
+                    navigator.geolocation.getCurrentPosition(
+                      async (pos) => {
+                        const lat = pos.coords.latitude;
+                        const lng = pos.coords.longitude;
+                        setMarkerPos({ lat, lng });
+                        const addr = await reverseGeocode(lat, lng);
+                        if (addr) {
+                          setValue("direccionEnvio", addr, { shouldValidate: true });
+                          toast.success("Ubicación GPS detectada. Verifica la dirección.");
+                        }
+                        setGeocoding(false);
+                      },
+                      () => {
+                        toast.error("No se pudo obtener tu ubicación. Activa el permiso de GPS.");
+                        setGeocoding(false);
+                      },
+                      { enableHighAccuracy: true, timeout: 10000 }
+                    );
+                  }}
+                  disabled={geocoding}
+                  className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-200 dark:border-sky-800 bg-blue-50 dark:bg-sky-950/20 py-3 text-sm font-semibold text-blue-700 dark:text-sky-400 transition-all hover:border-blue-400 hover:bg-blue-100 dark:hover:bg-sky-950/30 disabled:opacity-60"
+                >
+                  {geocoding
+                    ? <><Loader2 className="h-4 w-4 animate-spin" /> Detectando ubicación...</>
+                    : <><Navigation className="h-4 w-4" /> Usar mi ubicación actual (GPS)</>
+                  }
+                </button>
+
+                {/* ── Mapa ── */}
+                <div className="overflow-hidden rounded-xl border border-[var(--bg-border)]" style={{ height: 320 }}>
+                  <MapContainer
+                    center={QUITO_CENTER}
+                    zoom={13}
+                    style={{ height: "100%", width: "100%" }}
+                    scrollWheelZoom={true}
+                    zoomControl={true}
+                  >
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    <Marker position={markerPos} />
+                    <MapFlyTo position={markerPos} />
+                    <MapClickHandler onPick={handleMapPick} />
+                  </MapContainer>
+                </div>
+
+                <div className="mt-2 flex items-center justify-between text-[11px] text-[var(--text-muted)]">
+                  <span>También puedes hacer clic directo en el mapa</span>
+                  <span>Solo envíos en Quito</span>
+                </div>
+              </section>
+            )}
+
+            {/* ── Tarjeta info retiro local ── */}
+            {tipoEntrega === "RETIRO_LOCAL" && (
+              <section className="rounded-2xl border-2 border-blue-200 dark:border-sky-800 bg-blue-50 dark:bg-sky-950/20 p-6">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
+                    <MapPin className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-display text-lg font-bold text-[var(--text-primary)]">
+                      Puntos de entrega disponibles
+                    </h3>
+                    <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                      No tenemos un local fijo. Coordinamos el punto de encuentro según tu sector:
+                    </p>
+                    <ul className="mt-3 space-y-2">
+                      {["Quito Norte", "Quito Sur", "C.C. El Recreo"].map((punto) => (
+                        <li key={punto} className="flex items-center gap-2 text-sm font-semibold text-blue-700 dark:text-sky-300">
+                          <span className="h-2 w-2 rounded-full bg-blue-500" />
+                          {punto}
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="mt-4 flex items-center gap-3 rounded-xl border border-blue-200 dark:border-sky-800 bg-white dark:bg-[#12151c] px-4 py-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-green-500 text-white">
+                        <Phone className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-[var(--text-muted)]">Contáctanos para coordinar:</p>
+                        <a
+                          href="https://wa.me/593999001471?text=Hola,%20quiero%20coordinar%20el%20punto%20de%20entrega%20para%20mi%20pedido."
+                          target="_blank" rel="noreferrer"
+                          className="font-bold text-green-600 dark:text-green-400 hover:underline text-sm"
+                        >
+                          WhatsApp: 0999 001 471
+                        </a>
+                      </div>
+                    </div>
+                    <p className="mt-3 text-xs text-[var(--text-muted)]">
+                      Una vez confirmado tu pedido te escribiremos para acordar el lugar y hora de entrega.
+                    </p>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* ── Teléfono para retiro local ── */}
+            {tipoEntrega === "RETIRO_LOCAL" && (
+              <section className="rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-6 shadow-[var(--shadow-card)]">
+                <h2 className="mb-4 font-display text-lg font-bold text-[var(--text-primary)]">Datos de contacto</h2>
+                <Input
+                  label="Teléfono de contacto *"
+                  placeholder="09XXXXXXXX"
+                  error={errors.telefonoContacto?.message}
+                  {...register("telefonoContacto", { required: "Requerido para coordinar la entrega" })}
+                />
+                <p className="mt-2 text-xs text-[var(--text-muted)]">
+                  Lo usaremos para coordinar contigo el punto y hora de encuentro.
+                </p>
+              </section>
+            )}
+
+            {/* ── Datos de envío ── */}
+            <section className="rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-6 shadow-[var(--shadow-card)]">
+              <h2 className="mb-4 font-display text-lg font-bold text-[var(--text-primary)]">Datos de envío</h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+
+                {/* Ciudad fija: Quito */}
+                <div>
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-blue-700 dark:text-sky-400">
+                    Ciudad
+                  </label>
+                  <div className="mt-1 flex h-[46px] items-center justify-between rounded-xl border border-blue-200 dark:border-sky-800/50 bg-blue-50 dark:bg-blue-950/20 px-4 text-sm">
+                    <span className="font-semibold text-[var(--text-primary)]">Quito</span>
+                    <span className="flex items-center gap-1 rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-bold text-white">
+                      <Truck className="h-3 w-3" /> $3.00 · Servientrega
+                    </span>
+                  </div>
+                  <input type="hidden" value="Quito"     {...register("ciudad")} />
+                  <input type="hidden" value="Pichincha" {...register("provincia")} />
+                  <p className="mt-1 text-[11px] text-[var(--text-muted)]">Solo realizamos envíos en Quito.</p>
+                </div>
+
+                {/* Teléfono */}
+                <Input
+                  label="Teléfono de contacto"
+                  placeholder="09XXXXXXXX"
+                  error={errors.telefonoContacto?.message}
+                  {...register("telefonoContacto", { required: "Requerido" })}
+                />
+
+                {/* Dirección — se llena del mapa */}
+                <div className="sm:col-span-2">
+                  <Input
+                    label="Dirección exacta"
+                    placeholder="Busca en el mapa o escribe aquí..."
+                    error={errors.direccionEnvio?.message}
+                    {...register("direccionEnvio", { required: "Requerido" })}
+                  />
+                </div>
+
+                {/* Referencia */}
+                <div className="sm:col-span-2">
+                  <Input
+                    label="Referencia adicional"
+                    placeholder="Casa azul, piso 3, junto a la farmacia..."
+                    {...register("referenciaAdicional")}
+                  />
+                </div>
+              </div>
+            </section>
+
+            {/* ── Vendedor ── */}
+            <section className="rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-6 shadow-[var(--shadow-card)]">
+              <div className="mb-1 flex items-center gap-2">
+                <UserCheck className="h-5 w-5 text-sky-500" />
+                <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">Vendedor</h2>
+              </div>
+              <p className="mb-4 text-sm text-[var(--text-muted)]">
+                Si alguien te atendió, selecciónalo para que reciba su comisión ($4 por par).
+              </p>
+
               {sellersLoading ? (
-                <div className="flex items-center gap-2 py-3 text-sm text-slate-500 dark:text-slate-400">
+                <div className="flex items-center gap-2 py-3 text-sm text-[var(--text-muted)]">
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-sky-400 border-t-transparent" />
                   Cargando vendedores...
                 </div>
               ) : sellersError ? (
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
                     <AlertCircle className="h-4 w-4 shrink-0" />
-                    No se pudieron cargar los vendedores. Puedes continuar sin seleccionar uno.
+                    No se pudieron cargar los vendedores. Puedes continuar sin seleccionar.
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setSellersLoadAttempt((n) => n + 1)}
-                    className="self-start text-xs text-sky-600 underline hover:text-sky-800 dark:text-sky-400"
-                  >
+                  <button type="button" onClick={() => setSellersLoadAttempt(n => n + 1)}
+                    className="self-start text-xs text-blue-600 dark:text-sky-400 underline">
                     Reintentar
                   </button>
                 </div>
               ) : (
                 <>
-                  {/* Search box */}
                   <div className="relative mb-3">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
                     <input
                       value={sellerSearch}
                       onChange={(e) => setSellerSearch(e.target.value)}
                       placeholder="Buscar por nombre o correo..."
-                      className="h-11 w-full rounded-xl border border-blue-100 dark:border-[#222732] bg-slate-50 dark:bg-[#171a22] pl-9 pr-3 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-sky-400"
+                      className="h-11 w-full rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] pl-9 pr-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--input-border-focus)] focus:shadow-[var(--ring-focus)]"
                     />
                   </div>
-
-                  {/* Select */}
                   <select
                     {...register("vendedorId")}
-                    className="h-12 w-full rounded-xl border border-blue-100 dark:border-[#222732] bg-white dark:bg-[#171a22] px-3 text-sm text-slate-900 dark:text-white outline-none focus:border-sky-400"
+                    className="h-12 w-full rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] px-3 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--input-border-focus)]"
                   >
                     <option value="">— Ningún vendedor —</option>
                     {filteredSellers.map((s) => (
@@ -268,147 +574,146 @@ export default function CheckoutPage() {
                       </option>
                     ))}
                   </select>
-
-                  {sellerSearch && filteredSellers.length === 0 && (
-                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                      No se encontraron vendedores con "{sellerSearch}".
-                    </p>
-                  )}
-                  {sellers.length === 0 && !sellerSearch && (
-                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                      No hay vendedores activos registrados en este momento.
-                    </p>
-                  )}
-                  {sellers.length > 0 && (
-                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                      {sellers.length} vendedor{sellers.length !== 1 ? "es" : ""} disponible{sellers.length !== 1 ? "s" : ""}
-                    </p>
+                  {sellers.length === 0 && (
+                    <p className="mt-2 text-xs text-[var(--text-muted)]">No hay vendedores activos.</p>
                   )}
                 </>
               )}
-            </div>
-          </section>
+            </section>
 
-          {/* ── Bank info ── */}
-          <section className="rounded-3xl border border-blue-100 dark:border-[#222732] bg-white dark:bg-[#12151c] p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 shadow-sm dark:bg-sky-950 dark:text-sky-400">
-                <CreditCard className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="font-display text-xl font-bold text-slate-900 dark:text-white">Pago por Transferencia Bancaria</h2>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600 dark:text-sky-400">Banco Pichincha Ecuador</p>
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2 rounded-2xl bg-slate-50 dark:bg-[#171a22] p-4 text-sm">
-              <div>
-                <span className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Banco</span>
-                <span className="mt-1 block font-semibold text-slate-900 dark:text-white">Banco Pichincha</span>
-              </div>
-              <div>
-                <span className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">N° de Cuenta</span>
-                <span className="mt-1 block font-mono font-bold text-sky-600 dark:text-sky-400">2213521473</span>
-              </div>
-              <div className="sm:col-span-2">
-                <span className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Titular</span>
-                <span className="mt-1 block font-semibold text-slate-900 dark:text-white">Danny Alexander Guaman Pillajo</span>
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-xl border border-blue-100 dark:border-[#222732] bg-sky-50 dark:bg-sky-950/40 p-4 text-sm leading-relaxed">
-              <p className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
-                <MessageSquare className="h-4 w-4 text-sky-600 dark:text-sky-400" /> Pasos para confirmar tu pedido:
-              </p>
-              <ol className="mt-2 list-inside list-decimal space-y-1 text-slate-700 dark:text-slate-300">
-                <li>Realiza la transferencia del monto total a la cuenta indicada.</li>
-                <li>Sube el comprobante en <strong>Mis pedidos</strong> después de confirmar.</li>
-                <li>Si deseas, envía también el comprobante por WhatsApp a{" "}
-                  <a
-                    href="https://wa.me/593999001471?text=Hola,%20adjunto%20mi%20comprobante%20de%20pago"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-semibold text-sky-600 dark:text-sky-400 underline"
-                  >
-                    +593 999 001 471
-                  </a>.
-                </li>
-              </ol>
-            </div>
-          </section>
-
-          {/* ── Notes ── */}
-          <section>
-            <h2 className="mb-3 font-display text-xl font-bold text-slate-900 dark:text-white">Notas <span className="text-sm font-normal text-slate-400">(opcional)</span></h2>
-            <textarea
-              {...register("notas")}
-              rows={3}
-              placeholder="Indicaciones adicionales para tu pedido"
-              className="w-full rounded-xl border border-blue-100 dark:border-[#222732] bg-white dark:bg-[#12151c] p-4 text-sm text-slate-900 dark:text-white outline-none focus:border-sky-400"
-            />
-          </section>
-        </div>
-        {/* ── Order summary ── */}
-        <aside className="h-fit rounded-2xl bg-white dark:bg-[#12151c] text-slate-900 dark:text-white p-6 border border-slate-100 dark:border-[#222732] shadow-sm sticky top-20">
-          <h3 className="font-display text-xl font-bold text-slate-900 dark:text-white">Resumen del pedido</h3>
-          <ul className="mt-4 flex flex-col gap-3 text-sm">
-            {cart?.items.map((item) => (
-              <li key={item.id} className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <img src={resolveMediaUrl(item.imagenUrl) ?? "/placeholder.svg"} alt={item.nombre}
-                    className="h-12 w-12 rounded-lg object-contain bg-slate-50 dark:bg-slate-800 p-2" onError={(e)=>{(e.currentTarget as HTMLImageElement).src="/placeholder.svg"}} />
-                  <div className="truncate">
-                    <div className="text-sm font-medium truncate text-slate-900 dark:text-white">{item.nombre}</div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400">x{item.cantidad}</div>
-                  </div>
+            {/* ── Datos bancarios ── */}
+            <section className="rounded-2xl border border-blue-200 dark:border-sky-900/50 bg-[var(--card-bg)] p-6 shadow-[var(--shadow-card)]">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-sky-400">
+                  <CreditCard className="h-5 w-5" />
                 </div>
-                <div className="font-medium text-slate-900 dark:text-white">{formatCurrency(item.precioUnitario * item.cantidad)}</div>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-6 flex flex-col gap-2 border-t border-slate-100 dark:border-[#222732] pt-4 text-sm">
-            <div className="flex justify-between text-slate-500 dark:text-slate-400">
-              <span>Subtotal</span>
-              <span className="font-semibold text-slate-900 dark:text-white">{formatCurrency(subtotal)}</span>
-            </div>
-            <div className="flex justify-between text-slate-500 dark:text-slate-400">
-              <span>Envío</span>
-              <span className="font-semibold text-slate-900 dark:text-white">
-                {shippingCost != null ? formatCurrency(shippingCost) : "Según tu ciudad"}
-              </span>
-            </div>
-            <div className="flex justify-between border-t border-slate-100 dark:border-[#222732] pt-2 text-base font-bold text-slate-900 dark:text-white">
-              <span>Total</span>
-              <span>{formatCurrency(total)}</span>
-            </div>
+                <div>
+                  <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">Transferencia Bancaria</h2>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-blue-500 dark:text-sky-400">Banco Pichincha</p>
+                </div>
+              </div>
+              <div className="grid gap-3 rounded-xl bg-blue-50 dark:bg-blue-950/20 p-4 text-sm sm:grid-cols-2">
+                <div>
+                  <span className="block text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Banco</span>
+                  <span className="mt-0.5 block font-bold text-[var(--text-primary)]">Banco Pichincha</span>
+                </div>
+                <div>
+                  <span className="block text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">N° de Cuenta</span>
+                  <span className="mt-0.5 block font-mono font-bold text-blue-600 dark:text-sky-400">2213521473</span>
+                </div>
+                <div className="sm:col-span-2">
+                  <span className="block text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Titular</span>
+                  <span className="mt-0.5 block font-bold text-[var(--text-primary)]">Danny Alexander Guaman Pillajo</span>
+                </div>
+              </div>
+              <div className="mt-4 flex items-start gap-3 rounded-xl border border-blue-100 dark:border-sky-900/50 bg-blue-50 dark:bg-sky-950/20 p-4 text-sm">
+                <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-blue-500 dark:text-sky-400" />
+                <div>
+                  <p className="font-bold text-[var(--text-primary)]">Pasos para confirmar tu pedido:</p>
+                  <ol className="mt-2 list-decimal list-inside space-y-1 text-[var(--text-secondary)]">
+                    <li>Realiza la transferencia del monto total.</li>
+                    <li>Sube el comprobante en <strong>Mis pedidos</strong>.</li>
+                    <li>También puedes enviarlo por{" "}
+                      <a href="https://wa.me/593999001471" target="_blank" rel="noreferrer"
+                        className="font-semibold text-blue-600 dark:text-sky-400 underline">
+                        WhatsApp +593 999 001 471
+                      </a>.
+                    </li>
+                  </ol>
+                </div>
+              </div>
+            </section>
+
+            {/* ── Notas ── */}
+            <section className="rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-6 shadow-[var(--shadow-card)]">
+              <h2 className="mb-3 font-display text-lg font-bold text-[var(--text-primary)]">
+                Notas <span className="text-sm font-normal text-[var(--text-muted)]">(opcional)</span>
+              </h2>
+              <textarea
+                {...register("notas")}
+                rows={3}
+                placeholder="Indicaciones adicionales..."
+                className="w-full rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] p-4 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--input-border-focus)] focus:shadow-[var(--ring-focus)]"
+              />
+            </section>
           </div>
 
-          {/* Selected seller summary */}
-          {watch("vendedorId") && (
-            <div className="mt-4 rounded-xl border border-blue-100 dark:border-sky-900/50 bg-sky-50 dark:bg-sky-950/40 px-4 py-3 text-xs">
-              <p className="font-semibold text-sky-700 dark:text-sky-300">Vendedor seleccionado:</p>
-              <p className="text-sky-600 dark:text-sky-400">
-                {sellers.find((s) => String(s.id) === watch("vendedorId"))
-                  ? `${sellers.find((s) => String(s.id) === watch("vendedorId"))!.nombre} ${sellers.find((s) => String(s.id) === watch("vendedorId"))!.apellido}`
-                  : `ID #${watch("vendedorId")}`}
-              </p>
-            </div>
-          )}
+          {/* ════ ASIDE ════ */}
+          <aside className="h-fit rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-6 shadow-[var(--shadow-card)] lg:sticky lg:top-20">
+            <h3 className="font-display text-lg font-bold text-[var(--text-primary)]">Resumen del pedido</h3>
 
-          <Button
-            type="submit"
-            variant="primary"
-            size="lg"
-            fullWidth
-            className="mt-6"
-            isLoading={isSubmitting}
-            disabled={isSubmitting}
-          >
-            Confirmar pedido
-          </Button>
-          <p className="mt-3 text-center text-xs text-slate-400 dark:text-slate-500">Después de confirmar, subirás tu comprobante de pago.</p>
-        </aside>
-      </form>
+            <ul className="mt-4 flex flex-col gap-3 text-sm">
+              {cart?.items.map((item) => (
+                <li key={item.id} className="flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <img
+                      src={resolveMediaUrl(item.imagenUrl) ?? "/placeholder.svg"}
+                      alt={item.nombre}
+                      className="h-12 w-12 shrink-0 rounded-xl border border-[var(--bg-border)] bg-[var(--bg-surface2)] object-contain p-1"
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/placeholder.svg"; }}
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-[var(--text-primary)]">{item.nombre}</p>
+                      <p className="text-xs text-[var(--text-muted)]">×{item.cantidad}</p>
+                    </div>
+                  </div>
+                  <span className="shrink-0 font-semibold text-[var(--text-primary)]">
+                    {formatCurrency(item.precioUnitario * item.cantidad)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-5 flex flex-col gap-2 border-t border-[var(--bg-border)] pt-4 text-sm">
+              <div className="flex justify-between text-[var(--text-secondary)]">
+                <span>Subtotal</span>
+                <span className="font-semibold text-[var(--text-primary)]">{formatCurrency(subtotal)}</span>
+              </div>
+              <div className="flex justify-between text-[var(--text-secondary)]">
+                <span className="flex items-center gap-1.5">
+                  <Truck className="h-3.5 w-3.5 text-blue-500" />
+                  Envío {tipoEntrega === "RETIRO_LOCAL" ? "(retiro)" : "(Servientrega)"}
+                </span>
+                <span className={`font-semibold ${shippingCost === 0 ? "text-emerald-600 dark:text-emerald-400" : "text-[var(--text-primary)]"}`}>
+                  {shippingCost === 0 ? "Gratis" : formatCurrency(shippingCost)}
+                </span>
+              </div>
+              <div className="flex justify-between border-t border-[var(--bg-border)] pt-3 text-base font-black">
+                <span className="text-[var(--text-primary)]">Total</span>
+                <span className="text-blue-600 dark:text-sky-400">{formatCurrency(total)}</span>
+              </div>
+            </div>
+
+            {/* Vendedor seleccionado */}
+            {watch("vendedorId") && (
+              <div className="mt-4 rounded-xl border border-blue-100 dark:border-sky-900/50 bg-blue-50 dark:bg-sky-950/20 px-4 py-3 text-xs">
+                <p className="font-bold text-blue-700 dark:text-sky-300">Vendedor:</p>
+                <p className="mt-0.5 text-blue-600 dark:text-sky-400">
+                  {(() => {
+                    const s = sellers.find((x) => String(x.id) === watch("vendedorId"));
+                    return s ? `${s.nombre} ${s.apellido}` : `ID #${watch("vendedorId")}`;
+                  })()}
+                </p>
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              variant="secondary"
+              size="lg"
+              fullWidth
+              className="mt-5"
+              isLoading={isSubmitting}
+              disabled={isSubmitting}
+            >
+              Confirmar pedido
+            </Button>
+            <p className="mt-3 text-center text-xs text-[var(--text-muted)]">
+              Después de confirmar, subirás tu comprobante de pago.
+            </p>
+          </aside>
+        </form>
+      </div>
     </div>
   );
 }

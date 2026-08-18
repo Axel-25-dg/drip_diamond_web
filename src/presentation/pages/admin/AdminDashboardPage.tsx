@@ -6,7 +6,7 @@ import { Button } from "@/presentation/components/ui/Button";
 import { formatCurrency } from "@/presentation/utils/format";
 import {
   Package, Users, Mail, DollarSign, ShoppingBag, Clock,
-  Plus, ArrowUpRight, Tag, Layers, Ruler, TrendingUp, Zap,
+  Plus, ArrowUpRight, Tag, Layers, Ruler, TrendingUp, Zap, Shield,
 } from "lucide-react";
 
 export default function AdminDashboardPage() {
@@ -81,6 +81,7 @@ export default function AdminDashboardPage() {
             { to: "/admin/marcas", title: "Marcas", desc: "Gestiona las marcas disponibles en el catálogo.", icon: Tag, badge: "Catálogo" },
             { to: "/admin/categorias", title: "Categorías", desc: "Organiza productos por categorías con imágenes.", icon: Layers, badge: "Catálogo" },
             { to: "/admin/tallas", title: "Tallas", desc: "Administra las tallas maestras del sistema.", icon: Ruler, badge: "Catálogo" },
+            { to: "/admin/seguridad", title: "Panel de Seguridad", desc: "IPs bloqueadas, intentos de login y auditoría de acciones.", icon: Shield, badge: "Seguridad" },
             { to: "/contador", title: "Contabilidad & Despacho", desc: "Verifica pagos y confirma entregas.", icon: Clock, badge: "Contador" },
             { to: "/vendedor", title: "Comisiones & Ventas", desc: "Panel de vendedores y liquidaciones mensuales.", icon: DollarSign, badge: "Vendedor" },
           ].map(({ to, title, desc, icon: Icon, badge }) => (

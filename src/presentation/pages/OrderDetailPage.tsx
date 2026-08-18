@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { UploadCloud, CheckCircle2, XCircle, CreditCard, MessageSquare, ArrowLeft, Package } from "lucide-react";
+import { UploadCloud, CheckCircle2, XCircle, CreditCard, MessageSquare, ArrowLeft, Package, MapPin, Ban } from "lucide-react";
 import { useCases } from "@/infrastructure/factories/useCases.factory";
 import type { Order, UploadComprobanteMetadata } from "@/domain/entities/Order";
 import { Spinner } from "@/presentation/components/ui/Spinner";
 import { Badge } from "@/presentation/components/ui/Badge";
 import { Button } from "@/presentation/components/ui/Button";
+import { ShippingTicket } from "@/presentation/components/ui/ShippingTicket";
+import { useAuthStore } from "@/presentation/store/authStore";
 import {
   formatAddressForDisplay, formatCurrency, formatDate,
   orderStatusLabel, orderStatusTone, resolveMediaUrl,
@@ -65,6 +67,34 @@ export default function OrderDetailPage() {
       toast.error(err?.message || "No se pudo subir el comprobante.");
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const { user } = useAuthStore();
+  const rol = user?.rol?.toLowerCase();
+  const isStaff = rol === "administrador" || rol === "contador" || rol === "vendedor";
+  const isCliente = rol === "cliente" || !rol;
+
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  const handleCancel = async () => {
+    if (!order) return;
+    if (!confirm("¿Estás seguro de que deseas cancelar este pedido? Esta acción no se puede deshacer.")) return;
+    setIsCancelling(true);
+    try {
+      const { data } = await import("@/infrastructure/http/httpClient").then(m =>
+        m.httpClient.post<any>(`/pedidos/${order.id}/cancelar/`)
+      );
+      const safeUnwrap = (d: any) => d?.data ?? d;
+      const updated = await import("@/infrastructure/adapters/order.adapter").then(m =>
+        m.toOrder(safeUnwrap(data))
+      );
+      setOrder(updated);
+      toast.success("Pedido cancelado correctamente.");
+    } catch (err: any) {
+      toast.error(err?.message || "No se pudo cancelar el pedido.");
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -372,15 +402,53 @@ export default function OrderDetailPage() {
               ))}
             </div>
 
-            <div className="mt-5">
+            <div className="mt-5 flex flex-col gap-2">
               <Link to="/pedidos">
                 <Button variant="outline" fullWidth size="sm">
                   <ArrowLeft className="h-3.5 w-3.5" /> Volver a mis pedidos
                 </Button>
               </Link>
+
+              {/* Cancelar pedido — solo si está en estados cancelables */}
+              {["PENDIENTE_DE_PAGO", "COMPROBANTE_ENVIADO", "PAGO_RECHAZADO"].includes(order.estado) && (
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  disabled={isCancelling}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/20 py-2.5 text-sm font-semibold text-red-600 dark:text-red-400 transition-all hover:border-red-400 hover:bg-red-100 dark:hover:bg-red-950/40 disabled:opacity-50"
+                >
+                  {isCancelling
+                    ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-red-400 border-t-transparent" /> Cancelando...</>
+                    : <><Ban className="h-4 w-4" /> Cancelar pedido</>
+                  }
+                </button>
+              )}
             </div>
           </aside>
         </div>
+
+        {/* ══ SECCIÓN STAFF: Mapa + Ticket de envío ══
+            Solo visible para administrador, contador y vendedor.
+            El cliente NO ve esto — solo ve su resumen y comprobante arriba.
+        ══════════════════════════════════════════════════════════ */}
+        {isStaff && (
+          <section className="mt-8 rounded-2xl border border-blue-200 dark:border-sky-900/50 bg-[var(--card-bg)] p-6 shadow-[var(--shadow-card)]">
+            <div className="mb-5 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white">
+                <MapPin className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">
+                  Ubicación del cliente & Ticket Servientrega
+                </h2>
+                <p className="text-xs text-[var(--text-muted)]">
+                  Visible solo para staff — no lo ve el cliente
+                </p>
+              </div>
+            </div>
+            <ShippingTicket order={order} />
+          </section>
+        )}
       </div>
     </div>
   );

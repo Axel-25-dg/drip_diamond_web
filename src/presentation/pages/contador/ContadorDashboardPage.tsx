@@ -4,18 +4,13 @@ import type { PaymentProof } from "@/domain/entities/User";
 import type { Order } from "@/domain/entities/Order";
 import { Button } from "@/presentation/components/ui/Button";
 import { Badge } from "@/presentation/components/ui/Badge";
-import { formatCurrency, orderStatusLabel, orderStatusTone, resolveMediaUrl } from "@/presentation/utils/format";
+import { ShippingTicket } from "@/presentation/components/ui/ShippingTicket";
+import { formatCurrency, formatAddressForDisplay, orderStatusLabel, orderStatusTone, resolveMediaUrl } from "@/presentation/utils/format";
 import { toast } from "sonner";
 import {
-  CheckCircle,
-  XCircle,
-  FileText,
-  PackageCheck,
-  Truck,
-  Boxes,
-  CheckCircle2,
-  X,
-  DollarSign,
+  CheckCircle, XCircle, FileText, PackageCheck,
+  Truck, Boxes, CheckCircle2, X, DollarSign,
+  Eye, MapPin, User, Phone,
 } from "lucide-react";
 
 type Tab = "COMPROBANTES" | "PEDIDOS";
