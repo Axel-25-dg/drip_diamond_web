@@ -303,7 +303,14 @@ export function toOrder(dto: OrderDTO): Order {
         ? `${(dto as any).vendedor?.user?.first_name || (dto as any).vendedor?.user?.nombre || ""} ${(dto as any).vendedor?.user?.last_name || (dto as any).vendedor?.user?.apellido || ""}`.trim()
         : null) ||
       null,
-    direccionEnvio: formatAddressForDisplay(addressValue),
+    direccionEnvio:
+      typeof addressValue === "string"
+        ? addressValue
+        : typeof addressValue === "object" && addressValue !== null
+        ? ((addressValue.direccion_formateada || addressValue.direccion)
+            ? String(addressValue.direccion_formateada || addressValue.direccion)
+            : formatAddressForDisplay(addressValue))
+        : String(addressValue ?? ""),
     provincia,
     ciudad,
     telefonoContacto: telefono,

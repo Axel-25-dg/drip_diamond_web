@@ -3,7 +3,7 @@
  * Usado en admin, contador y vendedor para imprimir y pegar en el paquete.
  */
 import { useEffect, useRef, useState } from "react";
-import { MapContainer, TileLayer, Marker } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { Printer, MapPin, Package, Phone, User, Hash, Truck } from "lucide-react";
@@ -19,34 +19,79 @@ L.Icon.Default.mergeOptions({
 });
 
 /* Intenta extraer coordenadas lat/lng de la dirección si vienen en el string */
-function extractCoords(direccion: string): { lat: number; lng: number } | null {
+export function extractCoords(direccion: string): { lat: number; lng: number } | null {
+  if (!direccion) return null;
   const m = direccion.match(/(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
   if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
   return null;
 }
 
-/* Geocodifica la dirección si no hay coords */
-async function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ", Quito, Ecuador")}&limit=1&countrycodes=ec`,
-      { headers: { "Accept-Language": "es" } }
-    );
-    const data = await res.json();
-    if (data[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-  } catch { /* no-op */ }
+/* Geocodificación inteligente para direcciones de Quito */
+export async function smartGeocode(address: string): Promise<{ lat: number; lng: number } | null> {
+  if (!address || !address.trim()) return null;
+
+  const fromCoords = extractCoords(address);
+  if (fromCoords) return fromCoords;
+
+  const clean = address
+    .replace(/[\(\[]-?\d+\.\d+,\s*-?\d+\.\d+[\)\]]/g, "")
+    .replace(/·/g, " ")
+    .replace(/\b(casa esquinera|esquina|frente a|junto a|sector|barrio|lote|mz|manzana)\b/gi, " ")
+    .replace(/\b(Quito|Pichincha|Ecuador)\b/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!clean) return null;
+
+  const queries: string[] = [`${clean}, Quito, Ecuador`];
+
+  const tokens = clean
+    .split(/[\s,\.-]+/)
+    .filter((w) => w.length >= 4 && !/^\d+$/.test(w));
+
+  if (tokens.length >= 2) {
+    queries.push(`${tokens.slice(0, 2).join(" ")}, Quito, Ecuador`);
+  }
+  for (const token of tokens) {
+    if (!queries.some((q) => q.toLowerCase().includes(token.toLowerCase()))) {
+      queries.push(`${token}, Quito, Ecuador`);
+    }
+  }
+
+  for (const q of queries) {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1&countrycodes=ec`,
+        { headers: { "Accept-Language": "es" } }
+      );
+      const data = await res.json();
+      if (data && data[0] && data[0].lat && data[0].lon) {
+        return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+      }
+    } catch { /* continue */ }
+  }
+
   return null;
 }
 
 const QUITO_DEFAULT = { lat: -0.1807, lng: -78.4678 };
 
+function MapFlyTo({ position }: { position: { lat: number; lng: number } }) {
+  const map = useMap();
+  useEffect(() => {
+    map.invalidateSize();
+    map.setView(position, 17);
+  }, [map, position]);
+  return null;
+}
+
 /* ─── Mini map component ─────────────────────────────────── */
 function MiniMap({ coords }: { coords: { lat: number; lng: number } }) {
   return (
-    <div style={{ height: 220, width: "100%" }} className="overflow-hidden rounded-xl border border-blue-100">
+    <div style={{ height: 260, width: "100%" }} className="overflow-hidden rounded-xl border border-blue-100 shadow-sm">
       <MapContainer
         center={coords}
-        zoom={16}
+        zoom={17}
         style={{ height: "100%", width: "100%" }}
         scrollWheelZoom={false}
         zoomControl={true}
@@ -54,6 +99,7 @@ function MiniMap({ coords }: { coords: { lat: number; lng: number } }) {
       >
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         <Marker position={coords} />
+        <MapFlyTo position={coords} />
       </MapContainer>
     </div>
   );
@@ -70,19 +116,27 @@ export function ShippingTicket({ order }: Props) {
   const [loadingMap, setLoadingMap] = useState(true);
   const printRef = useRef<HTMLDivElement>(null);
 
+  const rawAddress = typeof order.direccionEnvio === "string" ? order.direccionEnvio : JSON.stringify(order.direccionEnvio ?? "");
   const direccion = formatAddressForDisplay(order.direccionEnvio) || "";
 
   useEffect(() => {
+    let isMounted = true;
     const run = async () => {
       setLoadingMap(true);
-      const fromString = extractCoords(direccion);
-      if (fromString) { setCoords(fromString); setLoadingMap(false); return; }
-      const geocoded = await geocodeAddress(direccion);
-      setCoords(geocoded ?? QUITO_DEFAULT);
-      setLoadingMap(false);
+      const fromString = extractCoords(rawAddress);
+      if (fromString) {
+        if (isMounted) { setCoords(fromString); setLoadingMap(false); }
+        return;
+      }
+      const geocoded = await smartGeocode(direccion || rawAddress);
+      if (isMounted) {
+        setCoords(geocoded ?? QUITO_DEFAULT);
+        setLoadingMap(false);
+      }
     };
     run();
-  }, [direccion]);
+    return () => { isMounted = false; };
+  }, [rawAddress, direccion]);
 
   /* ── Imprimir solo el ticket ── */
   const handlePrint = () => {
@@ -224,6 +278,19 @@ export function ShippingTicket({ order }: Props) {
               </div>
             )}
           </div>
+
+          {coords && (
+            <div style={{ padding: "0 24px 16px" }}>
+              <p style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", color: "#64748b", marginBottom: 4 }}>
+                Mapa de entrega (GPS)
+              </p>
+              <img
+                src={`https://static-maps.yandex.ru/1.x/?l=map&pt=${coords.lng},${coords.lat},pm2rdm&z=15&w=650&h=240`}
+                alt="Mapa de entrega"
+                style={{ width: "100%", height: 180, objectFit: "cover", borderRadius: 12, border: "1px solid #cbd5e1" }}
+              />
+            </div>
+          )}
 
           <hr className="divider" />
 

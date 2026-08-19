@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { UploadCloud, CheckCircle2, XCircle, CreditCard, MessageSquare, ArrowLeft, Package, MapPin, Ban } from "lucide-react";
+import { UploadCloud, CheckCircle2, XCircle, CreditCard, MessageSquare, ArrowLeft, Package, Ban } from "lucide-react";
 import { useCases } from "@/infrastructure/factories/useCases.factory";
 import type { Order, UploadComprobanteMetadata } from "@/domain/entities/Order";
 import { Spinner } from "@/presentation/components/ui/Spinner";
 import { Badge } from "@/presentation/components/ui/Badge";
 import { Button } from "@/presentation/components/ui/Button";
-import { ShippingTicket } from "@/presentation/components/ui/ShippingTicket";
-import { useAuthStore } from "@/presentation/store/authStore";
 import {
   formatAddressForDisplay, formatCurrency, formatDate,
   orderStatusLabel, orderStatusTone, resolveMediaUrl,
@@ -69,11 +67,6 @@ export default function OrderDetailPage() {
       setIsUploading(false);
     }
   };
-
-  const { user } = useAuthStore();
-  const rol = user?.rol?.toLowerCase();
-  const isStaff = rol === "administrador" || rol === "contador" || rol === "vendedor";
-  const isCliente = rol === "cliente" || !rol;
 
   const [isCancelling, setIsCancelling] = useState(false);
 
@@ -426,29 +419,6 @@ export default function OrderDetailPage() {
             </div>
           </aside>
         </div>
-
-        {/* ══ SECCIÓN STAFF: Mapa + Ticket de envío ══
-            Solo visible para administrador, contador y vendedor.
-            El cliente NO ve esto — solo ve su resumen y comprobante arriba.
-        ══════════════════════════════════════════════════════════ */}
-        {isStaff && (
-          <section className="mt-8 rounded-2xl border border-blue-200 dark:border-sky-900/50 bg-[var(--card-bg)] p-6 shadow-[var(--shadow-card)]">
-            <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white">
-                <MapPin className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">
-                  Ubicación del cliente & Ticket Servientrega
-                </h2>
-                <p className="text-xs text-[var(--text-muted)]">
-                  Visible solo para staff — no lo ve el cliente
-                </p>
-              </div>
-            </div>
-            <ShippingTicket order={order} />
-          </section>
-        )}
       </div>
     </div>
   );

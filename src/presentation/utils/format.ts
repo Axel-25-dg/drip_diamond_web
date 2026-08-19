@@ -9,19 +9,21 @@ export function formatDate(value?: string): string {
   return new Intl.DateTimeFormat("es-EC", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
+const COORD_REGEX = /\s*[\(\[]-?\d+\.\d+,\s*-?\d+\.\d+[\)\]]/g;
+
 export function formatAddressForDisplay(value: unknown): string {
   if (value == null || value === "") return "";
 
-  if (typeof value === "string") return value.trim();
+  let raw = "";
 
-  if (Array.isArray(value)) {
-    return value
+  if (typeof value === "string") {
+    raw = value.trim();
+  } else if (Array.isArray(value)) {
+    raw = value
       .filter((item) => item != null && item !== "")
       .map((item) => String(item).trim())
       .join(" · ");
-  }
-
-  if (typeof value === "object") {
+  } else if (typeof value === "object") {
     const record = value as Record<string, unknown>;
     const parts = [
       record.direccion_formateada,
@@ -35,11 +37,13 @@ export function formatAddressForDisplay(value: unknown): string {
       .filter((item): item is string => typeof item === "string" && item.trim() !== "")
       .map((item) => item.trim());
 
-    if (parts.length > 0) return parts.join(" · ");
-    return JSON.stringify(record);
+    if (parts.length > 0) raw = parts.join(" · ");
+    else raw = JSON.stringify(record);
+  } else {
+    raw = String(value).trim();
   }
 
-  return String(value).trim();
+  return raw.replace(COORD_REGEX, "").trim();
 }
 
 const STATUS_LABELS: Record<OrderStatus, string> = {

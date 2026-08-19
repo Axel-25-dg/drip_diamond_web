@@ -127,7 +127,7 @@ export default function OrdersPage() {
 }
 
 /* ─── Compact order card ──────────────────────────────────── */
-function OrderCard({ order, onCancelled }: { order: Order; onCancelled: (id: number) => void }) {
+function OrderCard({ order }: { order: Order; onCancelled?: (id: number) => void }) {
   const canUpload  = order.estado === "PENDIENTE_DE_PAGO" || order.estado === "PAGO_RECHAZADO";
   const canCancel  = ["PENDIENTE_DE_PAGO", "COMPROBANTE_ENVIADO", "PAGO_RECHAZADO"].includes(order.estado);
   const firstItem  = order.items?.[0];

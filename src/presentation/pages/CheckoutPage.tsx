@@ -17,6 +17,7 @@ import { Input } from "@/presentation/components/ui/Input";
 import { Button } from "@/presentation/components/ui/Button";
 import { Spinner } from "@/presentation/components/ui/Spinner";
 import { formatCurrency, resolveMediaUrl } from "@/presentation/utils/format";
+import { smartGeocode } from "@/presentation/components/ui/ShippingTicket";
 
 /* ── Fix leaflet icon in Vite ─────────────────────────────── */
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -267,10 +268,17 @@ export default function CheckoutPage() {
   const onSubmit = async (form: CheckoutForm) => {
     if (!cart || cart.items.length === 0) { toast.error("Tu carrito está vacío."); return; }
     setIsSubmitting(true);
+    const addressBase = form.direccionEnvio?.trim() || "";
+    const cleanBase = addressBase.replace(/\s*[\(\[]-?\d+\.\d+,\s*-?\d+\.\d+[\)\]]/g, "").trim();
+    const direccionConCoords =
+      form.tipoEntrega === "DOMICILIO" && markerPos
+        ? `${cleanBase} (${markerPos.lat.toFixed(6)}, ${markerPos.lng.toFixed(6)})`
+        : cleanBase;
+
     try {
       const order = await useCases.createOrder.execute({
-        direccionEnvio:      form.direccionEnvio,
-        direccionFormateada: form.direccionEnvio,
+        direccionEnvio:      direccionConCoords,
+        direccionFormateada: direccionConCoords,
         provincia:           "Pichincha",
         ciudad:              "Quito",
         telefonoContacto:    form.telefonoContacto,
