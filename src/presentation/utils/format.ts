@@ -94,7 +94,7 @@ export function resolveMediaUrl(path: any): string | null {
   if (!value || value === "null" || value === "undefined" || value === "[object Object]") return null;
   if (/^https?:\/\//i.test(value) || value.startsWith("data:")) return value;
 
-  const base = (import.meta.env.VITE_API_URL as string) || "http://127.0.0.1:8000/api";
+  const base = (import.meta.env.VITE_API_URL as string) || "https://dripdiamond.store/api";
   const origin = base.replace(/\/api\/?$/, "");
 
   if (value.startsWith("/media/") || value.startsWith("media/") || value.startsWith("uploads/")) {

@@ -1,0 +1,35 @@
+name: Deploy Frontend to Production
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies & Build
+        run: |
+          npm ci
+          echo "VITE_API_URL=https://dripdiamond.store/api" > .env
+          npm run build
+
+      - name: Copy files to VPS via SSH
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "dist/*"
+          target: "/var/www/drip_diamond_frontend/"
+          strip_components: 1
