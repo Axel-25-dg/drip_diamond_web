@@ -48,9 +48,9 @@ function getCategoryImage(category: Category): string | null {
 }
 
 const BENEFITS = [
-  { Icon: Truck,        title: "Envío express",     text: "Entrega en 48h con seguimiento en tiempo real hasta tu puerta." },
-  { Icon: ShieldCheck,  title: "Pares verificados", text: "Revisamos cada sneaker antes de enviarla para asegurar su calidad." },
-  { Icon: RefreshCw,    title: "Cambios sin líos",  text: "30 días para cambiar tu talla o modelo sin costos ocultos." },
+  { Icon: Truck, title: "Envío por Servientrega", text: "Despachos a todo Quito los días sábados o domingos para tu comodidad." },
+  { Icon: ShieldCheck, title: "Pares verificados", text: "Revisamos cada sneaker antes de enviarla para asegurar su calidad." },
+  { Icon: RefreshCw, title: "Cambios por fábrica", text: "Máximo 1 semana de plazo para solicitar cambios por daños de fábrica." },
 ];
 
 /* ─── Sneaker 3D component ─────────────────────────────────── */
@@ -282,12 +282,12 @@ export default function HomePage() {
             {/* Stats */}
             <div className="flex flex-wrap items-center gap-6 sm:gap-10 pt-2">
               {[
-                { v: "48h",  l: "Entrega express" },
+                { v: "Servientrega", l: "Envíos Sábados/Domingos" },
                 { v: "+500", l: "Modelos únicos" },
                 { v: "4.9/5", l: "Valoración media" },
               ].map((s) => (
                 <div key={s.l}>
-                  <p className="font-display text-2xl font-black text-gray-900 dark:text-white">{s.v}</p>
+                  <p className="font-display text-xl sm:text-2xl font-black text-gray-900 dark:text-white">{s.v}</p>
                   <p className="text-xs text-gray-400 dark:text-slate-400">{s.l}</p>
                 </div>
               ))}
@@ -525,7 +525,7 @@ export default function HomePage() {
                   Encuentra el par que define tu estilo.
                 </h2>
                 <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-                  Selección curada de zapatillas premium, envíos express y atención VIP para que no pierdas el paso.
+                  Selección curada de zapatillas premium, envíos por Servientrega los sábados y domingos a todo Quito.
                 </p>
               </div>
             </div>

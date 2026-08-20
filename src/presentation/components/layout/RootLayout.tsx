@@ -3,6 +3,7 @@ import { Toaster } from "sonner";
 import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
 import { CartDrawer } from "@/presentation/components/cart/CartDrawer";
+import { InfoPanelsModal } from "@/presentation/components/ui/InfoPanelsModal";
 
 export function RootLayout() {
   return (
@@ -13,6 +14,7 @@ export function RootLayout() {
       </main>
       <Footer />
       <CartDrawer />
+      <InfoPanelsModal />
       <Toaster position="top-center" richColors closeButton />
     </div>
   );

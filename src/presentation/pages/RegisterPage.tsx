@@ -6,6 +6,8 @@ import { useAuthStore } from "@/presentation/store/authStore";
 import { Input } from "@/presentation/components/ui/Input";
 import { Button } from "@/presentation/components/ui/Button";
 import { AuthShell } from "@/presentation/components/auth/AuthShell";
+import { sanitizeInput, bruteForceGuard } from "@/presentation/utils/securityUtils";
+import { useInfoPanels } from "@/presentation/store/useInfoPanels";
 
 interface RegisterForm {
   nombre: string;
@@ -21,6 +23,7 @@ interface RegisterForm {
 export default function RegisterPage() {
   const navigate = useNavigate();
   const { register: registerUser } = useAuthStore();
+  const { openPanel } = useInfoPanels();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
@@ -33,20 +36,30 @@ export default function RegisterPage() {
   const password = watch("password");
 
   const onSubmit = async (form: RegisterForm) => {
+    // Client-Side Anti-Brute-Force Rate Limiting
+    const guard = bruteForceGuard.checkAllowed("register-attempt", 4, 60000);
+    if (!guard.allowed) {
+      toast.error(`Demasiadas solicitudes de registro. Espera ${guard.waitSeconds}s.`);
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await registerUser({
-        nombre: form.nombre,
-        apellido: form.apellido,
-        correo: form.correo,
-        telefono: form.telefono,
-        direccion: form.direccion,
-        ciudad: form.ciudad,
+        nombre: sanitizeInput(form.nombre),
+        apellido: sanitizeInput(form.apellido),
+        correo: sanitizeInput(form.correo),
+        telefono: sanitizeInput(form.telefono),
+        direccion: form.direccion ? sanitizeInput(form.direccion) : undefined,
+        ciudad: form.ciudad ? sanitizeInput(form.ciudad) : undefined,
         password: form.password,
       });
-      toast.success("Cuenta creada. Ahora inicia sesión.");
+
+      bruteForceGuard.reset("register-attempt");
+      toast.success("Cuenta creada exitosamente. Ahora inicia sesión.");
       navigate("/login");
     } catch (err: any) {
+      bruteForceGuard.recordAttempt("register-attempt");
       toast.error(err?.message || "No se pudo crear la cuenta.");
     } finally {
       setIsSubmitting(false);
@@ -54,7 +67,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <AuthShell title="Crea tu cuenta" subtitle="Solo necesitamos algunos datos básicos, sin cédula ni RUC.">
+    <AuthShell title="Crea tu cuenta" subtitle="Solo datos básicos para entregas en Quito, sin cédula ni RUC.">
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
         <div className="grid grid-cols-2 gap-3">
           <Input label="Nombre" error={errors.nombre?.message} {...register("nombre", { required: "Requerido" })} />
@@ -67,13 +80,13 @@ export default function RegisterPage() {
           {...register("correo", { required: "Requerido" })}
         />
         <Input
-          label="Teléfono"
+          label="Teléfono (WhatsApp)"
           placeholder="09XXXXXXXX"
           error={errors.telefono?.message}
           {...register("telefono", { required: "Requerido" })}
         />
         <Input
-          label="Dirección exacta"
+          label="Dirección exacta en Quito"
           placeholder="Av. Amazonas y Naciones Unidas"
           error={errors.direccion?.message}
           {...register("direccion")}
@@ -99,6 +112,26 @@ export default function RegisterPage() {
             validate: (value) => value === password || "Las contraseñas no coinciden",
           })}
         />
+
+        <div className="text-[11px] text-slate-500 dark:text-slate-400">
+          Al hacer clic en Crear cuenta, aceptas nuestros{" "}
+          <button
+            type="button"
+            onClick={() => openPanel("terminos")}
+            className="text-sky-600 dark:text-sky-400 underline font-semibold"
+          >
+            Términos y condiciones
+          </button>{" "}
+          y{" "}
+          <button
+            type="button"
+            onClick={() => openPanel("privacidad")}
+            className="text-sky-600 dark:text-sky-400 underline font-semibold"
+          >
+            Políticas de privacidad
+          </button>
+          .
+        </div>
 
         <Button type="submit" size="lg" variant="secondary" fullWidth isLoading={isSubmitting} className="mt-2">
           Crear cuenta

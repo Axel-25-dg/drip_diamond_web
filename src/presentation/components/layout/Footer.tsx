@@ -1,8 +1,9 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/presentation/store/authStore";
-import { Mail, MapPin, ShieldCheck, Truck } from "lucide-react"
+import { useInfoPanels, type InfoPanelKey } from "@/presentation/store/useInfoPanels";
+import { Mail, MapPin, ShieldCheck, Truck, Phone, Sparkles } from "lucide-react";
 
-type IconProps = { className?: string }
+type IconProps = { className?: string };
 
 function InstagramIcon({ className }: IconProps) {
   return (
@@ -20,10 +21,10 @@ function InstagramIcon({ className }: IconProps) {
       <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
       <path d="M17.5 6.5h.01" />
     </svg>
-  )
+  );
 }
 
-function FacebookIcon({ className }: IconProps) {
+function TikTokIcon({ className }: IconProps) {
   return (
     <svg
       className={className}
@@ -35,158 +36,216 @@ function FacebookIcon({ className }: IconProps) {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+      <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
     </svg>
-  )
-}
-
-function WhatsappIcon({ className }: IconProps) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z" />
-      <path d="M9 9.5c0 2.5 2 4.5 4.5 4.5" />
-    </svg>
-  )
+  );
 }
 
 const SHOP_LINKS = [
   { to: "/catalogo", label: "Todo el catálogo" },
   { to: "/catalogo?ordering=-reciente", label: "Novedades" },
   { to: "/catalogo?ordering=precio", label: "Mejores precios" },
-]
+];
+
 const ACCOUNT_LINKS = [
   { to: "/perfil", label: "Mi perfil" },
   { to: "/pedidos", label: "Mis pedidos" },
   { to: "/carrito", label: "Mi carrito" },
-]
-const HELP_LINKS = [
-  { to: "#", label: "Cómo comprar" },
-  { to: "#", label: "Envíos y cobertura" },
-  { to: "#", label: "Métodos de pago" },
-  { to: "#", label: "Preguntas frecuentes" },
-]
+];
+
+const HELP_PANELS: { panelKey: InfoPanelKey; label: string }[] = [
+  { panelKey: "como-comprar", label: "Cómo comprar" },
+  { panelKey: "envios", label: "Envíos y cobertura" },
+  { panelKey: "pagos", label: "Métodos de pago" },
+  { panelKey: "faq", label: "Preguntas frecuentes" },
+];
 
 const SOCIALS = [
-  { Icon: InstagramIcon, label: "Instagram", href: "#" },
-  { Icon: FacebookIcon, label: "Facebook", href: "#" },
-  { Icon: WhatsappIcon, label: "WhatsApp", href: "#" },
-]
+  {
+    Icon: InstagramIcon,
+    label: "Instagram",
+    href: "https://www.instagram.com/drip.diamond.dd/?hl=en",
+  },
+  {
+    Icon: TikTokIcon,
+    label: "TikTok",
+    href: "https://www.tiktok.com/@drip.diamond0?_r=1&_t=ZS-992u2C77kbX",
+  },
+];
 
 export function Footer() {
   const { isAuthenticated } = useAuthStore();
   const { pathname } = useLocation();
+  const { openPanel } = useInfoPanels();
 
-  // Hide footer for authenticated users or when on auth routes
-  if (isAuthenticated || pathname.startsWith("/login") || pathname.startsWith("/register")) {
+  // Hide footer when on auth routes
+  if (isAuthenticated || pathname.startsWith("/login") || pathname.startsWith("/registro")) {
     return null;
   }
 
   return (
-    <footer className="relative bg-[#0b1220] text-slate-200">
-      {/* Línea de acento superior */}
-      <div className="h-px w-full bg-gradient-to-r from-transparent via-sky-500/60 to-transparent" />
+    <footer className="relative bg-[#060a12] text-slate-200 overflow-hidden border-t border-white/10">
+      {/* Glow Effects */}
+      <div className="pointer-events-none absolute -left-20 top-0 h-64 w-64 rounded-full bg-sky-500/10 blur-3xl" />
+      <div className="pointer-events-none absolute right-0 bottom-0 h-64 w-64 rounded-full bg-blue-600/10 blur-3xl" />
 
-      <div className="container-app grid gap-8 sm:gap-12 py-10 sm:py-16 grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-5">
-        {/* Marca */}
-        <div className="xs:col-span-2 sm:col-span-2 lg:col-span-2">
-          <Link to="/" className="inline-flex select-none items-center gap-3">
+      {/* Línea de acento superior */}
+      <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-sky-400 to-transparent shadow-[0_0_12px_rgba(56,189,248,0.5)]" />
+
+      <div className="container-app relative z-10 grid gap-8 sm:gap-12 py-12 sm:py-16 grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-5">
+        {/* Marca e Información de contacto */}
+        <div className="xs:col-span-2 sm:col-span-2 lg:col-span-2 space-y-5">
+          <Link to="/" className="inline-flex select-none items-center gap-3 group">
             <img
               src="/logo_drip.png"
               alt="Logo Drip Diamond"
-              className="h-10 sm:h-12 w-auto object-contain drop-shadow-[0_0_12px_rgba(56,189,248,0.35)]"
+              className="h-10 sm:h-12 w-auto object-contain drop-shadow-[0_0_15px_rgba(56,189,248,0.4)] transition-transform duration-300 group-hover:scale-105"
             />
             <span className="leading-none">
               <span className="font-display block text-xl sm:text-2xl font-black tracking-tight text-white">
                 DRIP<span className="text-sky-400">DIAMOND</span>
               </span>
-              <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-400">
+              <span className="mt-1 block text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">
                 Luxury Sneakers
               </span>
             </span>
           </Link>
 
-          <p className="mt-4 sm:mt-6 max-w-sm text-sm leading-relaxed text-slate-300">
-            Sneakers y streetwear de lujo. Entrega verificada a todo Quito con atención
-            personalizada.
+          <p className="max-w-md text-sm leading-relaxed text-slate-300">
+            Sneakers y streetwear de lujo. Entrega verificada a todo Quito con atención personalizada.
           </p>
 
-          <ul className="mt-4 sm:mt-6 space-y-3 text-sm text-slate-300">
-            <li className="flex items-center gap-3">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm space-y-2.5">
+            <div className="flex items-center gap-3 text-xs sm:text-sm text-slate-200">
               <MapPin className="h-4 w-4 shrink-0 text-sky-400" aria-hidden="true" />
-              <span>Quito, Ecuador</span>
-            </li>
-            <li className="flex items-center gap-3">
-              <Mail className="h-4 w-4 shrink-0 text-sky-400" aria-hidden="true" />
-              <a href="mailto:contacto@dripdiamond.ec" className="transition-colors hover:text-sky-300">
-                contacto@dripdiamond.ec
-              </a>
-            </li>
-          </ul>
+              <span className="font-semibold text-white">Quito, Ecuador</span>
+            </div>
 
-          <div className="mt-6 sm:mt-7 flex gap-3">
-            {SOCIALS.map(({ Icon, label, href }) => (
+            <div className="flex items-center gap-3 text-xs sm:text-sm">
+              <Phone className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" />
               <a
-                key={label}
-                href={href}
-                aria-label={label}
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-200 transition-all hover:-translate-y-0.5 hover:border-sky-400/40 hover:bg-sky-400/15 hover:text-sky-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400"
+                href="https://wa.me/593999001471"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono font-bold text-emerald-300 hover:text-emerald-200 transition-colors underline decoration-emerald-500/40 underline-offset-4"
               >
-                <Icon className="h-4 w-4" />
+                +593 99 900 1471
               </a>
-            ))}
+            </div>
+
+            <div className="flex items-center gap-3 text-xs sm:text-sm text-slate-300 pt-0.5">
+              <Mail className="h-4 w-4 shrink-0 text-sky-400" aria-hidden="true" />
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs">
+                <a href="mailto:dripzapatillas@gmail.com" className="text-sky-300 hover:text-white transition-colors">
+                  dripzapatillas@gmail.com
+                </a>
+                <span className="text-slate-500 font-bold">•</span>
+                <a href="mailto:contacto@dripdiamond.ec" className="text-slate-300 hover:text-white transition-colors">
+                  contacto@dripdiamond.ec
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 pt-1">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Redes Oficiales:</span>
+            <div className="flex gap-2.5">
+              {SOCIALS.map(({ Icon, label, href }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={label}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-200 transition-all hover:-translate-y-0.5 hover:border-sky-400/50 hover:bg-sky-400/20 hover:text-sky-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400"
+                >
+                  <Icon className="h-4 w-4" />
+                </a>
+              ))}
+            </div>
           </div>
         </div>
 
+        {/* Secciones de Enlaces */}
         <FooterCol title="Tienda" links={SHOP_LINKS} />
         <FooterCol title="Mi cuenta" links={ACCOUNT_LINKS} />
-        <FooterCol title="Ayuda" links={HELP_LINKS} />
+
+        {/* Ayuda — abre los paneles interactivos */}
+        <nav aria-label="Ayuda" className="space-y-4">
+          <h4 className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-sky-400">Ayuda</h4>
+          <ul className="space-y-3">
+            {HELP_PANELS.map((item) => (
+              <li key={item.label}>
+                <button
+                  onClick={() => openPanel(item.panelKey)}
+                  className="group inline-flex items-center gap-2 text-left text-sm text-slate-300 transition-all hover:text-white hover:translate-x-1"
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-sky-400/40 transition-all group-hover:bg-sky-400 group-hover:scale-125" aria-hidden="true" />
+                  {item.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </nav>
       </div>
 
-      {/* Barra inferior */}
-      <div className="border-t border-white/10">
+      {/* Barra Inferior & Legales */}
+      <div className="border-t border-white/10 bg-[#04070d]">
         <div className="container-app flex flex-col items-center justify-between gap-4 py-6 sm:flex-row text-center sm:text-left">
-          <span className="text-xs text-slate-400">
-            © {new Date().getFullYear()} Drip Diamond. Todos los derechos reservados.
-          </span>
-          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-slate-300">
-            <span className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-sky-400" aria-hidden="true" />
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <span className="text-xs font-medium text-slate-400">
+              © {new Date().getFullYear()} Drip Diamond. Todos los derechos reservados.
+            </span>
+            <div className="hidden sm:block h-3 w-px bg-white/15" />
+            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-slate-400">
+              <button onClick={() => openPanel("terminos")} className="hover:text-sky-300 transition-colors">
+                Términos y condiciones
+              </button>
+              <span className="text-slate-600">•</span>
+              <button onClick={() => openPanel("privacidad")} className="hover:text-sky-300 transition-colors">
+                Políticas de privacidad
+              </button>
+              <span className="text-slate-600">•</span>
+              <button onClick={() => openPanel("cookies")} className="hover:text-sky-300 transition-colors">
+                Administrar cookies
+              </button>
+              <span className="text-slate-600">•</span>
+              <button onClick={() => openPanel("soporte")} className="hover:text-sky-300 transition-colors font-bold text-sky-400">
+                Soporte
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-slate-300">
+            <span className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-emerald-300 font-semibold">
+              <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" />
               Pagos verificados manualmente
             </span>
-            <span className="flex items-center gap-2">
-              <Truck className="h-4 w-4 text-sky-400" aria-hidden="true" />
-              Envíos a todo Quito
+            <span className="flex items-center gap-2 rounded-lg border border-sky-500/30 bg-sky-500/10 px-2.5 py-1 text-sky-300 font-semibold">
+              <Truck className="h-3.5 w-3.5 text-sky-400" aria-hidden="true" />
+              Envíos Servientrega (Sábados/Domingos)
             </span>
           </div>
         </div>
       </div>
     </footer>
-  )
+  );
 }
 
 function FooterCol({ title, links }: { title: string; links: { to: string; label: string }[] }) {
   return (
-    <nav aria-label={title}>
-      <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-sky-400">{title}</h4>
-      <ul className="mt-5 space-y-3">
+    <nav aria-label={title} className="space-y-4">
+      <h4 className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-sky-400">{title}</h4>
+      <ul className="space-y-3">
         {links.map((link) => (
           <li key={link.label}>
-            <Link to={link.to} className="group inline-flex items-center gap-2 text-sm text-slate-300 transition-colors hover:text-white">
-              <span className="h-px w-0 bg-sky-400 transition-all duration-300 group-hover:w-4" aria-hidden="true" />
+            <Link to={link.to} className="group inline-flex items-center gap-2 text-sm text-slate-300 transition-all hover:text-white hover:translate-x-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-sky-400/40 transition-all group-hover:bg-sky-400 group-hover:scale-125" aria-hidden="true" />
               {link.label}
             </Link>
           </li>
         ))}
       </ul>
     </nav>
-  )
+  );
 }

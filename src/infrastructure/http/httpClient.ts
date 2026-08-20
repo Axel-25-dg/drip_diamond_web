@@ -143,7 +143,15 @@ httpClient.interceptors.response.use(
 function normalizeError(error: AxiosError<ApiEnvelope<unknown>>): ApiError {
   const status = error.response?.status ?? 0;
   const envelope = error.response?.data;
-  const message = envelope?.message || error.message || "Ocurrió un error inesperado.";
+  
+  // Sanitizar el mensaje para evitar que el servidor exponga stack traces o SQL/JSON crudos al frontend
+  let message = envelope?.message || error.message || "Ocurrió un error inesperado de red.";
+  
+  // Si el mensaje contiene trazas de error interno del backend o HTML de servidor (ej 500 HTML), ocultarlo
+  if (status >= 500 || message.includes("Traceback") || message.includes("Internal Server Error") || message.includes("<!DOCTYPE html>")) {
+    message = "No se pudo procesar la solicitud en este momento. Por favor reintenta más tarde.";
+  }
+
   return new ApiError(message, status, envelope?.errors);
 }
 
