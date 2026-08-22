@@ -57,6 +57,7 @@ export interface Order {
   subtotal: number;
   costoEnvio: number | null;
   total: number;
+  tipoEntrega?: "DOMICILIO" | "RETIRO_LOCAL";
   montoTotal?: number;
   clienteNombre?: string | null;
   numeroGuia?: string | null;

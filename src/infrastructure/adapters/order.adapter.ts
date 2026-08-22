@@ -225,10 +225,42 @@ export function toCart(dto: CartDTO): Cart {
 
 export function toOrder(dto: OrderDTO): Order {
   const items = (dto.detalles ?? dto.items ?? []).map(toOrderItem);
-  const totalVal =
-    toNumber(dto.total ?? (dto as any).monto_total ?? dto.subtotal) ||
-    items.reduce((acc, item) => acc + item.precioUnitario * item.cantidad, 0);
+  const itemsSubtotal = items.reduce((acc, item) => acc + item.precioUnitario * item.cantidad, 0);
+  const subtotalVal = toNumber(dto.subtotal) > 0 ? toNumber(dto.subtotal) : itemsSubtotal;
+
   const addressValue = dto.direccion_envio ?? dto.direccion_formateada ?? null;
+  const addressStr =
+    typeof addressValue === "string"
+      ? addressValue
+      : typeof addressValue === "object" && addressValue !== null
+      ? String(addressValue.direccion_formateada || addressValue.direccion || "")
+      : "";
+
+  const rawTipo = (dto as any).tipo_entrega ?? (dto as any).tipoEntrega;
+  const isRetiro =
+    rawTipo === "RETIRO_LOCAL" ||
+    addressStr.toLowerCase().includes("retiro");
+
+  const resolvedTipoEntrega: "DOMICILIO" | "RETIRO_LOCAL" = isRetiro ? "RETIRO_LOCAL" : "DOMICILIO";
+
+  const costoEnvioVal = isRetiro
+    ? 0
+    : dto.costo_envio != null && toNumber(dto.costo_envio) >= 0
+    ? toNumber(dto.costo_envio)
+    : 3;
+
+  const rawTotal = toNumber(dto.total ?? (dto as any).monto_total);
+  let totalVal = 0;
+  if (rawTotal > 0) {
+    if (!isRetiro && Math.abs(rawTotal - subtotalVal) < 0.01) {
+      totalVal = subtotalVal + costoEnvioVal;
+    } else {
+      totalVal = rawTotal;
+    }
+  } else {
+    totalVal = subtotalVal + costoEnvioVal;
+  }
+
   const clientName =
     // New dedicated field from backend serializer
     (dto as any).cliente_nombre ||
@@ -276,10 +308,11 @@ export function toOrder(dto: OrderDTO): Order {
     numero: dto.numero ?? `#${dto.id}`,
     estado: (dto.estado as OrderStatus) || "PENDIENTE_DE_PAGO",
     items,
-    subtotal: toNumber(dto.subtotal),
-    costoEnvio: dto.costo_envio != null ? toNumber(dto.costo_envio) : null,
+    subtotal: subtotalVal,
+    costoEnvio: costoEnvioVal,
     total: totalVal,
     montoTotal: totalVal,
+    tipoEntrega: resolvedTipoEntrega,
     clienteNombre: clientName,
     numeroGuia: (dto as any).numero_guia || null,
     vendedorId:
