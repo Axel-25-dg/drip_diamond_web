@@ -253,33 +253,69 @@ export class ApiAdminRepository implements AdminRepositoryPort {
   }
 
   async createUser(payload: CreateUserDTO): Promise<User> {
+    const jsonHeaders = { headers: { "Content-Type": "application/json" } };
     const username = payload.correo.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "");
+    const rolLower = (payload.rol || "vendedor").toLowerCase();
+    const rolUpper = (payload.rol || "VENDEDOR").toUpperCase();
 
-    if (payload.rol === "VENDEDOR") {
-      try {
-        const body = {
-          username, email: payload.correo, password: payload.password,
-          primer_nombre: payload.nombre, primer_apellido: payload.apellido,
-          telefono: payload.telefono, banco: "Banco Pichincha",
-          tipo_cuenta: "Ahorros", numero_cuenta: "2200112233",
-        };
-        const { data } = await httpClient.post<any>("/usuarios/vendedores/crear/", body);
-        const u = safeUnwrap<any>(data);
-        return { id: u.id || Date.now(), nombre: u.primer_nombre || payload.nombre, apellido: u.primer_apellido || payload.apellido, correo: u.email || payload.correo, telefono: u.telefono || payload.telefono, rol: "VENDEDOR", username: u.username || username };
-      } catch { /* fallback */ }
-    } else if (payload.rol === "CONTADOR") {
-      try {
-        const body = { username, email: payload.correo, password: payload.password, primer_nombre: payload.nombre, primer_apellido: payload.apellido, telefono: payload.telefono };
-        const { data } = await httpClient.post<any>("/usuarios/contadores/crear/", body);
-        const u = safeUnwrap<any>(data);
-        return { id: u.id || Date.now(), nombre: u.primer_nombre || payload.nombre, apellido: u.primer_apellido || payload.apellido, correo: u.email || payload.correo, telefono: u.telefono || payload.telefono, rol: "CONTADOR", username: u.username || username };
-      } catch { /* fallback */ }
+    const body = {
+      username,
+      email: payload.correo,
+      correo: payload.correo,
+      password: payload.password,
+      nombre: payload.nombre,
+      primer_nombre: payload.nombre,
+      apellido: payload.apellido,
+      primer_apellido: payload.apellido,
+      telefono: payload.telefono || "",
+      rol: rolLower,
+      role: rolLower,
+      tipo: rolLower,
+      banco: "Banco Pichincha",
+      tipo_cuenta: "Ahorros",
+      numero_cuenta: "2200112233",
+    };
+
+    let responseData: any = null;
+
+    try {
+      const { data } = await httpClient.post<any>("/usuarios/registro/", body, jsonHeaders);
+      responseData = safeUnwrap<any>(data);
+    } catch {
+      if (payload.rol === "VENDEDOR") {
+        try {
+          const { data } = await httpClient.post<any>("/usuarios/vendedores/crear/", body, jsonHeaders);
+          responseData = safeUnwrap<any>(data);
+        } catch { /* fallback */ }
+      } else if (payload.rol === "CONTADOR") {
+        try {
+          const { data } = await httpClient.post<any>("/usuarios/contadores/crear/", body, jsonHeaders);
+          responseData = safeUnwrap<any>(data);
+        } catch { /* fallback */ }
+      }
+
+      if (!responseData) {
+        try {
+          const { data } = await httpClient.post<any>("/usuarios/", body, jsonHeaders);
+          responseData = safeUnwrap<any>(data);
+        } catch {
+          const upperBody = { ...body, rol: rolUpper, role: rolUpper };
+          const { data } = await httpClient.post<any>("/usuarios/", upperBody, jsonHeaders);
+          responseData = safeUnwrap<any>(data);
+        }
+      }
     }
 
-    const standardBody = { nombre: payload.nombre, apellido: payload.apellido, correo: payload.correo, telefono: payload.telefono, password: payload.password, rol: payload.rol };
-    const { data } = await httpClient.post<any>("/usuarios/", standardBody);
-    const u = safeUnwrap<any>(data);
-    return { id: u.id, nombre: u.nombre || payload.nombre, apellido: u.apellido || payload.apellido, correo: u.correo || payload.correo, telefono: u.telefono || payload.telefono, rol: normalizeUserRole(u.rol || payload.rol), username: u.username };
+    const u = responseData?.usuario || responseData?.user || responseData || {};
+    return {
+      id: u.id || Date.now(),
+      nombre: u.nombre || u.primer_nombre || payload.nombre,
+      apellido: u.apellido || u.primer_apellido || payload.apellido,
+      correo: u.correo || u.email || payload.correo,
+      telefono: u.telefono || payload.telefono || "",
+      rol: normalizeUserRole(u.rol || u.role || u.tipo || payload.rol),
+      username: u.username || username,
+    };
   }
 
   async updateUser(id: number, payload: UpdateUserDTO): Promise<User> {
@@ -306,31 +342,23 @@ export class ApiAdminRepository implements AdminRepositoryPort {
     }
 
     let responseData: any = null;
+    const jsonHeaders = { headers: { "Content-Type": "application/json" } };
+
     try {
-      const { data } = await httpClient.patch<any>(`/usuarios/${id}/`, body);
+      const { data } = await httpClient.patch<any>(`/usuarios/${id}/`, body, jsonHeaders);
       responseData = safeUnwrap<any>(data);
-    } catch {
+    } catch (err: any) {
       try {
         const upperBody = { ...body, rol: rolUpper, role: rolUpper, tipo: rolUpper };
-        const { data } = await httpClient.patch<any>(`/usuarios/${id}/`, upperBody);
+        const { data } = await httpClient.patch<any>(`/usuarios/${id}/`, upperBody, jsonHeaders);
         responseData = safeUnwrap<any>(data);
       } catch {
-        const fd = new FormData();
-        if (payload.nombre !== undefined) {
-          fd.append("nombre", payload.nombre);
-          fd.append("primer_nombre", payload.nombre);
+        try {
+          const { data } = await httpClient.put<any>(`/usuarios/${id}/`, body, jsonHeaders);
+          responseData = safeUnwrap<any>(data);
+        } catch (finalErr: any) {
+          throw err || finalErr;
         }
-        if (payload.apellido !== undefined) {
-          fd.append("apellido", payload.apellido);
-          fd.append("primer_apellido", payload.apellido);
-        }
-        if (payload.telefono !== undefined) fd.append("telefono", payload.telefono);
-        if (rolLower !== undefined) {
-          fd.append("rol", rolLower);
-          fd.append("role", rolLower);
-        }
-        const { data } = await httpClient.patch<any>(`/usuarios/${id}/`, fd);
-        responseData = safeUnwrap<any>(data);
       }
     }
 
