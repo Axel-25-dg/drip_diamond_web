@@ -27,7 +27,9 @@ function isSellerItem(item: any): boolean {
     item?.rol ?? item?.role ?? item?.tipo ?? item?.usuario?.rol ?? item?.usuario?.role ?? item?.user?.rol ?? item?.user?.role
   );
 
-  const rawRol = String(item?.rol || item?.role || item?.tipo || "").toLowerCase();
+  const rawRol = String(
+    item?.rol || item?.role || item?.tipo || item?.usuario?.rol || item?.user?.rol || ""
+  ).toLowerCase();
 
   const hasSellerShape = Boolean(
     item?.perfil_vendedor ||
@@ -36,27 +38,34 @@ function isSellerItem(item: any): boolean {
     item?.is_vendedor ||
     item?.codigo_referido ||
     item?.codigoReferido ||
-    rawRol.includes("vendedor")
+    rawRol.includes("vendedor") ||
+    rawRol.includes("vender") ||
+    rawRol === "seller"
   );
 
   return role === "vendedor" || hasSellerShape;
 }
 
-function normalizeSellerItem(item: any): Seller | null {
+function normalizeSellerItem(item: any, isVendorEndpoint = false): Seller | null {
   if (!item || typeof item !== "object") return null;
-  if (!isSellerItem(item)) return null;
 
   const id =
     item.id ??
     item.usuario?.id ??
     item.user?.id ??
-    item.usuario_id ??
-    item.user_id ??
     item.vendedor_id ??
     item.vendedor?.id ??
-    item.usuario?.usuario_id ??
-    item.user?.user_id ??
+    item.usuario_id ??
+    item.user_id ??
     null;
+
+  if (!id || Number(id) <= 0) return null;
+
+  // If fetched from a general user list (like /usuarios/), verify seller role
+  if (!isVendorEndpoint && !isSellerItem(item)) {
+    return null;
+  }
+
   const nombre =
     item.nombre ||
     item.primer_nombre ||
@@ -67,7 +76,9 @@ function normalizeSellerItem(item: any): Seller | null {
     item.user?.primer_nombre ||
     item.vendedor?.nombre ||
     item.vendedor?.primer_nombre ||
+    item.username ||
     "";
+
   const apellido =
     item.apellido ||
     item.primer_apellido ||
@@ -79,6 +90,7 @@ function normalizeSellerItem(item: any): Seller | null {
     item.vendedor?.apellido ||
     item.vendedor?.primer_apellido ||
     "";
+
   const correo =
     item.correo ||
     item.email ||
@@ -90,10 +102,8 @@ function normalizeSellerItem(item: any): Seller | null {
     item.vendedor?.email ||
     "";
 
-  if (!id) return null;
-
   return {
-    id: Number(id) || 0,
+    id: Number(id),
     nombre: String(nombre || "Vendedor").trim(),
     apellido: String(apellido || "").trim(),
     correo: correo ? String(correo).trim() : undefined,
@@ -138,22 +148,26 @@ export class ApiOrderRepository implements OrderRepositoryPort {
   }
 
   async getActiveSellers(): Promise<Seller[]> {
-    const rawItems: any[] = [];
+    const rawItems: Array<{ item: any; isVendorEp: boolean }> = [];
     const endpoints = [
-      "/usuarios/vendedores/activos/",
-      "/usuarios/vendedores/",
-      "/usuarios/?rol=vendedor",
-      "/usuarios/?rol=VENDEDOR",
-      "/usuarios/",
+      { url: "/usuarios/vendedores/activos/", isVendorEp: true },
+      { url: "/usuarios/vendedores/", isVendorEp: true },
+      { url: "/vendedores/activos/", isVendorEp: true },
+      { url: "/vendedores/", isVendorEp: true },
+      { url: "/usuarios/?rol=vendedor", isVendorEp: true },
+      { url: "/usuarios/?rol=VENDEDOR", isVendorEp: true },
+      { url: "/usuarios/", isVendorEp: false },
     ];
 
     for (const ep of endpoints) {
       try {
-        const { data } = await httpClient.get<any>(ep, { params: { _t: Date.now() } });
+        const { data } = await httpClient.get<any>(ep.url, { params: { _t: Date.now() } });
         const payload = safeUnwrap<any>(data);
         const list = toList<any>(payload);
         if (list.length > 0) {
-          rawItems.push(...list);
+          for (const item of list) {
+            rawItems.push({ item, isVendorEp: ep.isVendorEp });
+          }
         }
       } catch {
         // continue
@@ -162,14 +176,33 @@ export class ApiOrderRepository implements OrderRepositoryPort {
 
     const sellersMap = new Map<number, Seller>();
 
-    for (const item of rawItems) {
-      const seller = normalizeSellerItem(item);
+    for (const { item, isVendorEp } of rawItems) {
+      const seller = normalizeSellerItem(item, isVendorEp);
       if (seller && seller.id > 0 && !sellersMap.has(seller.id)) {
         sellersMap.set(seller.id, seller);
       }
     }
 
-    return Array.from(sellersMap.values());
+    const result = Array.from(sellersMap.values());
+
+    if (result.length > 0) {
+      try {
+        localStorage.setItem("drip_sellers_cache", JSON.stringify(result));
+      } catch { /* ignore */ }
+      return result;
+    }
+
+    try {
+      const cached = localStorage.getItem("drip_sellers_cache");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch { /* ignore */ }
+
+    return [];
   }
 
   async getShippingZones(): Promise<ShippingZone[]> {
