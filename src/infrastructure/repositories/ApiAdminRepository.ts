@@ -1,7 +1,7 @@
 import type { AdminRepositoryPort } from "@/domain/ports/AdminRepositoryPort";
 import type { Product, Brand, Category, Talla } from "@/domain/entities/Product";
 import type { Order } from "@/domain/entities/Order";
-import type { User, PaymentProof, EmailCampaign, AdminStats, CommissionReport } from "@/domain/entities/User";
+import { normalizeUserRole, type User, type PaymentProof, type EmailCampaign, type AdminStats, type CommissionReport } from "@/domain/entities/User";
 import type {
   CreateProductDTO,
   CreateVariantDTO,
@@ -238,13 +238,13 @@ export class ApiAdminRepository implements AdminRepositoryPort {
       const items: any[] = Array.isArray(payload) ? payload : payload?.results ?? [];
       return items.map((u: any) => ({
         id: u.id,
-        nombre: u.nombre || u.primer_nombre || "",
-        apellido: u.apellido || u.primer_apellido || "",
+        nombre: u.nombre || u.primer_nombre || u.first_name || "",
+        apellido: u.apellido || u.primer_apellido || u.last_name || "",
         correo: u.correo || u.email || "",
         telefono: u.telefono || "",
-        rol: u.rol || "CLIENTE",
+        rol: normalizeUserRole(u.rol || u.role || u.tipo || u.usuario?.rol || u.user?.rol),
         username: u.username,
-        fotoPerfilUrl: u.foto_perfil_url,
+        fotoPerfilUrl: u.foto_perfil_url || u.foto_perfil,
         creadoEn: u.creado_en,
       }));
     } catch {
@@ -279,31 +279,69 @@ export class ApiAdminRepository implements AdminRepositoryPort {
     const standardBody = { nombre: payload.nombre, apellido: payload.apellido, correo: payload.correo, telefono: payload.telefono, password: payload.password, rol: payload.rol };
     const { data } = await httpClient.post<any>("/usuarios/", standardBody);
     const u = safeUnwrap<any>(data);
-    return { id: u.id, nombre: u.nombre || payload.nombre, apellido: u.apellido || payload.apellido, correo: u.correo || payload.correo, telefono: u.telefono || payload.telefono, rol: u.rol || payload.rol, username: u.username };
+    return { id: u.id, nombre: u.nombre || payload.nombre, apellido: u.apellido || payload.apellido, correo: u.correo || payload.correo, telefono: u.telefono || payload.telefono, rol: normalizeUserRole(u.rol || payload.rol), username: u.username };
   }
 
   async updateUser(id: number, payload: UpdateUserDTO): Promise<User> {
-    // Backend expects multipart/form-data (uses MultiPartParser + JSONParser)
-    const fd = new FormData();
+    const rolRaw = payload.rol ? String(payload.rol).trim() : undefined;
+    const rolLower = rolRaw ? rolRaw.toLowerCase() : undefined;
+    const rolUpper = rolRaw ? rolRaw.toUpperCase() : undefined;
+
+    const body: Record<string, any> = {};
     if (payload.nombre !== undefined) {
-      fd.append("nombre", payload.nombre);
-      fd.append("primer_nombre", payload.nombre);
+      body.nombre = payload.nombre;
+      body.primer_nombre = payload.nombre;
     }
     if (payload.apellido !== undefined) {
-      fd.append("apellido", payload.apellido);
-      fd.append("primer_apellido", payload.apellido);
+      body.apellido = payload.apellido;
+      body.primer_apellido = payload.apellido;
     }
-    if (payload.telefono !== undefined) fd.append("telefono", payload.telefono);
-    if (payload.rol !== undefined) fd.append("rol", payload.rol);
-    const { data } = await httpClient.patch<any>(`/usuarios/${id}/`, fd);
-    const u = safeUnwrap<any>(data);
+    if (payload.telefono !== undefined) {
+      body.telefono = payload.telefono;
+    }
+    if (rolRaw !== undefined) {
+      body.rol = rolLower;
+      body.role = rolLower;
+      body.tipo = rolLower;
+    }
+
+    let responseData: any = null;
+    try {
+      const { data } = await httpClient.patch<any>(`/usuarios/${id}/`, body);
+      responseData = safeUnwrap<any>(data);
+    } catch {
+      try {
+        const upperBody = { ...body, rol: rolUpper, role: rolUpper, tipo: rolUpper };
+        const { data } = await httpClient.patch<any>(`/usuarios/${id}/`, upperBody);
+        responseData = safeUnwrap<any>(data);
+      } catch {
+        const fd = new FormData();
+        if (payload.nombre !== undefined) {
+          fd.append("nombre", payload.nombre);
+          fd.append("primer_nombre", payload.nombre);
+        }
+        if (payload.apellido !== undefined) {
+          fd.append("apellido", payload.apellido);
+          fd.append("primer_apellido", payload.apellido);
+        }
+        if (payload.telefono !== undefined) fd.append("telefono", payload.telefono);
+        if (rolLower !== undefined) {
+          fd.append("rol", rolLower);
+          fd.append("role", rolLower);
+        }
+        const { data } = await httpClient.patch<any>(`/usuarios/${id}/`, fd);
+        responseData = safeUnwrap<any>(data);
+      }
+    }
+
+    const u = responseData || {};
     return {
       id: u.id || id,
       nombre: u.nombre || u.primer_nombre || payload.nombre || "",
       apellido: u.apellido || u.primer_apellido || payload.apellido || "",
       correo: u.correo || u.email || "",
       telefono: u.telefono || payload.telefono || "",
-      rol: u.rol || payload.rol || "CLIENTE",
+      rol: normalizeUserRole(u.rol || u.role || u.tipo || payload.rol),
       username: u.username,
     };
   }

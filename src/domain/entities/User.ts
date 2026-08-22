@@ -1,10 +1,11 @@
 export type UserRole = "administrador" | "contador" | "vendedor" | "cliente" | "ADMINISTRADOR" | "CONTADOR" | "VENDEDOR" | "CLIENTE";
 
 export function normalizeUserRole(role?: string | null): UserRole {
-  const value = (role || "cliente").toString().trim().toLowerCase();
-  if (value === "administrador") return "administrador";
-  if (value === "contador") return "contador";
-  if (value === "vendedor") return "vendedor";
+  if (!role) return "cliente";
+  const value = role.toString().trim().toLowerCase();
+  if (value.includes("admin")) return "administrador";
+  if (value.includes("contador")) return "contador";
+  if (value.includes("vendedor")) return "vendedor";
   return "cliente";
 }
 

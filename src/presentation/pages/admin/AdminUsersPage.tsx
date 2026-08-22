@@ -57,7 +57,13 @@ export default function AdminUsersPage() {
     e.preventDefault();
     if (editingUser) {
       setIsSubmitting(true);
-      try { await useCases.updateUserAdmin.execute(editingUser.id, { nombre, apellido, telefono, rol: rol as any }); toast.success("Usuario actualizado"); setShowModal(false); fetchUsers(); }
+      try {
+        const updated = await useCases.updateUserAdmin.execute(editingUser.id, { nombre, apellido, telefono, rol: rol as any });
+        toast.success("Usuario actualizado");
+        setShowModal(false);
+        setUsers((prev) => prev.map((u) => (u.id === editingUser.id ? { ...u, ...updated, rol: updated.rol } : u)));
+        fetchUsers();
+      }
       catch (err: any) { toast.error(err?.message || "No se pudo actualizar"); }
       finally { setIsSubmitting(false); }
       return;
