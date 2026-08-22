@@ -254,12 +254,12 @@ export class ApiAdminRepository implements AdminRepositoryPort {
 
   async createUser(payload: CreateUserDTO): Promise<User> {
     const jsonHeaders = { headers: { "Content-Type": "application/json" } };
-    const username = payload.correo.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "");
+    const baseName = payload.correo.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "").substring(0, 15);
+    const uniqueUsername = `${baseName}_${Math.floor(1000 + Math.random() * 9000)}`;
     const rolLower = (payload.rol || "vendedor").toLowerCase();
-    const rolUpper = (payload.rol || "VENDEDOR").toUpperCase();
 
     const body = {
-      username,
+      username: uniqueUsername,
       email: payload.correo,
       correo: payload.correo,
       password: payload.password,
@@ -277,33 +277,34 @@ export class ApiAdminRepository implements AdminRepositoryPort {
     };
 
     let responseData: any = null;
+    let lastError: any = null;
 
     try {
       const { data } = await httpClient.post<any>("/usuarios/registro/", body, jsonHeaders);
       responseData = safeUnwrap<any>(data);
-    } catch {
-      if (payload.rol === "VENDEDOR") {
-        try {
-          const { data } = await httpClient.post<any>("/usuarios/vendedores/crear/", body, jsonHeaders);
-          responseData = safeUnwrap<any>(data);
-        } catch { /* fallback */ }
-      } else if (payload.rol === "CONTADOR") {
-        try {
-          const { data } = await httpClient.post<any>("/usuarios/contadores/crear/", body, jsonHeaders);
-          responseData = safeUnwrap<any>(data);
-        } catch { /* fallback */ }
-      }
-
-      if (!responseData) {
-        try {
-          const { data } = await httpClient.post<any>("/usuarios/", body, jsonHeaders);
-          responseData = safeUnwrap<any>(data);
-        } catch {
-          const upperBody = { ...body, rol: rolUpper, role: rolUpper };
-          const { data } = await httpClient.post<any>("/usuarios/", upperBody, jsonHeaders);
-          responseData = safeUnwrap<any>(data);
+    } catch (err1: any) {
+      lastError = err1;
+      try {
+        const { data } = await httpClient.post<any>("/usuarios/", body, jsonHeaders);
+        responseData = safeUnwrap<any>(data);
+      } catch (err2: any) {
+        lastError = err2;
+        if (payload.rol === "VENDEDOR") {
+          try {
+            const { data } = await httpClient.post<any>("/usuarios/vendedores/crear/", body, jsonHeaders);
+            responseData = safeUnwrap<any>(data);
+          } catch (err3: any) { lastError = err3; }
+        } else if (payload.rol === "CONTADOR") {
+          try {
+            const { data } = await httpClient.post<any>("/usuarios/contadores/crear/", body, jsonHeaders);
+            responseData = safeUnwrap<any>(data);
+          } catch (err3: any) { lastError = err3; }
         }
       }
+    }
+
+    if (!responseData) {
+      throw lastError || new Error("No se pudo crear el usuario. Revisa que el correo no esté registrado.");
     }
 
     const u = responseData?.usuario || responseData?.user || responseData || {};
@@ -314,7 +315,7 @@ export class ApiAdminRepository implements AdminRepositoryPort {
       correo: u.correo || u.email || payload.correo,
       telefono: u.telefono || payload.telefono || "",
       rol: normalizeUserRole(u.rol || u.role || u.tipo || payload.rol),
-      username: u.username || username,
+      username: u.username || uniqueUsername,
     };
   }
 

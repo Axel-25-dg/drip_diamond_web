@@ -70,8 +70,23 @@ export default function AdminUsersPage() {
     }
     if (!nombre || !apellido || !correo || !password) { toast.error("Completa los campos obligatorios"); return; }
     setIsSubmitting(true);
-    try { await useCases.createUserAdmin.execute({ nombre, apellido, correo, telefono, password, rol: rol as any }); toast.success("Usuario creado"); setShowModal(false); fetchUsers(); }
-    catch (err: any) { toast.error(err?.errors ? Object.values(err.errors).flat().join(", ") : err?.message || "Error al crear"); }
+    try {
+      const created = await useCases.createUserAdmin.execute({ nombre, apellido, correo, telefono, password, rol: rol as any });
+      toast.success("Usuario creado exitosamente");
+      setShowModal(false);
+      if (created && created.id) {
+        setUsers((prev) => [created, ...prev.filter((u) => u.id !== created.id)]);
+      }
+      fetchUsers();
+    }
+    catch (err: any) {
+      const errDetail = err?.errors
+        ? typeof err.errors === "object"
+          ? Object.entries(err.errors).map(([k, v]) => `${k}: ${Array.isArray(v) ? (v as any).join(", ") : v}`).join(" | ")
+          : String(err.errors)
+        : err?.message || "Error al crear usuario";
+      toast.error(errDetail);
+    }
     finally { setIsSubmitting(false); }
   };
 

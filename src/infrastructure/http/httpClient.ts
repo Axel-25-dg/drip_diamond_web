@@ -43,12 +43,21 @@ function resolveQueue(token: string | null) {
 export const httpClient: AxiosInstance = axios.create({
   baseURL: env.apiUrl,
   timeout: 20000,
+  headers: {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+  },
 });
 
 httpClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = tokenStorage.getAccess();
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  // When data is FormData, delete Content-Type so browser sets boundary automatically
+  if (config.data instanceof FormData && config.headers) {
+    delete config.headers["Content-Type"];
   }
 
   if ((config.method || "get").toLowerCase() === "get") {
