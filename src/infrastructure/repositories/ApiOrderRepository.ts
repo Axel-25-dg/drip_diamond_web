@@ -38,6 +38,8 @@ function isSellerItem(item: any): boolean {
     item?.is_vendedor ||
     item?.codigo_referido ||
     item?.codigoReferido ||
+    item?.vendedor_id ||
+    item?.vendedor_nombre ||
     rawRol.includes("vendedor") ||
     rawRol.includes("vender") ||
     rawRol === "seller"
@@ -49,14 +51,15 @@ function isSellerItem(item: any): boolean {
 function normalizeSellerItem(item: any, isVendorEndpoint = false): Seller | null {
   if (!item || typeof item !== "object") return null;
 
+  // Extract ID (prefer User ID or Vendedor ID over raw record ID)
   const id =
-    item.id ??
-    item.usuario?.id ??
-    item.user?.id ??
     item.vendedor_id ??
-    item.vendedor?.id ??
     item.usuario_id ??
     item.user_id ??
+    item.vendedor?.id ??
+    item.usuario?.id ??
+    item.user?.id ??
+    item.id ??
     null;
 
   if (!id || Number(id) <= 0) return null;
@@ -66,7 +69,16 @@ function normalizeSellerItem(item: any, isVendorEndpoint = false): Seller | null
     return null;
   }
 
-  const nombre =
+  const rawFullName =
+    item.vendedor_nombre ||
+    item.usuario_nombre ||
+    item.nombre_completo ||
+    item.nombre_vendedor ||
+    item.usuario?.nombre_completo ||
+    item.vendedor?.nombre_completo ||
+    "";
+
+  let nombre =
     item.nombre ||
     item.primer_nombre ||
     item.first_name ||
@@ -76,10 +88,9 @@ function normalizeSellerItem(item: any, isVendorEndpoint = false): Seller | null
     item.user?.primer_nombre ||
     item.vendedor?.nombre ||
     item.vendedor?.primer_nombre ||
-    item.username ||
     "";
 
-  const apellido =
+  let apellido =
     item.apellido ||
     item.primer_apellido ||
     item.last_name ||
@@ -91,9 +102,21 @@ function normalizeSellerItem(item: any, isVendorEndpoint = false): Seller | null
     item.vendedor?.primer_apellido ||
     "";
 
+  if (!nombre && rawFullName) {
+    const parts = rawFullName.trim().split(" ");
+    nombre = parts[0] || "";
+    apellido = parts.slice(1).join(" ") || "";
+  }
+
+  if (!nombre && item.username) {
+    nombre = item.username;
+  }
+
   const correo =
     item.correo ||
     item.email ||
+    item.vendedor_email ||
+    item.usuario_email ||
     item.usuario?.correo ||
     item.user?.correo ||
     item.usuario?.email ||
@@ -154,6 +177,8 @@ export class ApiOrderRepository implements OrderRepositoryPort {
       { url: "/usuarios/vendedores/", isVendorEp: true },
       { url: "/vendedores/activos/", isVendorEp: true },
       { url: "/vendedores/", isVendorEp: true },
+      { url: "/liquidaciones/resumen-global/", isVendorEp: true },
+      { url: "/comisiones/", isVendorEp: true },
       { url: "/usuarios/?rol=vendedor", isVendorEp: true },
       { url: "/usuarios/?rol=VENDEDOR", isVendorEp: true },
       { url: "/usuarios/", isVendorEp: false },
