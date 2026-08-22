@@ -301,6 +301,12 @@ export default function CheckoutPage() {
   const subtotal     = cart?.subtotal ?? 0;
   const total        = subtotal + shippingCost;
 
+  useEffect(() => {
+    if (tipoEntrega === "RETIRO_LOCAL") {
+      setValue("direccionEnvio", "Retiro en local - Centro Comercial por acordar");
+    }
+  }, [tipoEntrega, setValue]);
+
   const filteredSellers = useMemo(() => {
     const q = sellerSearch.trim().toLowerCase();
     if (!q) return sellers;
@@ -321,7 +327,9 @@ export default function CheckoutPage() {
     if (!pendingFormData) return;
     setIsSubmitting(true);
     const form = pendingFormData;
-    const addressBase = form.direccionEnvio?.trim() || "";
+    const addressBase = form.tipoEntrega === "RETIRO_LOCAL"
+      ? "Retiro en local - Centro Comercial por acordar"
+      : form.direccionEnvio?.trim() || "";
     const cleanBase = addressBase.replace(/\s*[\(\[]-?\d+\.\d+,\s*-?\d+\.\d+[\)\]]/g, "").trim();
     const direccionConCoords =
       form.tipoEntrega === "DOMICILIO" && markerPos
@@ -502,116 +510,88 @@ export default function CheckoutPage() {
               </section>
             )}
 
-            {/* ── Tarjeta info retiro local ── */}
+            {/* ── Retiro local: Datos de contacto y entrega ── */}
             {tipoEntrega === "RETIRO_LOCAL" && (
-              <section className="rounded-2xl border-2 border-blue-200 dark:border-sky-800 bg-blue-50 dark:bg-sky-950/20 p-6">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
-                    <MapPin className="h-5 w-5" />
+              <section className="rounded-2xl border-2 border-blue-500/40 bg-gradient-to-br from-blue-50/80 via-blue-50/30 to-sky-50/50 dark:from-blue-950/40 dark:via-[#121622] dark:to-sky-950/30 p-6 shadow-[var(--shadow-card)]">
+                <div className="flex items-start gap-3.5">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/20">
+                    <Phone className="h-5 w-5" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-display text-lg font-bold text-[var(--text-primary)]">
-                      Puntos de entrega disponibles
-                    </h3>
-                    <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                      No tenemos un local fijo. Coordinamos el punto de encuentro según tu sector:
+                    <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">
+                      Datos de contacto para Retiro Local
+                    </h2>
+                    <p className="mt-1 text-sm leading-relaxed text-[var(--text-secondary)]">
+                      Ingresa tu número de teléfono. Nos pondremos en contacto contigo vía WhatsApp para acordar la hora y el punto de encuentro en uno de nuestros <strong>3 centros comerciales</strong> principales (Quito Norte, Quito Sur o C.C. El Recreo).
                     </p>
-                    <ul className="mt-3 space-y-2">
-                      {["Quito Norte", "Quito Sur", "C.C. El Recreo"].map((punto) => (
-                        <li key={punto} className="flex items-center gap-2 text-sm font-semibold text-blue-700 dark:text-sky-300">
-                          <span className="h-2 w-2 rounded-full bg-blue-500" />
-                          {punto}
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="mt-4 flex items-center gap-3 rounded-xl border border-blue-200 dark:border-sky-800 bg-white dark:bg-[#12151c] px-4 py-3">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-green-500 text-white">
-                        <Phone className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-[var(--text-muted)]">Contáctanos para coordinar:</p>
-                        <a
-                          href="https://wa.me/593999001471?text=Hola,%20quiero%20coordinar%20el%20punto%20de%20entrega%20para%20mi%20pedido."
-                          target="_blank" rel="noreferrer"
-                          className="font-bold text-green-600 dark:text-green-400 hover:underline text-sm"
-                        >
-                          WhatsApp: 0999 001 471
-                        </a>
-                      </div>
+
+                    <div className="mt-5">
+                      <Input
+                        label="Teléfono de contacto *"
+                        placeholder="09XXXXXXXX"
+                        error={errors.telefonoContacto?.message}
+                        {...register("telefonoContacto", { required: "Requerido para coordinar la entrega" })}
+                      />
+                      <p className="mt-2 text-xs text-[var(--text-muted)]">
+                        Nos comunicaremos a este número para coordinar el retiro.
+                      </p>
                     </div>
-                    <p className="mt-3 text-xs text-[var(--text-muted)]">
-                      Una vez confirmado tu pedido te escribiremos para acordar el lugar y hora de entrega.
-                    </p>
                   </div>
                 </div>
               </section>
             )}
 
-            {/* ── Teléfono para retiro local ── */}
-            {tipoEntrega === "RETIRO_LOCAL" && (
+            {/* ── Datos de envío (Solo para Domicilio) ── */}
+            {tipoEntrega === "DOMICILIO" && (
               <section className="rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-6 shadow-[var(--shadow-card)]">
-                <h2 className="mb-4 font-display text-lg font-bold text-[var(--text-primary)]">Datos de contacto</h2>
-                <Input
-                  label="Teléfono de contacto *"
-                  placeholder="09XXXXXXXX"
-                  error={errors.telefonoContacto?.message}
-                  {...register("telefonoContacto", { required: "Requerido para coordinar la entrega" })}
-                />
-                <p className="mt-2 text-xs text-[var(--text-muted)]">
-                  Lo usaremos para coordinar contigo el punto y hora de encuentro.
-                </p>
+                <h2 className="mb-4 font-display text-lg font-bold text-[var(--text-primary)]">Datos de envío</h2>
+                <div className="grid gap-4 sm:grid-cols-2">
+
+                  {/* Ciudad fija: Quito */}
+                  <div>
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-blue-700 dark:text-sky-400">
+                      Ciudad
+                    </label>
+                    <div className="mt-1 flex h-[46px] items-center justify-between rounded-xl border border-blue-200 dark:border-sky-800/50 bg-blue-50 dark:bg-blue-950/20 px-4 text-sm">
+                      <span className="font-semibold text-[var(--text-primary)]">Quito</span>
+                      <span className="flex items-center gap-1 rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-bold text-white">
+                        <Truck className="h-3 w-3" /> $3.00 · Servientrega
+                      </span>
+                    </div>
+                    <input type="hidden" value="Quito"     {...register("ciudad")} />
+                    <input type="hidden" value="Pichincha" {...register("provincia")} />
+                    <p className="mt-1 text-[11px] text-[var(--text-muted)]">Solo realizamos envíos en Quito.</p>
+                  </div>
+
+                  {/* Teléfono */}
+                  <Input
+                    label="Teléfono de contacto"
+                    placeholder="09XXXXXXXX"
+                    error={errors.telefonoContacto?.message}
+                    {...register("telefonoContacto", { required: "Requerido" })}
+                  />
+
+                  {/* Dirección — se llena del mapa */}
+                  <div className="sm:col-span-2">
+                    <Input
+                      label="Dirección exacta"
+                      placeholder="Busca en el mapa o escribe aquí..."
+                      error={errors.direccionEnvio?.message}
+                      {...register("direccionEnvio", { required: "Requerido" })}
+                    />
+                  </div>
+
+                  {/* Referencia */}
+                  <div className="sm:col-span-2">
+                    <Input
+                      label="Referencia adicional"
+                      placeholder="Casa azul, piso 3, junto a la farmacia..."
+                      {...register("referenciaAdicional")}
+                    />
+                  </div>
+                </div>
               </section>
             )}
-
-            {/* ── Datos de envío ── */}
-            <section className="rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-6 shadow-[var(--shadow-card)]">
-              <h2 className="mb-4 font-display text-lg font-bold text-[var(--text-primary)]">Datos de envío</h2>
-              <div className="grid gap-4 sm:grid-cols-2">
-
-                {/* Ciudad fija: Quito */}
-                <div>
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-blue-700 dark:text-sky-400">
-                    Ciudad
-                  </label>
-                  <div className="mt-1 flex h-[46px] items-center justify-between rounded-xl border border-blue-200 dark:border-sky-800/50 bg-blue-50 dark:bg-blue-950/20 px-4 text-sm">
-                    <span className="font-semibold text-[var(--text-primary)]">Quito</span>
-                    <span className="flex items-center gap-1 rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-bold text-white">
-                      <Truck className="h-3 w-3" /> $3.00 · Servientrega
-                    </span>
-                  </div>
-                  <input type="hidden" value="Quito"     {...register("ciudad")} />
-                  <input type="hidden" value="Pichincha" {...register("provincia")} />
-                  <p className="mt-1 text-[11px] text-[var(--text-muted)]">Solo realizamos envíos en Quito.</p>
-                </div>
-
-                {/* Teléfono */}
-                <Input
-                  label="Teléfono de contacto"
-                  placeholder="09XXXXXXXX"
-                  error={errors.telefonoContacto?.message}
-                  {...register("telefonoContacto", { required: "Requerido" })}
-                />
-
-                {/* Dirección — se llena del mapa */}
-                <div className="sm:col-span-2">
-                  <Input
-                    label="Dirección exacta"
-                    placeholder="Busca en el mapa o escribe aquí..."
-                    error={errors.direccionEnvio?.message}
-                    {...register("direccionEnvio", { required: "Requerido" })}
-                  />
-                </div>
-
-                {/* Referencia */}
-                <div className="sm:col-span-2">
-                  <Input
-                    label="Referencia adicional"
-                    placeholder="Casa azul, piso 3, junto a la farmacia..."
-                    {...register("referenciaAdicional")}
-                  />
-                </div>
-              </div>
-            </section>
 
             {/* ── Vendedor ── */}
             <section className="rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-6 shadow-[var(--shadow-card)]">
