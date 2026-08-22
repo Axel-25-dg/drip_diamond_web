@@ -20,12 +20,14 @@ function toList<T>(payload: any): T[] {
   return [] as T[];
 }
 
-function looksLikeSeller(item: any): boolean {
+function isSellerItem(item: any): boolean {
   if (!item || typeof item !== "object") return false;
 
   const role = normalizeUserRole(
-    item?.rol ?? item?.role ?? item?.usuario?.rol ?? item?.usuario?.role ?? item?.user?.rol ?? item?.user?.role
+    item?.rol ?? item?.role ?? item?.tipo ?? item?.usuario?.rol ?? item?.usuario?.role ?? item?.user?.rol ?? item?.user?.role
   );
+
+  const rawRol = String(item?.rol || item?.role || item?.tipo || "").toLowerCase();
 
   const hasSellerShape = Boolean(
     item?.perfil_vendedor ||
@@ -34,22 +36,15 @@ function looksLikeSeller(item: any): boolean {
     item?.is_vendedor ||
     item?.codigo_referido ||
     item?.codigoReferido ||
-    item?.tipo === "VENDEDOR" ||
-    item?.tipo === "vendedor"
+    rawRol.includes("vendedor")
   );
 
-  const hasBasicUserShape = Boolean(
-    item?.id &&
-    (item?.nombre || item?.primer_nombre || item?.apellido || item?.primer_apellido ||
-     item?.correo || item?.email || item?.username)
-  );
-
-  return role === "vendedor" || hasSellerShape || hasBasicUserShape;
+  return role === "vendedor" || hasSellerShape;
 }
 
 function normalizeSellerItem(item: any): Seller | null {
   if (!item || typeof item !== "object") return null;
-  if (!looksLikeSeller(item)) return null;
+  if (!isSellerItem(item)) return null;
 
   const id =
     item.id ??
@@ -99,9 +94,9 @@ function normalizeSellerItem(item: any): Seller | null {
 
   return {
     id: Number(id) || 0,
-    nombre: String(nombre || "Vendedor"),
-    apellido: String(apellido || ""),
-    correo: correo ? String(correo) : undefined,
+    nombre: String(nombre || "Vendedor").trim(),
+    apellido: String(apellido || "").trim(),
+    correo: correo ? String(correo).trim() : undefined,
   };
 }
 
@@ -143,26 +138,38 @@ export class ApiOrderRepository implements OrderRepositoryPort {
   }
 
   async getActiveSellers(): Promise<Seller[]> {
-    // Único endpoint público para vendedores activos (IsAuthenticated)
-    const { data } = await httpClient.get<any>("/usuarios/vendedores/activos/", {
-      params: { _t: Date.now() },
-    });
-    const payload = safeUnwrap<any>(data);
-    const list = toList<any>(payload);
+    const rawItems: any[] = [];
+    const endpoints = [
+      "/usuarios/vendedores/activos/",
+      "/usuarios/vendedores/",
+      "/usuarios/?rol=vendedor",
+      "/usuarios/?rol=VENDEDOR",
+      "/usuarios/",
+    ];
 
-    if (import.meta.env.DEV) {
-      console.debug("[getActiveSellers] raw count:", list.length, list.slice(0, 2));
+    for (const ep of endpoints) {
+      try {
+        const { data } = await httpClient.get<any>(ep, { params: { _t: Date.now() } });
+        const payload = safeUnwrap<any>(data);
+        const list = toList<any>(payload);
+        if (list.length > 0) {
+          rawItems.push(...list);
+        }
+      } catch {
+        // continue
+      }
     }
 
-    const sellers = list
-      .map((item: any) => normalizeSellerItem(item))
-      .filter((item): item is Seller => Boolean(item));
+    const sellersMap = new Map<number, Seller>();
 
-    if (import.meta.env.DEV) {
-      console.debug("[getActiveSellers] normalized sellers:", sellers.length, sellers);
+    for (const item of rawItems) {
+      const seller = normalizeSellerItem(item);
+      if (seller && seller.id > 0 && !sellersMap.has(seller.id)) {
+        sellersMap.set(seller.id, seller);
+      }
     }
 
-    return sellers;
+    return Array.from(sellersMap.values());
   }
 
   async getShippingZones(): Promise<ShippingZone[]> {
