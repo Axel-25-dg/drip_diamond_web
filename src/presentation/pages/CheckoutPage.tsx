@@ -11,8 +11,9 @@ import type { LatLngLiteral } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useCases } from "@/infrastructure/factories/useCases.factory";
-import type { Seller } from "@/domain/entities/User";
+import { normalizeUserRole, type Seller } from "@/domain/entities/User";
 import { useCartStore } from "@/presentation/store/cartStore";
+import { useAuthStore } from "@/presentation/store/authStore";
 import { Input } from "@/presentation/components/ui/Input";
 import { Button } from "@/presentation/components/ui/Button";
 import { Spinner } from "@/presentation/components/ui/Spinner";
@@ -218,6 +219,7 @@ interface CheckoutForm {
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const { cart, fetchCart } = useCartStore();
+  const { user } = useAuthStore();
   const location = useLocation();
   const refParam = new URLSearchParams(location.search).get("ref");
 
@@ -258,23 +260,44 @@ export default function CheckoutPage() {
     setSellersError(false);
     useCases.getActiveSellers.execute()
       .then((s) => {
-        setSellers(s);
-        if (refParam && s.length > 0) {
+        let allSellers = [...s];
+
+        if (user && (normalizeUserRole(user.rol) === "vendedor" || user.perfilVendedor)) {
+          const exists = allSellers.some((x) => x.id === user.id);
+          if (!exists && user.id > 0) {
+            allSellers.unshift({
+              id: user.id,
+              nombre: user.nombre || "Vendedor",
+              apellido: user.apellido || "",
+              correo: user.correo || user.email,
+            });
+          }
+        }
+
+        setSellers(allSellers);
+
+        if (refParam && allSellers.length > 0) {
           const m = refParam.match(/(\d+)$/);
           const selId = m ? Number(m[1]) : null;
           const found = selId
-            ? s.find((x) => x.id === selId)
-            : s.find((x) =>
+            ? allSellers.find((x) => x.id === selId)
+            : allSellers.find((x) =>
               `${x.id}` === refParam ||
               `${x.nombre} ${x.apellido}`.toLowerCase().includes(refParam.toLowerCase()) ||
               x.correo?.toLowerCase().includes(refParam.toLowerCase())
             );
-          if (found) { setValue("vendedorId", String(found.id)); toast.info(`Vendedor ${found.nombre} preseleccionado.`); }
+          if (found) {
+            setValue("vendedorId", String(found.id));
+            toast.info(`Vendedor ${found.nombre} preseleccionado.`);
+          }
+        } else if (user && (normalizeUserRole(user.rol) === "vendedor" || user.perfilVendedor)) {
+          setValue("vendedorId", String(user.id));
+          toast.info(`Vendedor ${user.nombre} preseleccionado para comisión.`);
         }
       })
       .catch(() => setSellersError(true))
       .finally(() => setSellersLoading(false));
-  }, [sellersLoadAttempt]);
+  }, [sellersLoadAttempt, user, refParam, setValue]);
 
   /* Click en mapa → reverse geocode → llenar campo */
   const handleMapPick = useCallback(async (lat: number, lng: number) => {
