@@ -52,7 +52,7 @@ async function reverseGeocode(lat: number, lng: number): Promise<string> {
 
     const a = data.address;
     let place = data.name || a.amenity || a.shop || a.building || a.office || a.tourism || a.leisure || "";
-    
+
     // Ignorar etiquetas genéricas internas de OSM
     if (/^(planta \d+|nodo|punto|bench|tree|lote \d+|banca|árbol|semáforo)/i.test(place)) {
       place = "";
@@ -126,9 +126,9 @@ function MapSearchBox({
 }: {
   onSelect: (lat: number, lng: number, label: string) => void;
 }) {
-  const [query,       setQuery]       = useState("");
-  const [results,     setResults]     = useState<NominatimResult[]>([]);
-  const [searching,   setSearching]   = useState(false);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<NominatimResult[]>([]);
+  const [searching, setSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -202,36 +202,36 @@ function MapSearchBox({
 
 /* ── Form type ────────────────────────────────────────────── */
 interface CheckoutForm {
-  tipoEntrega:         "DOMICILIO" | "RETIRO_LOCAL";
-  direccionEnvio:      string;
+  tipoEntrega: "DOMICILIO" | "RETIRO_LOCAL";
+  direccionEnvio: string;
   referenciaAdicional: string;
-  provincia:           string;
-  ciudad:              string;
-  telefonoContacto:    string;
-  vendedorId:          string;
-  notas:               string;
+  provincia: string;
+  ciudad: string;
+  telefonoContacto: string;
+  vendedorId: string;
+  notas: string;
 }
 
 /* ═══════════════════════════════════════════════════════════
    CHECKOUT PAGE
 ═══════════════════════════════════════════════════════════ */
 export default function CheckoutPage() {
-  const navigate   = useNavigate();
+  const navigate = useNavigate();
   const { cart, fetchCart } = useCartStore();
-  const location   = useLocation();
-  const refParam   = new URLSearchParams(location.search).get("ref");
+  const location = useLocation();
+  const refParam = new URLSearchParams(location.search).get("ref");
 
-  const [sellers,            setSellers]            = useState<Seller[]>([]);
-  const [sellerSearch,       setSellerSearch]       = useState("");
-  const [isSubmitting,       setIsSubmitting]       = useState(false);
-  const [isLoading,          setIsLoading]          = useState(true);
-  const [sellersLoading,     setSellersLoading]     = useState(true);
-  const [sellersError,       setSellersError]       = useState(false);
+  const [sellers, setSellers] = useState<Seller[]>([]);
+  const [sellerSearch, setSellerSearch] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [sellersLoading, setSellersLoading] = useState(true);
+  const [sellersError, setSellersError] = useState(false);
   const [sellersLoadAttempt, setSellersLoadAttempt] = useState(0);
-  const [markerPos,          setMarkerPos]          = useState<LatLngLiteral>(QUITO_CENTER);
-  const [geocoding,          setGeocoding]          = useState(false);
-  const [isStockModalOpen,   setIsStockModalOpen]   = useState(false);
-  const [pendingFormData,    setPendingFormData]    = useState<CheckoutForm | null>(null);
+  const [markerPos, setMarkerPos] = useState<LatLngLiteral>(QUITO_CENTER);
+  const [geocoding, setGeocoding] = useState(false);
+  const [isStockModalOpen, setIsStockModalOpen] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<CheckoutForm | null>(null);
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } =
     useForm<CheckoutForm>({
@@ -265,10 +265,10 @@ export default function CheckoutPage() {
           const found = selId
             ? s.find((x) => x.id === selId)
             : s.find((x) =>
-                `${x.id}` === refParam ||
-                `${x.nombre} ${x.apellido}`.toLowerCase().includes(refParam.toLowerCase()) ||
-                x.correo?.toLowerCase().includes(refParam.toLowerCase())
-              );
+              `${x.id}` === refParam ||
+              `${x.nombre} ${x.apellido}`.toLowerCase().includes(refParam.toLowerCase()) ||
+              x.correo?.toLowerCase().includes(refParam.toLowerCase())
+            );
           if (found) { setValue("vendedorId", String(found.id)); toast.info(`Vendedor ${found.nombre} preseleccionado.`); }
         }
       })
@@ -296,10 +296,10 @@ export default function CheckoutPage() {
     setGeocoding(false);
   }, [setValue]);
 
-  const tipoEntrega  = watch("tipoEntrega");
+  const tipoEntrega = watch("tipoEntrega");
   const shippingCost = tipoEntrega === "RETIRO_LOCAL" ? 0 : SHIPPING_COST;
-  const subtotal     = cart?.subtotal ?? 0;
-  const total        = subtotal + shippingCost;
+  const subtotal = cart?.subtotal ?? 0;
+  const total = subtotal + shippingCost;
 
   useEffect(() => {
     if (tipoEntrega === "RETIRO_LOCAL") {
@@ -338,15 +338,15 @@ export default function CheckoutPage() {
 
     try {
       const order = await useCases.createOrder.execute({
-        direccionEnvio:      direccionConCoords,
+        direccionEnvio: direccionConCoords,
         direccionFormateada: direccionConCoords,
-        provincia:           "Pichincha",
-        ciudad:              "Quito",
-        telefonoContacto:    form.telefonoContacto,
-        vendedorId:          form.vendedorId ? Number(form.vendedorId) : null,
-        notas:               form.notas || form.referenciaAdicional,
+        provincia: "Pichincha",
+        ciudad: "Quito",
+        telefonoContacto: form.telefonoContacto,
+        vendedorId: form.vendedorId ? Number(form.vendedorId) : null,
+        notas: form.notas || form.referenciaAdicional,
         referenciaAdicional: form.referenciaAdicional || form.notas,
-        tipoEntrega:         form.tipoEntrega,
+        tipoEntrega: form.tipoEntrega,
       });
       toast.success("¡Solicitud recibida! Te contactaremos vía WhatsApp para confirmar tu talla.");
       setIsStockModalOpen(false);
@@ -412,11 +412,10 @@ export default function CheckoutPage() {
                 {(["DOMICILIO", "RETIRO_LOCAL"] as const).map((opt) => (
                   <label
                     key={opt}
-                    className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 p-4 transition-all ${
-                      tipoEntrega === opt
+                    className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 p-4 transition-all ${tipoEntrega === opt
                         ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30"
                         : "border-[var(--bg-border)] hover:border-blue-300"
-                    }`}
+                      }`}
                   >
                     <input type="radio" value={opt} {...register("tipoEntrega")} className="hidden" />
                     <div className={`flex h-4 w-4 items-center justify-center rounded-full border-2 ${tipoEntrega === opt ? "border-blue-600 bg-blue-600" : "border-gray-300"}`}>
@@ -522,7 +521,7 @@ export default function CheckoutPage() {
                       Datos de contacto para Retiro Local
                     </h2>
                     <p className="mt-1 text-sm leading-relaxed text-[var(--text-secondary)]">
-                      Ingresa tu número de teléfono. Nos pondremos en contacto contigo vía WhatsApp para acordar la hora y el punto de encuentro en uno de nuestros <strong>3 centros comerciales</strong> principales (Quito Norte, Quito Sur o C.C. El Recreo).
+                      Ingresa tu número de teléfono. Nos pondremos en contacto contigo vía WhatsApp para acordar la hora y el punto de encuentro en uno de los <strong>3 centros comerciales</strong> principales (Quito Norte, Quito Sur o C.C. El Recreo).
                     </p>
 
                     <div className="mt-5">
