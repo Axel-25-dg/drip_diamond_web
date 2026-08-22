@@ -239,27 +239,18 @@ export function toOrder(dto: OrderDTO): Order {
   const rawTipo = (dto as any).tipo_entrega ?? (dto as any).tipoEntrega;
   const isRetiro =
     rawTipo === "RETIRO_LOCAL" ||
-    addressStr.toLowerCase().includes("retiro");
+    addressStr.toLowerCase().includes("retiro") ||
+    addressStr.toLowerCase().includes("punto de encuentro");
 
   const resolvedTipoEntrega: "DOMICILIO" | "RETIRO_LOCAL" = isRetiro ? "RETIRO_LOCAL" : "DOMICILIO";
 
   const costoEnvioVal = isRetiro
     ? 0
-    : dto.costo_envio != null && toNumber(dto.costo_envio) >= 0
+    : dto.costo_envio != null && toNumber(dto.costo_envio) > 0
     ? toNumber(dto.costo_envio)
     : 3;
 
-  const rawTotal = toNumber(dto.total ?? (dto as any).monto_total);
-  let totalVal = 0;
-  if (rawTotal > 0) {
-    if (!isRetiro && Math.abs(rawTotal - subtotalVal) < 0.01) {
-      totalVal = subtotalVal + costoEnvioVal;
-    } else {
-      totalVal = rawTotal;
-    }
-  } else {
-    totalVal = subtotalVal + costoEnvioVal;
-  }
+  const totalVal = isRetiro ? subtotalVal : subtotalVal + costoEnvioVal;
 
   const clientName =
     // New dedicated field from backend serializer

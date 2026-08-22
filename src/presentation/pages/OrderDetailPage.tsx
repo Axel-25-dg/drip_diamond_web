@@ -369,7 +369,9 @@ export default function OrderDetailPage() {
               <div className="flex justify-between text-[var(--text-secondary)]">
                 <span>Envío</span>
                 <span className="font-semibold text-[var(--text-primary)]">
-                  {order.costoEnvio != null ? formatCurrency(order.costoEnvio) : "Por definir"}
+                  {order.tipoEntrega === "RETIRO_LOCAL" || order.costoEnvio === 0
+                    ? "$0,00 (Gratis)"
+                    : formatCurrency(order.costoEnvio ?? 3)}
                 </span>
               </div>
               <div className="mt-2 flex justify-between border-t border-[var(--bg-border)] pt-3 text-base font-bold">
