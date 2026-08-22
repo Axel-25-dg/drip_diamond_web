@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import {
   Search, CreditCard, MessageSquare, UserCheck,
-  AlertCircle, MapPin, Truck, X, Loader2, Navigation, Phone,
+  AlertCircle, MapPin, Truck, X, Loader2, Navigation, Phone, Sparkles, ShieldCheck,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -18,17 +18,19 @@ import { Button } from "@/presentation/components/ui/Button";
 import { Spinner } from "@/presentation/components/ui/Spinner";
 import { formatCurrency, resolveMediaUrl } from "@/presentation/utils/format";
 import { smartGeocode } from "@/presentation/components/ui/ShippingTicket";
-
-/* ── Fix leaflet icon in Vite ─────────────────────────────── */
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl:       "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl:     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-});
+import { StockVerificationModal } from "@/presentation/components/checkout/StockVerificationModal";
+import { CheckoutMap } from "@/presentation/components/checkout/CheckoutMap";
 
 const QUITO_CENTER: LatLngLiteral = { lat: -0.1807, lng: -78.4678 };
 const SHIPPING_COST = 3;
+
+const QUITO_PRESETS = [
+  { name: "La Carolina", lat: -0.1825, lng: -78.4845 },
+  { name: "Quicentro Norte", lat: -0.1762, lng: -78.4795 },
+  { name: "C.C. El Recreo", lat: -0.2486, lng: -78.5144 },
+  { name: "CCI / Iñaquito", lat: -0.1802, lng: -78.4877 },
+  { name: "Condado Shopping", lat: -0.1042, lng: -78.4908 },
+];
 
 /* ── Tipos ────────────────────────────────────────────────── */
 interface NominatimResult {
@@ -38,21 +40,58 @@ interface NominatimResult {
   lon: string;
 }
 
-/* ── Reverse geocode: coordenadas → dirección legible ──────── */
+/* ── Reverse geocode: coordenadas → dirección detallada estilo Google Maps ──────── */
 async function reverseGeocode(lat: number, lng: number): Promise<string> {
   try {
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=es`,
-      { headers: { "Accept-Language": "es" } }
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=es`,
+      { headers: { "User-Agent": "ZapatillasEC-Web/1.0", "Accept-Language": "es" } }
     );
     const data = await res.json();
-    const a = data.address || {};
-    const parts = [
-      a.road || a.pedestrian || a.path || "",
-      a.house_number || "",
-      a.neighbourhood || a.suburb || a.quarter || "",
-    ].filter(Boolean);
-    return parts.join(" ").trim() || data.display_name?.split(",")[0] || "";
+    if (!data || !data.address) return "";
+
+    const a = data.address;
+    let place = data.name || a.amenity || a.shop || a.building || a.office || a.tourism || a.leisure || "";
+    
+    // Ignorar etiquetas genéricas internas de OSM
+    if (/^(planta \d+|nodo|punto|bench|tree|lote \d+|banca|árbol|semáforo)/i.test(place)) {
+      place = "";
+    }
+
+    const rawRoad = a.road || a.pedestrian || a.street || a.footway || a.residential || a.path || "";
+    const houseNo = a.house_number || "";
+    const sector = a.suburb || a.neighbourhood || a.city_district || a.quarter || a.parish || "";
+
+    let parts: string[] = [];
+
+    if (place && place.toLowerCase() !== rawRoad.toLowerCase()) {
+      parts.push(place);
+    }
+
+    if (rawRoad) {
+      let formattedRoad = rawRoad;
+      if (!/^(av|avenida|calle|pasaje|transversal|diagonal|n-)/i.test(rawRoad)) {
+        formattedRoad = `Calle ${rawRoad}`;
+      }
+      if (houseNo) {
+        formattedRoad += ` N° ${houseNo}`;
+      }
+      parts.push(formattedRoad);
+    }
+
+    if (sector && sector.toLowerCase() !== rawRoad.toLowerCase()) {
+      parts.push(`Sector ${sector}`);
+    }
+
+    if (!parts.some((p) => p.toLowerCase().includes("quito"))) {
+      parts.push("Quito");
+    }
+
+    if (parts.length === 0 && data.display_name) {
+      return data.display_name.split(",").slice(0, 4).join(", ").trim();
+    }
+
+    return parts.join(", ").trim();
   } catch { return ""; }
 }
 
@@ -191,6 +230,8 @@ export default function CheckoutPage() {
   const [sellersLoadAttempt, setSellersLoadAttempt] = useState(0);
   const [markerPos,          setMarkerPos]          = useState<LatLngLiteral>(QUITO_CENTER);
   const [geocoding,          setGeocoding]          = useState(false);
+  const [isStockModalOpen,   setIsStockModalOpen]   = useState(false);
+  const [pendingFormData,    setPendingFormData]    = useState<CheckoutForm | null>(null);
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } =
     useForm<CheckoutForm>({
@@ -244,12 +285,15 @@ export default function CheckoutPage() {
     setGeocoding(false);
   }, [setValue]);
 
-  /* Buscador → mover mapa + llenar campo */
-  const handleSearchSelect = useCallback((lat: number, lng: number, label: string) => {
+  /* Buscador → mover mapa + llenar campo con dirección detallada */
+  const handleSearchSelect = useCallback(async (lat: number, lng: number, label: string) => {
     setMarkerPos({ lat, lng });
-    const short = label.split(",").slice(0, 2).join(",").trim();
-    setValue("direccionEnvio", short, { shouldValidate: true });
-    toast.success("Dirección encontrada.");
+    setGeocoding(true);
+    const detailed = await reverseGeocode(lat, lng);
+    const finalAddr = detailed || label.split(",").slice(0, 4).join(", ").trim();
+    setValue("direccionEnvio", finalAddr, { shouldValidate: true });
+    toast.success("Dirección detectada.");
+    setGeocoding(false);
   }, [setValue]);
 
   const tipoEntrega  = watch("tipoEntrega");
@@ -265,9 +309,18 @@ export default function CheckoutPage() {
     );
   }, [sellerSearch, sellers]);
 
-  const onSubmit = async (form: CheckoutForm) => {
+  /* Abrir modal de verificación de stock antes de crear pedido */
+  const handleFormValid = (form: CheckoutForm) => {
     if (!cart || cart.items.length === 0) { toast.error("Tu carrito está vacío."); return; }
+    setPendingFormData(form);
+    setIsStockModalOpen(true);
+  };
+
+  /* Confirmar solicitud de pedido desde el modal */
+  const handleConfirmOrder = async () => {
+    if (!pendingFormData) return;
     setIsSubmitting(true);
+    const form = pendingFormData;
     const addressBase = form.direccionEnvio?.trim() || "";
     const cleanBase = addressBase.replace(/\s*[\(\[]-?\d+\.\d+,\s*-?\d+\.\d+[\)\]]/g, "").trim();
     const direccionConCoords =
@@ -287,7 +340,8 @@ export default function CheckoutPage() {
         referenciaAdicional: form.referenciaAdicional || form.notas,
         tipoEntrega:         form.tipoEntrega,
       });
-      toast.success("Pedido creado. Ahora sube tu comprobante de pago.");
+      toast.success("¡Solicitud recibida! Te contactaremos vía WhatsApp para confirmar tu talla.");
+      setIsStockModalOpen(false);
       navigate(`/pedidos/${order.id}`);
     } catch (err: any) {
       toast.error(err?.message || "No se pudo crear el pedido.");
@@ -300,13 +354,44 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-page)]">
+      {/* Modal Flotante de Verificación de Stock */}
+      <StockVerificationModal
+        isOpen={isStockModalOpen}
+        onClose={() => setIsStockModalOpen(false)}
+        onConfirm={handleConfirmOrder}
+        isSubmitting={isSubmitting}
+        userPhone={watch("telefonoContacto")}
+      />
+
       <div className="container-app py-6 sm:py-8 lg:py-10">
         <h1 className="font-display text-3xl font-extrabold text-[var(--text-primary)] sm:text-4xl">
           Checkout
         </h1>
 
+        {/* Banner Informativo Flotante / Destacado */}
+        <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-teal-500/10 dark:from-emerald-950/40 dark:via-[#121622] dark:to-teal-950/30 p-4 sm:p-5 shadow-sm">
+          <div className="flex items-start gap-3.5">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 text-white shadow-md shadow-emerald-500/20">
+              <MessageSquare className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                  Verificación de disponibilidad antes del pago
+                </h3>
+                <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-950/80 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+                  <Sparkles className="h-3 w-3" /> WhatsApp
+                </span>
+              </div>
+              <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                Antes de que realices el pago o envíes tu comprobante, nos comunicaremos contigo por WhatsApp para confirmarte que el modelo y talla de la zapatilla siguen disponibles en inventario.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <form
-          onSubmit={handleSubmit(onSubmit)}
+          onSubmit={handleSubmit(handleFormValid)}
           className="mt-6 grid gap-6 lg:gap-8 lg:grid-cols-[1fr_380px]"
         >
           {/* ════ LEFT ════ */}
@@ -352,13 +437,8 @@ export default function CheckoutPage() {
                   </h2>
                 </div>
                 <p className="mb-4 text-sm text-[var(--text-muted)]">
-                  Busca tu calle, haz clic en el mapa o usa tu ubicación actual.
+                  Haz clic en el mapa, usa tus accesos rápidos o activa tu ubicación GPS.
                 </p>
-
-                {/* ── Buscador FUERA del mapa ── */}
-                <div className="mb-3">
-                  <MapSearchBox onSelect={handleSearchSelect} />
-                </div>
 
                 {/* ── Botón GPS: usar mi ubicación actual ── */}
                 <button
@@ -397,29 +477,28 @@ export default function CheckoutPage() {
                   }
                 </button>
 
-                {/* ── Mapa ── */}
-                <div className="overflow-hidden rounded-xl border border-[var(--bg-border)]" style={{ height: 320 }}>
-                  <MapContainer
-                    center={QUITO_CENTER}
-                    zoom={13}
-                    style={{ height: "100%", width: "100%" }}
-                    scrollWheelZoom={true}
-                    zoomControl={true}
-                  >
-                    <TileLayer
-                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    />
-                    <Marker position={markerPos} />
-                    <MapFlyTo position={markerPos} />
-                    <MapClickHandler onPick={handleMapPick} />
-                  </MapContainer>
+                {/* ── Chips de Ubicación Rápida ── */}
+                <div className="mb-3">
+                  <span className="block text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1.5">
+                    Sectores populares en Quito:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {QUITO_PRESETS.map((preset) => (
+                      <button
+                        key={preset.name}
+                        type="button"
+                        onClick={() => handleMapPick(preset.lat, preset.lng)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-blue-200/60 dark:border-sky-800/60 bg-blue-50/60 dark:bg-sky-950/30 px-2.5 py-1 text-xs font-semibold text-blue-700 dark:text-sky-300 transition-all hover:bg-blue-100 dark:hover:bg-sky-900/40 active:scale-95"
+                      >
+                        <MapPin className="h-3 w-3 text-blue-500" />
+                        {preset.name}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                <div className="mt-2 flex items-center justify-between text-[11px] text-[var(--text-muted)]">
-                  <span>También puedes hacer clic directo en el mapa</span>
-                  <span>Solo envíos en Quito</span>
-                </div>
+                {/* ── Mapa HD Google / CARTO ── */}
+                <CheckoutMap position={markerPos} onPick={handleMapPick} height={350} />
               </section>
             )}
 
@@ -710,14 +789,15 @@ export default function CheckoutPage() {
               variant="secondary"
               size="lg"
               fullWidth
-              className="mt-5"
+              className="mt-5 bg-emerald-600 hover:bg-emerald-500 text-white border-none shadow-lg shadow-emerald-600/25 gap-2"
               isLoading={isSubmitting}
               disabled={isSubmitting}
             >
-              Confirmar pedido
+              <MessageSquare className="h-5 w-5" />
+              Solicitar Pedido
             </Button>
-            <p className="mt-3 text-center text-xs text-[var(--text-muted)]">
-              Después de confirmar, subirás tu comprobante de pago.
+            <p className="mt-3 text-center text-xs leading-normal text-slate-500 dark:text-slate-400">
+              Verificamos la disponibilidad en bodega y te confirmamos por WhatsApp antes de tu pago.
             </p>
           </aside>
         </form>

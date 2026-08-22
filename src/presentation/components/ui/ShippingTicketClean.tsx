@@ -1,16 +1,12 @@
-/**
- * ShippingTicket — Ticket imprimible para Servientrega + mini mapa de ubicación.
- * Usado en admin, contador y vendedor para imprimir y pegar en el paquete.
- */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { MapPin, Printer } from "lucide-react";
 import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
+import type { LatLngLiteral } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { Printer, MapPin, Package, Phone, User, Hash, Truck } from "lucide-react";
 import type { Order } from "@/domain/entities/Order";
-import { formatCurrency, formatDate, formatAddressForDisplay } from "@/presentation/utils/format";
+import { formatCurrency, formatDate } from "@/presentation/utils/format";
 
-/* Fix leaflet icon */
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -18,15 +14,23 @@ L.Icon.Default.mergeOptions({
   shadowUrl:     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-/* Intenta extraer coordenadas lat/lng de la dirección si vienen en el string */
-export function extractCoords(direccion: string): { lat: number; lng: number } | null {
-  if (!direccion) return null;
-  const m = direccion.match(/(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
-  if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
-  return null;
+const QUITO_DEFAULT: LatLngLiteral = { lat: -0.1807, lng: -78.4678 };
+
+function extractCoords(str?: string | null): { lat: number; lng: number } | null {
+  if (!str) return null;
+  const m = str.match(/[\(\[]\s*(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)\s*[\)\]]/);
+  if (!m) return null;
+  const lat = parseFloat(m[1]);
+  const lng = parseFloat(m[2]);
+  if (isNaN(lat) || isNaN(lng)) return null;
+  return { lat, lng };
 }
 
-/* Geocodificación inteligente para direcciones de Quito */
+function formatAddressForDisplay(str?: string | null): string {
+  if (!str) return "";
+  return str.replace(/\s*[\(\[]-?\d+\.\d+,\s*-?\d+\.\d+[\)\]]/g, "").trim();
+}
+
 export async function smartGeocode(address: string): Promise<{ lat: number; lng: number } | null> {
   if (!address || !address.trim()) return null;
 
@@ -68,34 +72,30 @@ export async function smartGeocode(address: string): Promise<{ lat: number; lng:
       if (data && data[0] && data[0].lat && data[0].lon) {
         return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
       }
-    } catch { /* continue */ }
+    } catch {
+      // Fallback
+    }
   }
-
   return null;
 }
 
-const QUITO_DEFAULT = { lat: -0.1807, lng: -78.4678 };
-
-function MapFlyTo({ position }: { position: { lat: number; lng: number } }) {
+function MapFlyTo({ position }: { position: LatLngLiteral }) {
   const map = useMap();
   useEffect(() => {
-    map.invalidateSize();
-    map.setView(position, 17);
-  }, [map, position]);
+    map.flyTo(position, 16, { duration: 1 });
+  }, [position, map]);
   return null;
 }
 
-/* ─── Mini map component ─────────────────────────────────── */
-function MiniMap({ coords }: { coords: { lat: number; lng: number } }) {
+function MiniMap({ coords }: { coords: LatLngLiteral }) {
   return (
-    <div style={{ height: 260, width: "100%" }} className="overflow-hidden rounded-xl border border-blue-100 shadow-sm">
+    <div className="overflow-hidden rounded-xl border border-[var(--bg-border)]" style={{ height: 220 }}>
       <MapContainer
         center={coords}
-        zoom={17}
+        zoom={15}
         style={{ height: "100%", width: "100%" }}
         scrollWheelZoom={false}
         zoomControl={true}
-        attributionControl={false}
       >
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         <Marker position={coords} />
@@ -136,7 +136,6 @@ export function ShippingTicket({ order }: Props) {
     return () => { isMounted = false; };
   }, [rawAddress, direccion]);
 
-  /* ── Imprimir solo el ticket ── */
   const handlePrint = () => {
     const content = printRef.current;
     if (!content) return;
@@ -147,7 +146,7 @@ export function ShippingTicket({ order }: Props) {
       <html lang="es">
       <head>
         <meta charset="UTF-8" />
-        <title>Ticket Servientrega — Pedido ${order.numero}</title>
+        <title>Ticket Servientrega - Pedido ${order.numero}</title>
         <style>
           @page {
             size: A4 portrait;
@@ -202,7 +201,6 @@ export function ShippingTicket({ order }: Props) {
           .total-row td { font-weight: 800; font-size: 12px; background: #eff6ff; }
           .footer { background: #f8faff; padding: 10px 20px; font-size: 10px; color: #64748b; text-align: center; border-top: 1px solid #e2e8f0; page-break-inside: avoid; break-inside: avoid; }
           
-          /* Copia para paquete */
           .ticket-copy-container {
             page-break-before: always;
             break-before: page;
@@ -240,12 +238,10 @@ export function ShippingTicket({ order }: Props) {
 
   return (
     <div className="space-y-5">
-
-      {/* ── Mini mapa ── */}
       <div>
         <div className="mb-2 flex items-center gap-2">
           <MapPin className="h-4 w-4 text-blue-500" />
-          <span className="text-sm font-bold text-[var(--text-primary)]">Ubicación del cliente</span>
+          <span className="text-sm font-bold text-[var(--text-primary)]">Ubicacion del cliente</span>
         </div>
         {loadingMap ? (
           <div className="flex h-[220px] items-center justify-center rounded-xl border border-[var(--bg-border)] bg-[var(--bg-surface2)]">
@@ -255,12 +251,11 @@ export function ShippingTicket({ order }: Props) {
           <MiniMap coords={coords!} />
         )}
         <p className="mt-1.5 text-xs text-[var(--text-muted)]">
-          <strong>Dirección:</strong> {direccion || "—"}
+          <strong>Direccion:</strong> {direccion || "—"}
           {" · "}{order.ciudad}, {order.provincia}
         </p>
       </div>
 
-      {/* ── Botón imprimir ── */}
       <button
         type="button"
         onClick={handlePrint}
@@ -270,14 +265,11 @@ export function ShippingTicket({ order }: Props) {
         Imprimir ticket Servientrega
       </button>
 
-      {/* ── Ticket (hidden — solo para imprimir) ── */}
       <div ref={printRef} style={{ display: "none" }}>
-        {/* Ticket Principal (Página 1) */}
         <div className="ticket">
-          {/* Header */}
           <div className="header">
             <div>
-              <h1>DRIP DIAMOND — Ticket de Envío</h1>
+              <h1>DRIP DIAMOND - Ticket de Envio</h1>
               <p>Servientrega Ecuador · Quito</p>
             </div>
             <div style={{ textAlign: "right" }}>
@@ -286,18 +278,17 @@ export function ShippingTicket({ order }: Props) {
             </div>
           </div>
 
-          {/* Datos */}
           <div className="body">
             <div className="field">
               <label>Destinatario</label>
               <p>{order.clienteNombre || "Cliente"}</p>
             </div>
             <div className="field">
-              <label>Teléfono de contacto</label>
+              <label>Telefono de contacto</label>
               <p>{order.telefonoContacto || "—"}</p>
             </div>
             <div className="field full">
-              <label>Dirección exacta de entrega</label>
+              <label>Direccion exacta de entrega</label>
               <p>{direccion || "—"}</p>
             </div>
             <div className="field">
@@ -317,12 +308,12 @@ export function ShippingTicket({ order }: Props) {
               <p>{formatCurrency(order.total)}</p>
             </div>
             <div className="field">
-              <label>Costo de envío</label>
+              <label>Costo de envio</label>
               <p>$3.00 USD</p>
             </div>
             <div className="field">
               <label>Remitente</label>
-              <p>Drip Diamond — 0999 001 471</p>
+              <p>Drip Diamond - 0999 001 471</p>
             </div>
             {order.vendedorNombre && (
               <div className="field">
@@ -347,7 +338,6 @@ export function ShippingTicket({ order }: Props) {
 
           <hr className="divider" />
 
-          {/* Productos */}
           <div className="items">
             <table>
               <thead>
@@ -376,23 +366,21 @@ export function ShippingTicket({ order }: Props) {
             </table>
           </div>
 
-          {/* Footer */}
           <div className="footer">
             <p>Drip Diamond | Luxury Sneakers Ecuador | WhatsApp: 0999 001 471</p>
             <p style={{ marginTop: 2 }}>Pedido {order.numero} · {formatDate(order.creadoEn)} · Estado: {order.estado}</p>
           </div>
         </div>
 
-        {/* Segunda copia reducida (Página 2 limpia) */}
         <div className="ticket-copy-container">
           <div className="cut-line">
-            <span>✂ Cortar aquí — Pegar en el paquete</span>
+            <span>-- Cortar aqui - Pegar en el paquete --</span>
           </div>
 
           <div className="ticket" style={{ fontSize: "11px" }}>
             <div className="header" style={{ padding: "10px 16px" }}>
               <div>
-                <h1 style={{ fontSize: 14 }}>DRIP DIAMOND — Copia para Paquete</h1>
+                <h1 style={{ fontSize: 14 }}>DRIP DIAMOND - Copia para Paquete</h1>
               </div>
               <p>{order.numero}</p>
             </div>
@@ -402,11 +390,11 @@ export function ShippingTicket({ order }: Props) {
                 <p>{order.clienteNombre || "Cliente"}</p>
               </div>
               <div className="field">
-                <label>Teléfono</label>
+                <label>Telefono</label>
                 <p>{order.telefonoContacto || "—"}</p>
               </div>
               <div className="field full">
-                <label>Dirección exacta de entrega</label>
+                <label>Direccion exacta de entrega</label>
                 <p>{direccion || "—"} · {order.ciudad}</p>
               </div>
               <div className="field">
