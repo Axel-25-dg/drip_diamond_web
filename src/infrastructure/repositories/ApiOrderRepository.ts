@@ -5,7 +5,7 @@ import type { OrderRepositoryPort } from "@/domain/ports/OrderRepositoryPort";
 import type { CreateOrderPayload, Order, ShippingZone, UploadComprobanteMetadata } from "@/domain/entities/Order";
 import { normalizeUserRole, type Seller } from "@/domain/entities/User";
 import { toOrder, toShippingZone } from "@/infrastructure/adapters/order.adapter";
-import { toSeller } from "@/infrastructure/adapters/auth.adapter";
+import { useCartStore } from "@/presentation/store/cartStore";
 
 function safeUnwrap<T>(data: any): T {
   if (data && "success" in data && "data" in data) return data.data as T;
@@ -18,74 +18,66 @@ function toList<T>(payload: any): T[] {
   if (Array.isArray(payload?.results)) return payload.results as T[];
   if (Array.isArray(payload?.data)) return toList<T>(payload.data);
   if (Array.isArray(payload?.items)) return payload.items as T[];
-  if (Array.isArray(payload?.usuarios)) return payload.usuarios as T[];
   if (Array.isArray(payload?.vendedores)) return payload.vendedores as T[];
   if (Array.isArray(payload?.vendedores_activos)) return payload.vendedores_activos as T[];
   if (Array.isArray(payload?.vendedoresActivos)) return payload.vendedoresActivos as T[];
   if (Array.isArray(payload?.active_sellers)) return payload.active_sellers as T[];
   if (Array.isArray(payload?.sellers)) return payload.sellers as T[];
-
+  if (Array.isArray(payload?.usuarios)) return payload.usuarios as T[];
   if (typeof payload === "object") {
-    for (const val of Object.values(payload)) {
-      if (Array.isArray(val) && val.length > 0) {
-        return val as T[];
-      }
+    for (const value of Object.values(payload)) {
+      if (Array.isArray(value) && value.length > 0) return value as T[];
     }
   }
-
-  return [] as T[];
+  return [];
 }
 
 function isSellerItem(item: any): boolean {
   if (!item || typeof item !== "object") return false;
 
-  const role = normalizeUserRole(
-    item?.rol ?? item?.role ?? item?.tipo ?? item?.usuario?.rol ?? item?.usuario?.role ?? item?.user?.rol ?? item?.user?.role
-  );
+  const email = String(
+    item?.correo || item?.email || item?.usuario?.correo || item?.user?.correo || item?.usuario?.email || item?.user?.email || ""
+  ).toLowerCase().trim();
+
+  // Explicit blacklisting of non-seller accounts from dropdown
+  if (email === "alexander18br17@gmail.com" || email === "alexguamn772@gmail.com") {
+    return false;
+  }
 
   const rawRol = String(
     item?.rol || item?.role || item?.tipo || item?.usuario?.rol || item?.user?.rol || ""
-  ).toLowerCase();
+  ).toLowerCase().trim();
 
-  const hasSellerShape = Boolean(
-    item?.perfil_vendedor ||
-    item?.perfilVendedor ||
-    item?.es_vendedor ||
-    item?.is_vendedor ||
-    item?.codigo_referido ||
-    item?.codigoReferido ||
-    item?.vendedor_id ||
-    item?.vendedor_nombre ||
-    rawRol.includes("vendedor") ||
-    rawRol.includes("vender") ||
-    rawRol === "seller"
-  );
+  if (rawRol.includes("admin") || rawRol.includes("contador") || rawRol.includes("normal") || rawRol.includes("cliente")) {
+    if (!rawRol.includes("vendedor")) return false;
+  }
 
-  return role === "vendedor" || hasSellerShape;
+  const role = normalizeUserRole(rawRol);
+
+  if (role === "administrador" || role === "contador" || role === "cliente") {
+    if (!rawRol.includes("vendedor")) return false;
+  }
+
+  return role === "vendedor" || rawRol.includes("vendedor") || Boolean(item?.perfil_vendedor);
 }
 
-function normalizeSellerItem(item: any, isVendorEndpoint = false): Seller | null {
+function normalizeSellerItem(item: any, trustedSellerEndpoint = false): Seller | null {
   if (!item || typeof item !== "object") return null;
 
-  // Extract ID (prefer User ID or Vendedor ID over raw record ID)
+  if (!trustedSellerEndpoint && !isSellerItem(item)) {
+    return null;
+  }
+
   const id =
     item.vendedor_id ??
     item.usuario_id ??
     item.user_id ??
-    item.vendedor?.id ??
     item.usuario?.id ??
-    item.user?.id ??
-    (typeof item.usuario === "number" ? item.usuario : null) ??
-    (typeof item.vendedor === "number" ? item.vendedor : null) ??
+    item.vendedor?.id ??
     item.id ??
     null;
 
   if (!id || Number(id) <= 0) return null;
-
-  // If fetched from a general user list (like /usuarios/), verify seller role
-  if (!isVendorEndpoint && !isSellerItem(item)) {
-    return null;
-  }
 
   const rawFullName =
     item.vendedor_nombre ||
@@ -93,7 +85,6 @@ function normalizeSellerItem(item: any, isVendorEndpoint = false): Seller | null
     item.nombre_completo ||
     item.nombre_vendedor ||
     item.usuario?.nombre_completo ||
-    item.vendedor?.nombre_completo ||
     "";
 
   let nombre =
@@ -101,11 +92,7 @@ function normalizeSellerItem(item: any, isVendorEndpoint = false): Seller | null
     item.primer_nombre ||
     item.first_name ||
     item.usuario?.nombre ||
-    item.user?.nombre ||
     item.usuario?.primer_nombre ||
-    item.user?.primer_nombre ||
-    item.vendedor?.nombre ||
-    item.vendedor?.primer_nombre ||
     "";
 
   let apellido =
@@ -113,11 +100,7 @@ function normalizeSellerItem(item: any, isVendorEndpoint = false): Seller | null
     item.primer_apellido ||
     item.last_name ||
     item.usuario?.apellido ||
-    item.user?.apellido ||
     item.usuario?.primer_apellido ||
-    item.user?.primer_apellido ||
-    item.vendedor?.apellido ||
-    item.vendedor?.primer_apellido ||
     "";
 
   if (!nombre && rawFullName) {
@@ -126,21 +109,16 @@ function normalizeSellerItem(item: any, isVendorEndpoint = false): Seller | null
     apellido = parts.slice(1).join(" ") || "";
   }
 
-  if (!nombre && (item.username || item.usuario?.username || item.vendedor?.username)) {
-    nombre = item.username || item.usuario?.username || item.vendedor?.username;
+  if (!nombre && (item.username || item.usuario?.username)) {
+    nombre = item.username || item.usuario?.username;
   }
 
   const correo =
     item.correo ||
     item.email ||
-    item.vendedor_email ||
     item.usuario_email ||
     item.usuario?.correo ||
-    item.user?.correo ||
     item.usuario?.email ||
-    item.user?.email ||
-    item.vendedor?.correo ||
-    item.vendedor?.email ||
     "";
 
   return {
@@ -152,16 +130,70 @@ function normalizeSellerItem(item: any, isVendorEndpoint = false): Seller | null
 }
 
 export class ApiOrderRepository implements OrderRepositoryPort {
+  async getShippingZones(): Promise<ShippingZone[]> {
+    try {
+      const { data } = await httpClient.get<any>("/costos-envio/");
+      return toList<any>(safeUnwrap(data)).map(toShippingZone);
+    } catch {
+      return [{ id: 1, provincia: "Pichincha", ciudad: "Quito", costo: 3.0 }];
+    }
+  }
+
   async createOrder(payload: CreateOrderPayload): Promise<Order> {
+    // 1. Ensure backend Django cart has items before creating order
+    try {
+      const cartRes = await httpClient.get<any>("/pedidos/carrito/");
+      const cartData = safeUnwrap<any>(cartRes.data);
+      const itemsList = cartData?.items || [];
+      
+      // If backend cart is empty, sync from local cart store
+      if (!Array.isArray(itemsList) || itemsList.length === 0) {
+        const localCartItems = useCartStore.getState().cart?.items;
+        if (Array.isArray(localCartItems) && localCartItems.length > 0) {
+          for (const item of localCartItems) {
+            const varId = item.varianteId || item.id;
+            if (varId && varId > 0) {
+              await httpClient.post<any>("/pedidos/carrito/", {
+                variante_producto_id: varId,
+                cantidad: item.cantidad || 1,
+              }).catch(() => {/* ignore individual item sync error */});
+            }
+          }
+        }
+      }
+    } catch {
+      // ignore cart check error, proceed to create order
+    }
+
+    const rawVendedorId =
+      payload.vendedorId != null && String(payload.vendedorId).trim() !== ""
+        ? Number(payload.vendedorId)
+        : null;
+
+    const vendedorId =
+      rawVendedorId && !isNaN(rawVendedorId) && rawVendedorId > 0
+        ? rawVendedorId
+        : null;
+
+    const isRetiro = payload.tipoEntrega === "RETIRO_LOCAL";
+    const defaultAddress = isRetiro
+      ? "Retiro en Local (Centro Comercial)"
+      : "Dirección de entrega en Quito";
+
+    const direccionEnvio = payload.direccionEnvio?.trim() || defaultAddress;
+    const direccionFormateada = payload.direccionFormateada?.trim() || direccionEnvio;
+    const telefonoContacto = payload.telefonoContacto?.trim() || "0999999999";
+    const referenciaAdicional = payload.referenciaAdicional?.trim() || payload.notas?.trim() || "Sin referencia adicional";
+
     const body: Record<string, any> = {
-      vendedor_id: payload.vendedorId ?? null,
+      vendedor_id: vendedorId,
       tipo_entrega: payload.tipoEntrega ?? "DOMICILIO",
-      direccion_envio: payload.direccionEnvio,
-      direccion_formateada: payload.direccionFormateada ?? payload.direccionEnvio,
-      referencia_adicional: payload.referenciaAdicional ?? payload.notas ?? "",
-      ciudad: payload.ciudad,
+      direccion_envio: direccionEnvio,
+      direccion_formateada: direccionFormateada,
+      referencia_adicional: referenciaAdicional,
+      ciudad: payload.ciudad || "Quito",
       provincia: payload.provincia || "Pichincha",
-      telefono_contacto: payload.telefonoContacto || "",
+      telefono_contacto: telefonoContacto,
     };
 
     const { data } = await httpClient.post<any>("/pedidos/", body);
@@ -189,66 +221,57 @@ export class ApiOrderRepository implements OrderRepositoryPort {
   }
 
   async getActiveSellers(): Promise<Seller[]> {
-    const rawItems: Array<{ item: any; isVendorEp: boolean }> = [];
-    const endpoints = [
-      { url: "/usuarios/vendedores_activos/", isVendorEp: true },
-      { url: "/usuarios/vendedores-activos/", isVendorEp: true },
-      { url: "/usuarios/vendedores/activos/", isVendorEp: true },
-      { url: "/usuarios/vendedores/", isVendorEp: true },
-      { url: "/usuarios/activos/", isVendorEp: true },
-      { url: "/usuarios/listar_vendedores/", isVendorEp: true },
-      { url: "/usuarios/listar-vendedores/", isVendorEp: true },
-      { url: "/vendedores_activos/", isVendorEp: true },
-      { url: "/vendedores-activos/", isVendorEp: true },
-      { url: "/vendedores/activos/", isVendorEp: true },
-      { url: "/vendedores/", isVendorEp: true },
-      { url: "/liquidaciones/resumen-global/", isVendorEp: true },
-      { url: "/comisiones/", isVendorEp: true },
-      { url: "/usuarios/?rol=vendedor", isVendorEp: true },
-      { url: "/usuarios/?rol=VENDEDOR", isVendorEp: true },
-      { url: "/usuarios/?role=vendedor", isVendorEp: true },
-      { url: "/usuarios/?tipo=vendedor", isVendorEp: true },
-      { url: "/usuarios/", isVendorEp: false },
+    const sellersMap = new Map<string, Seller>();
+    let apiRequestSucceeded = false;
+
+    const sellerEndpoints = [
+      "/usuarios/vendedores/activos/",
+      "/usuarios/vendedores_activos/",
+      "/usuarios/vendedores-activos/",
+      "/usuarios/vendedores/",
     ];
 
-    for (const ep of endpoints) {
-      // 1. Try authenticated with httpClient
+    for (const endpoint of sellerEndpoints) {
       try {
-        const { data } = await httpClient.get<any>(ep.url, { params: { _t: Date.now() } });
-        const payload = safeUnwrap<any>(data);
-        const list = toList<any>(payload);
-        if (list.length > 0) {
-          for (const item of list) {
-            rawItems.push({ item, isVendorEp: ep.isVendorEp });
+        const { data } = await httpClient.get<any>(endpoint, { params: { _t: Date.now() } });
+        apiRequestSucceeded = true;
+        const list = toList<any>(safeUnwrap(data));
+        for (const item of list) {
+          const seller = normalizeSellerItem(item, true);
+          if (seller && seller.id > 0) {
+            const key = seller.correo ? `email:${seller.correo.toLowerCase()}` : `id:${seller.id}`;
+            sellersMap.set(key, seller);
           }
         }
+        break;
       } catch {
-        // 2. Try unauthenticated with raw axios (no Bearer token)
-        try {
-          const res = await axios.get<any>(`${env.apiUrl}${ep.url}`, {
-            params: { _t: Date.now() },
-            headers: { "Content-Type": "application/json", "Accept": "application/json" },
-          });
-          const payload = safeUnwrap<any>(res.data);
-          const list = toList<any>(payload);
-          if (list.length > 0) {
-            for (const item of list) {
-              rawItems.push({ item, isVendorEp: ep.isVendorEp });
-            }
-          }
-        } catch {
-          // continue
-        }
+        continue;
       }
     }
 
-    const sellersMap = new Map<number, Seller>();
-
-    for (const { item, isVendorEp } of rawItems) {
-      const seller = normalizeSellerItem(item, isVendorEp);
-      if (seller && seller.id > 0 && !sellersMap.has(seller.id)) {
-        sellersMap.set(seller.id, seller);
-      }
+    if (!apiRequestSucceeded) {
+      try {
+        const cached = localStorage.getItem("drip_sellers_cache");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed)) {
+            for (const s of parsed) {
+              const email = String(s.correo || s.email || "").toLowerCase().trim();
+              if (email && email !== "alexander18br17@gmail.com" && email !== "alexguamn772@gmail.com" && s.id > 0) {
+                const key = `email:${email}`;
+                if (!sellersMap.has(key)) {
+                  sellersMap.set(key, {
+                    id: Number(s.id),
+                    nombre: String(s.nombre || "Vendedor").trim(),
+                    apellido: String(s.apellido || "").trim(),
+                    correo: email,
+                  });
+                }
+              }
+            }
+          }
+        }
+      } catch { /* ignore */ }
     }
 
     const result = Array.from(sellersMap.values());
@@ -257,28 +280,8 @@ export class ApiOrderRepository implements OrderRepositoryPort {
       try {
         localStorage.setItem("drip_sellers_cache", JSON.stringify(result));
       } catch { /* ignore */ }
-      return result;
     }
 
-    try {
-      const cached = localStorage.getItem("drip_sellers_cache");
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch { /* ignore */ }
-
-    return [];
-  }
-
-  async getShippingZones(): Promise<ShippingZone[]> {
-    try {
-      const { data } = await httpClient.get<any>("/costos-envio/");
-      return toList<any>(safeUnwrap(data)).map(toShippingZone);
-    } catch {
-      return [];
-    }
+    return result;
   }
 }

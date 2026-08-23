@@ -236,7 +236,7 @@ export class ApiAdminRepository implements AdminRepositoryPort {
       const { data } = await httpClient.get<any>(url);
       const payload = safeUnwrap<any>(data);
       const items: any[] = Array.isArray(payload) ? payload : payload?.results ?? [];
-      return items.map((u: any) => ({
+      const mapped = items.map((u: any) => ({
         id: u.id,
         nombre: u.nombre || u.primer_nombre || u.first_name || "",
         apellido: u.apellido || u.primer_apellido || u.last_name || "",
@@ -247,6 +247,23 @@ export class ApiAdminRepository implements AdminRepositoryPort {
         fotoPerfilUrl: u.foto_perfil_url || u.foto_perfil,
         creadoEn: u.creado_en,
       }));
+
+      const sellers = mapped
+        .filter((u) => u.rol === "vendedor")
+        .map((u) => ({
+          id: u.id,
+          nombre: u.nombre || u.username || "Vendedor",
+          apellido: u.apellido || "",
+          correo: u.correo,
+        }));
+      if (sellers.length > 0) {
+        try {
+          localStorage.setItem("drip_sellers_cache", JSON.stringify(sellers));
+          localStorage.setItem("drip_sellers_timestamp", String(Date.now()));
+        } catch {}
+      }
+
+      return mapped;
     } catch {
       return [];
     }
@@ -579,10 +596,10 @@ export class ApiAdminRepository implements AdminRepositoryPort {
     }
   }
 
-  async assignSellerToOrder(orderId: number, vendedorId: number): Promise<any> {
+  async assignSellerToOrder(orderId: number, vendedorId: number): Promise<Order> {
     try {
       const { data } = await httpClient.post<any>(`/pedidos/${orderId}/asignar-vendedor/`, { vendedor_id: vendedorId });
-      return this._mapLiquidacion(safeUnwrap(data));
+      return toOrder(safeUnwrap(data));
     } catch {
       throw new Error("No se pudo asignar el vendedor al pedido.");
     }
