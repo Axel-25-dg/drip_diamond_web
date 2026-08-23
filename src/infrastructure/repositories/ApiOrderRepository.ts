@@ -13,12 +13,26 @@ function safeUnwrap<T>(data: any): T {
 }
 
 function toList<T>(payload: any): T[] {
+  if (!payload) return [];
   if (Array.isArray(payload)) return payload as T[];
   if (Array.isArray(payload?.results)) return payload.results as T[];
+  if (Array.isArray(payload?.data)) return toList<T>(payload.data);
   if (Array.isArray(payload?.items)) return payload.items as T[];
   if (Array.isArray(payload?.usuarios)) return payload.usuarios as T[];
   if (Array.isArray(payload?.vendedores)) return payload.vendedores as T[];
-  if (payload?.data) return toList<T>(payload.data);
+  if (Array.isArray(payload?.vendedores_activos)) return payload.vendedores_activos as T[];
+  if (Array.isArray(payload?.vendedoresActivos)) return payload.vendedoresActivos as T[];
+  if (Array.isArray(payload?.active_sellers)) return payload.active_sellers as T[];
+  if (Array.isArray(payload?.sellers)) return payload.sellers as T[];
+
+  if (typeof payload === "object") {
+    for (const val of Object.values(payload)) {
+      if (Array.isArray(val) && val.length > 0) {
+        return val as T[];
+      }
+    }
+  }
+
   return [] as T[];
 }
 
@@ -61,6 +75,8 @@ function normalizeSellerItem(item: any, isVendorEndpoint = false): Seller | null
     item.vendedor?.id ??
     item.usuario?.id ??
     item.user?.id ??
+    (typeof item.usuario === "number" ? item.usuario : null) ??
+    (typeof item.vendedor === "number" ? item.vendedor : null) ??
     item.id ??
     null;
 
@@ -110,8 +126,8 @@ function normalizeSellerItem(item: any, isVendorEndpoint = false): Seller | null
     apellido = parts.slice(1).join(" ") || "";
   }
 
-  if (!nombre && item.username) {
-    nombre = item.username;
+  if (!nombre && (item.username || item.usuario?.username || item.vendedor?.username)) {
+    nombre = item.username || item.usuario?.username || item.vendedor?.username;
   }
 
   const correo =
@@ -175,19 +191,28 @@ export class ApiOrderRepository implements OrderRepositoryPort {
   async getActiveSellers(): Promise<Seller[]> {
     const rawItems: Array<{ item: any; isVendorEp: boolean }> = [];
     const endpoints = [
+      { url: "/usuarios/vendedores_activos/", isVendorEp: true },
+      { url: "/usuarios/vendedores-activos/", isVendorEp: true },
       { url: "/usuarios/vendedores/activos/", isVendorEp: true },
       { url: "/usuarios/vendedores/", isVendorEp: true },
+      { url: "/usuarios/activos/", isVendorEp: true },
+      { url: "/usuarios/listar_vendedores/", isVendorEp: true },
+      { url: "/usuarios/listar-vendedores/", isVendorEp: true },
+      { url: "/vendedores_activos/", isVendorEp: true },
+      { url: "/vendedores-activos/", isVendorEp: true },
       { url: "/vendedores/activos/", isVendorEp: true },
       { url: "/vendedores/", isVendorEp: true },
       { url: "/liquidaciones/resumen-global/", isVendorEp: true },
       { url: "/comisiones/", isVendorEp: true },
       { url: "/usuarios/?rol=vendedor", isVendorEp: true },
       { url: "/usuarios/?rol=VENDEDOR", isVendorEp: true },
+      { url: "/usuarios/?role=vendedor", isVendorEp: true },
+      { url: "/usuarios/?tipo=vendedor", isVendorEp: true },
       { url: "/usuarios/", isVendorEp: false },
     ];
 
     for (const ep of endpoints) {
-      // 1. Try authenticated
+      // 1. Try authenticated with httpClient
       try {
         const { data } = await httpClient.get<any>(ep.url, { params: { _t: Date.now() } });
         const payload = safeUnwrap<any>(data);
@@ -198,7 +223,7 @@ export class ApiOrderRepository implements OrderRepositoryPort {
           }
         }
       } catch {
-        // 2. Try unauthenticated (no Bearer token)
+        // 2. Try unauthenticated with raw axios (no Bearer token)
         try {
           const res = await axios.get<any>(`${env.apiUrl}${ep.url}`, {
             params: { _t: Date.now() },
