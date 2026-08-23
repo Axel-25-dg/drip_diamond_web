@@ -1,3 +1,5 @@
+import axios from "axios";
+import { env } from "@/infrastructure/config/env";
 import { httpClient } from "@/infrastructure/http/httpClient";
 import type { OrderRepositoryPort } from "@/domain/ports/OrderRepositoryPort";
 import type { CreateOrderPayload, Order, ShippingZone, UploadComprobanteMetadata } from "@/domain/entities/Order";
@@ -185,6 +187,7 @@ export class ApiOrderRepository implements OrderRepositoryPort {
     ];
 
     for (const ep of endpoints) {
+      // 1. Try authenticated
       try {
         const { data } = await httpClient.get<any>(ep.url, { params: { _t: Date.now() } });
         const payload = safeUnwrap<any>(data);
@@ -195,7 +198,22 @@ export class ApiOrderRepository implements OrderRepositoryPort {
           }
         }
       } catch {
-        // continue
+        // 2. Try unauthenticated (no Bearer token)
+        try {
+          const res = await axios.get<any>(`${env.apiUrl}${ep.url}`, {
+            params: { _t: Date.now() },
+            headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          });
+          const payload = safeUnwrap<any>(res.data);
+          const list = toList<any>(payload);
+          if (list.length > 0) {
+            for (const item of list) {
+              rawItems.push({ item, isVendorEp: ep.isVendorEp });
+            }
+          }
+        } catch {
+          // continue
+        }
       }
     }
 
