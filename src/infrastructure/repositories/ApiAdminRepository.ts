@@ -460,17 +460,15 @@ export class ApiAdminRepository implements AdminRepositoryPort {
 
   async getAdminStats(): Promise<AdminStats> {
     try {
-      const [pedidosRes, productosRes] = await Promise.all([
-        httpClient.get<any>("/pedidos/"),
-        httpClient.get<any>("/productos/"),
-      ]);
+      const pedidosRes = await httpClient.get<any>("/pedidos/");
+      const productosRes = await httpClient.get<any>("/productos/").catch(() => null);
       const pedidosList = safeUnwrap<any>(pedidosRes.data);
-      const productosList = safeUnwrap<any>(productosRes.data);
+      const productosList = productosRes ? safeUnwrap<any>(productosRes.data) : [];
       const pedidosArr: any[] = Array.isArray(pedidosList) ? pedidosList : pedidosList?.results ?? [];
       const productosArr: any[] = Array.isArray(productosList) ? productosList : productosList?.results ?? [];
       const totalVentas = pedidosArr
-        .filter((p: any) => ["ENTREGADO", "ENVIADO", "PAGO_APROBADO"].includes(p.estado))
-        .reduce((sum: number, p: any) => sum + Number(p.total || p.monto_total || 0), 0);
+        .filter((p: any) => ["PAGO_APROBADO", "PREPARANDO_PEDIDO", "ENVIADO", "ENTREGADO"].includes(p.estado))
+        .reduce((sum: number, p: any) => sum + Number(p.total ?? p.monto_total ?? p.monto ?? 0), 0);
       const pendientes = pedidosArr.filter((p: any) => ["PENDIENTE_DE_PAGO", "COMPROBANTE_ENVIADO"].includes(p.estado)).length;
       return { totalVentas, totalPedidos: pedidosArr.length, pedidosPendientes: pendientes, productosActivos: productosArr.length, totalClientes: 0, totalVendedores: 0 };
     } catch {

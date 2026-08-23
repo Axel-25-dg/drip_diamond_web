@@ -52,7 +52,7 @@ export default function VendedorDashboardPage() {
     (async () => {
       try {
         const [oRes, cRes, summaryRes, liqRes] = await Promise.all([
-          useCases.getSellerOrders.execute(user?.id),
+          useCases.getSellerOrders.execute(),
           useCases.getCommissionReport.execute(),
           useCases.getSellerCommissionSummary.execute(),
           useCases.getLiquidaciones.execute(user?.id),
