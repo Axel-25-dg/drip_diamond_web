@@ -40,13 +40,15 @@ export function useProductImage(productId: number, imagenPrincipal: string | nul
         const url =
           resolveMediaUrl(detail.imagenPrincipal) ??
           (detail.galeria.length > 0 ? resolveMediaUrl(detail.galeria[0].url) : null);
-        imageCache.set(productId, url);
+        if (url) {
+          imageCache.set(productId, url);
+        }
         setResolvedUrl(url);
       })
       .catch(() => {
-        imageCache.set(productId, null);
+        fetchedRef.current = false;
       });
   }, [productId, fromSummary]);
 
-  return resolvedUrl;
+  return fromSummary ?? resolvedUrl;
 }

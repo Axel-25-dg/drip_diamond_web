@@ -6,7 +6,7 @@ import { Button } from "@/presentation/components/ui/Button";
 import { formatCurrency } from "@/presentation/utils/format";
 import {
   Package, Users, Mail, DollarSign, ShoppingBag, Clock,
-  Plus, ArrowUpRight, Tag, Layers, Ruler, TrendingUp, Zap, Shield,
+  Plus, ArrowUpRight, Tag, Layers, Ruler, TrendingUp, Zap, Shield, Sparkles,
 } from "lucide-react";
 
 export default function AdminDashboardPage() {
@@ -78,6 +78,7 @@ export default function AdminDashboardPage() {
             { to: "/admin/productos", title: "Catálogo de Productos", desc: "Crea y edita zapatillas, precios, marcas y variantes.", icon: Package, badge: "Catálogo" },
             { to: "/admin/usuarios", title: "Usuarios & Roles", desc: "Vendedores, contadores, admins y clientes.", icon: Users, badge: "Personal" },
             { to: "/admin/campanas", title: "Campañas Email", desc: "Envía promociones masivas a segmentos reales.", icon: Mail, badge: "Marketing" },
+            { to: "/admin/promociones", title: "Promociones & Envío Gratis", desc: "Reglas de envío gratis (2+ pares) y promociones.", icon: Sparkles, badge: "Promociones" },
             { to: "/admin/marcas", title: "Marcas", desc: "Gestiona las marcas disponibles en el catálogo.", icon: Tag, badge: "Catálogo" },
             { to: "/admin/categorias", title: "Categorías", desc: "Organiza productos por categorías con imágenes.", icon: Layers, badge: "Catálogo" },
             { to: "/admin/tallas", title: "Tallas", desc: "Administra las tallas maestras del sistema.", icon: Ruler, badge: "Catálogo" },

@@ -55,6 +55,13 @@ export class UploadComprobanteUseCase {
   }
 }
 
+export class CancelOrderUseCase {
+  constructor(private repo: OrderRepositoryPort) {}
+  execute(pedidoId: number) {
+    return this.repo.cancelOrder(pedidoId);
+  }
+}
+
 export class GetActiveSellersUseCase {
   constructor(private repo: OrderRepositoryPort) {}
   execute() {

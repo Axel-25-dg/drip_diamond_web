@@ -117,7 +117,13 @@ export default function OrdersPage() {
         ) : (
           <ul className="mt-6 flex flex-col gap-3">
             {filtered.map((order) => (
-              <OrderCard key={order.id} order={order} />
+              <OrderCard
+                key={order.id}
+                order={order}
+                onCancelled={(id) => {
+                  setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, estado: "CANCELADO" } : o)));
+                }}
+              />
             ))}
           </ul>
         )}
@@ -127,13 +133,28 @@ export default function OrdersPage() {
 }
 
 /* ─── Compact order card ──────────────────────────────────── */
-function OrderCard({ order }: { order: Order; onCancelled?: (id: number) => void }) {
+function OrderCard({ order, onCancelled }: { order: Order; onCancelled?: (id: number) => void }) {
   const canUpload  = order.estado === "PENDIENTE_DE_PAGO" || order.estado === "PAGO_RECHAZADO";
   const canCancel  = ["PENDIENTE_DE_PAGO", "COMPROBANTE_ENVIADO", "PAGO_RECHAZADO"].includes(order.estado);
   const firstItem  = order.items?.[0];
   const imgSrc     = resolveMediaUrl(firstItem?.imagenUrl);
   const extraItems = (order.items?.length ?? 0) - 1;
   const [cancelling, setCancelling] = useState(false);
+
+  const handleCancel = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!confirm("¿Estás seguro de que deseas cancelar este pedido? Esta acción no se puede deshacer.")) return;
+    setCancelling(true);
+    try {
+      await useCases.cancelOrder.execute(order.id);
+      toast.success("Pedido cancelado correctamente.");
+      if (onCancelled) onCancelled(order.id);
+    } catch (err: any) {
+      toast.error(err?.message || "No se pudo cancelar el pedido.");
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   /* Left accent color */
   const accentLeft =
@@ -151,7 +172,14 @@ function OrderCard({ order }: { order: Order; onCancelled?: (id: number) => void
         <div className="relative shrink-0 self-start sm:self-center">
           <div className="h-14 w-14 overflow-hidden rounded-xl border border-[var(--card-border)] bg-[var(--bg-surface2)]">
             {imgSrc ? (
-              <img src={imgSrc} alt={firstItem?.nombre ?? ""} className="h-full w-full object-cover" />
+              <img
+                src={imgSrc}
+                alt={firstItem?.nombre ?? ""}
+                className="h-full w-full object-cover"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = "/placeholder.svg";
+                }}
+              />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-[var(--text-muted)]">
                 <Package className="h-6 w-6" />
@@ -215,6 +243,20 @@ function OrderCard({ order }: { order: Order; onCancelled?: (id: number) => void
           </span>
 
           <div className="flex items-center gap-1.5">
+            {/* Cancel — when actionable */}
+            {canCancel && (
+              <button
+                type="button"
+                onClick={handleCancel}
+                disabled={cancelling}
+                title="Cancelar pedido"
+                className="inline-flex items-center gap-1 rounded-full border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 px-2.5 py-1 text-[11px] font-semibold text-red-600 dark:text-red-400 transition-colors hover:bg-red-100 dark:hover:bg-red-950/50 disabled:opacity-50"
+              >
+                {cancelling ? <Loader2 className="h-3 w-3 animate-spin" /> : <Ban className="h-3 w-3" />}
+                Cancelar
+              </button>
+            )}
+
             {/* Upload — only when action required */}
             {canUpload && (
               <Link to={`/pedidos/${order.id}`}>

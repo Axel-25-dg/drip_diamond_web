@@ -42,7 +42,7 @@ function resolveQueue(token: string | null) {
 
 export const httpClient: AxiosInstance = axios.create({
   baseURL: env.apiUrl,
-  timeout: 20000,
+  timeout: 35000,
   headers: {
     "Content-Type": "application/json",
     "Accept": "application/json",
@@ -58,14 +58,6 @@ httpClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   // When data is FormData, delete Content-Type so browser sets boundary automatically
   if (config.data instanceof FormData && config.headers) {
     delete config.headers["Content-Type"];
-  }
-
-  if ((config.method || "get").toLowerCase() === "get") {
-    const key = buildRequestKey(config);
-    const existing = inFlightRequests.get(key);
-    if (existing) {
-      return Promise.reject({ __deduped: true, promise: existing } as any);
-    }
   }
 
   return config;
@@ -85,12 +77,19 @@ httpClient.interceptors.response.use(
     const status = error.response?.status;
     const isAuthEndpoint = originalRequest?.url?.includes("/auth/login") || originalRequest?.url?.includes("/auth/refresh");
 
-    if (status === 429 && originalRequest) {
-      console.warn(`Rate limited (429): ${originalRequest.method ?? 'GET'} ${originalRequest.url}`);
+    // Clean in-flight GET request cache on error so future requests aren't blocked
+    if (originalRequest && (originalRequest.method || "get").toLowerCase() === "get") {
+      const key = buildRequestKey(originalRequest);
+      inFlightRequests.delete(key);
+    }
+
+    // Auto-retry transient network errors, cold-start timeouts (ECONNABORTED), 502, 503, 504, or 429 rate limit
+    const isNetworkOrTimeout = !error.response || status === 502 || status === 503 || status === 504 || error.code === "ECONNABORTED";
+    if ((status === 429 || isNetworkOrTimeout) && originalRequest && (originalRequest.method || "get").toLowerCase() === "get") {
       const attempt = (retryCounts.get(originalRequest) ?? 0) + 1;
       if (attempt <= 2) {
         retryCounts.set(originalRequest, attempt);
-        const delay = 300 * attempt;
+        const delay = status === 429 ? 300 * attempt : 600 * attempt;
         await new Promise((resolve) => window.setTimeout(resolve, delay));
         return httpClient(originalRequest);
       }
@@ -173,7 +172,13 @@ export function unwrap<T>(envelope: ApiEnvelope<T>): T {
 try {
   const _originalGet = httpClient.get.bind(httpClient) as any;
   httpClient.get = function (url: string, config?: InternalAxiosRequestConfig) {
-    const key = `get:${url}:${config?.params ? JSON.stringify(config.params) : ""}`;
+    const fakeConfig: InternalAxiosRequestConfig = {
+      method: "get",
+      url,
+      params: config?.params,
+      headers: (config?.headers || {}) as any,
+    };
+    const key = buildRequestKey(fakeConfig);
     const existing = inFlightRequests.get(key) as Promise<any> | undefined;
     if (existing) {
       return existing;

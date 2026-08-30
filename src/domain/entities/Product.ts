@@ -81,6 +81,11 @@ export interface Promotion {
   descripcion?: string;
   imagenUrl?: string | null;
   activo: boolean;
+  tipo?: "ENVIO_GRATIS_DOS_PARES" | "DESCUENTO_PORCENTAJE" | "DESCUENTO_FIJO" | "GENERAL";
+  minPares?: number;
+  descuentoPorcentaje?: number;
+  descuentoFijo?: number;
+  creadoEn?: string;
 }
 
 export interface ProductFilters {

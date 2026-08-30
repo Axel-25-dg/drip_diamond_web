@@ -191,12 +191,17 @@ export function toSize(dto: SizeDTO): Size {
   return { id: dto.id, valor: dto.valor };
 }
 
-export function toPromotion(dto: PromotionDTO): Promotion {
+export function toPromotion(dto: any): Promotion {
   return {
-    id: dto.id,
-    titulo: dto.titulo,
-    descripcion: dto.descripcion,
-    imagenUrl: dto.imagen_url ?? null,
-    activo: dto.activo,
+    id: dto.id ?? Date.now(),
+    titulo: dto.titulo ?? "Promoción",
+    descripcion: dto.descripcion ?? "",
+    imagenUrl: dto.imagen_url ?? dto.imagenUrl ?? null,
+    activo: dto.activo ?? true,
+    tipo: dto.tipo ?? (dto.min_pares ? "ENVIO_GRATIS_DOS_PARES" : "GENERAL"),
+    minPares: dto.min_pares ?? dto.minPares ?? 2,
+    descuentoPorcentaje: dto.descuento_porcentaje ?? dto.descuentoPorcentaje,
+    descuentoFijo: dto.descuento_fijo ?? dto.descuentoFijo,
+    creadoEn: dto.creado_en ?? dto.creadoEn,
   };
 }

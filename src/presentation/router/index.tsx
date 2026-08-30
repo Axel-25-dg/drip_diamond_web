@@ -26,6 +26,7 @@ import AdminCategoriesPage from "@/presentation/pages/admin/AdminCategoriesPage"
 import AdminTallasPage from "@/presentation/pages/admin/AdminTallasPage";
 import AdminOrdersPage from "@/presentation/pages/admin/AdminOrdersPage";
 import AdminSecurityPage from "@/presentation/pages/admin/AdminSecurityPage";
+import AdminPromotionsPage from "@/presentation/pages/admin/AdminPromotionsPage";
 
 // Contador Dashboard
 import ContadorDashboardPage from "@/presentation/pages/contador/ContadorDashboardPage";
@@ -76,6 +77,7 @@ export const router = createBrowserRouter([
           { path: "admin/categorias", element: <AdminCategoriesPage /> },
           { path: "admin/tallas", element: <AdminTallasPage /> },
           { path: "admin/seguridad", element: <AdminSecurityPage /> },
+          { path: "admin/promociones", element: <AdminPromotionsPage /> },
         ],
       },
 

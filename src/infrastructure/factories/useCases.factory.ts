@@ -4,6 +4,10 @@ import {
   GetProductDetailUseCase,
   GetCatalogFiltersUseCase,
   GetPromotionsUseCase,
+  CreatePromotionUseCase,
+  UpdatePromotionUseCase,
+  DeletePromotionUseCase,
+  TogglePromotionUseCase,
 } from "@/application/use-cases/catalog.use-cases";
 import {
   LoginUseCase,
@@ -24,6 +28,7 @@ import {
   GetOrdersUseCase,
   GetOrderDetailUseCase,
   UploadComprobanteUseCase,
+  CancelOrderUseCase,
   GetActiveSellersUseCase,
   GetShippingZonesUseCase,
 } from "@/application/use-cases/order.use-cases";
@@ -54,6 +59,10 @@ export const useCases = {
   getProductDetail: new GetProductDetailUseCase(catalogRepository),
   getCatalogFilters: new GetCatalogFiltersUseCase(catalogRepository),
   getPromotions: new GetPromotionsUseCase(catalogRepository),
+  createPromotion: new CreatePromotionUseCase(catalogRepository),
+  updatePromotion: new UpdatePromotionUseCase(catalogRepository),
+  deletePromotion: new DeletePromotionUseCase(catalogRepository),
+  togglePromotion: new TogglePromotionUseCase(catalogRepository),
 
   login: new LoginUseCase(authRepository),
   register: new RegisterUseCase(authRepository),
@@ -72,6 +81,7 @@ export const useCases = {
   getOrders: new GetOrdersUseCase(orderRepository),
   getOrderDetail: new GetOrderDetailUseCase(orderRepository),
   uploadComprobante: new UploadComprobanteUseCase(orderRepository),
+  cancelOrder: new CancelOrderUseCase(orderRepository),
   getActiveSellers: new GetActiveSellersUseCase(orderRepository),
   getShippingZones: new GetShippingZonesUseCase(orderRepository),
 

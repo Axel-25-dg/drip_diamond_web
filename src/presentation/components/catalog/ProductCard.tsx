@@ -42,6 +42,9 @@ export function ProductCard({ product }: { product: ProductSummary }) {
             alt={product.nombre}
             loading="lazy"
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.08]"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).src = "/placeholder.svg";
+            }}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center dot-pattern">

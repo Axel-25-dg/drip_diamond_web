@@ -92,9 +92,20 @@ export function resolveMediaUrl(path: any): string | null {
 
   const value = String(raw).trim();
   if (!value || value === "null" || value === "undefined" || value === "[object Object]") return null;
-  if (/^https?:\/\//i.test(value) || value.startsWith("data:")) return value;
+  
+  const isHttpsPage = typeof window !== "undefined" && window.location.protocol === "https:";
 
-  const base = (import.meta.env.VITE_API_URL as string) || "https://dripdiamond.store/api";
+  if (/^https?:\/\//i.test(value) || value.startsWith("data:")) {
+    if (isHttpsPage && value.startsWith("http://")) {
+      return value.replace(/^http:\/\//i, "https://");
+    }
+    return value;
+  }
+
+  let base = (import.meta.env.VITE_API_URL as string) || "https://dripdiamond.store/api";
+  if (isHttpsPage && base.startsWith("http://")) {
+    base = base.replace(/^http:\/\//i, "https://");
+  }
   const origin = base.replace(/\/api\/?$/, "");
 
   if (value.startsWith("/media/") || value.startsWith("media/") || value.startsWith("uploads/")) {

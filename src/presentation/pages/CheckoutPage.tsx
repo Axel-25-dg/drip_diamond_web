@@ -14,6 +14,7 @@ import { useCases } from "@/infrastructure/factories/useCases.factory";
 import { normalizeUserRole, type Seller } from "@/domain/entities/User";
 import { useCartStore } from "@/presentation/store/cartStore";
 import { useAuthStore } from "@/presentation/store/authStore";
+import { usePromotions } from "@/presentation/hooks/usePromotions";
 import { Input } from "@/presentation/components/ui/Input";
 import { Button } from "@/presentation/components/ui/Button";
 import { Spinner } from "@/presentation/components/ui/Spinner";
@@ -319,8 +320,16 @@ export default function CheckoutPage() {
     setGeocoding(false);
   }, [setValue]);
 
+  const { isFreeShippingPromoActive, minParesForFreeShipping } = usePromotions();
+
+  const totalPairs = useMemo(() => {
+    return cart?.items.reduce((acc, item) => acc + item.cantidad, 0) ?? 0;
+  }, [cart]);
+
   const tipoEntrega = watch("tipoEntrega");
-  const shippingCost = tipoEntrega === "RETIRO_LOCAL" ? 0 : SHIPPING_COST;
+  const isFreeShippingApplied = isFreeShippingPromoActive && totalPairs >= minParesForFreeShipping;
+  const baseShippingCost = tipoEntrega === "RETIRO_LOCAL" ? 0 : SHIPPING_COST;
+  const shippingCost = (tipoEntrega === "RETIRO_LOCAL" || isFreeShippingApplied) ? 0 : baseShippingCost;
   const subtotal = cart?.subtotal ?? 0;
   const total = subtotal + shippingCost;
 
@@ -772,6 +781,20 @@ export default function CheckoutPage() {
                 <span className="text-blue-600 dark:text-sky-400">{formatCurrency(total)}</span>
               </div>
             </div>
+
+            {/* Promo banner */}
+            {tipoEntrega !== "RETIRO_LOCAL" && isFreeShippingApplied && (
+              <div className="mt-4 rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/30 p-3 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+                <Sparkles className="h-4 w-4 shrink-0 text-emerald-500" />
+                <span><strong>¡Envío GRATIS aplicado!</strong> Tienes {totalPairs} pares en tu pedido (Promo {minParesForFreeShipping}+ pares).</span>
+              </div>
+            )}
+            {tipoEntrega !== "RETIRO_LOCAL" && isFreeShippingPromoActive && totalPairs < minParesForFreeShipping && (
+              <div className="mt-4 rounded-xl border border-blue-200 dark:border-sky-900/50 bg-blue-50 dark:bg-sky-950/30 p-3 text-xs text-blue-800 dark:text-sky-300 flex items-center gap-2">
+                <Truck className="h-4 w-4 shrink-0 text-blue-500" />
+                <span><strong>¡Agrega {minParesForFreeShipping - totalPairs} par{minParesForFreeShipping - totalPairs > 1 ? "es" : ""} más y obtén ENVÍO GRATIS!</strong> (Promo {minParesForFreeShipping}+ pares).</span>
+              </div>
+            )}
 
             {/* Vendedor seleccionado */}
             {watch("vendedorId") && (

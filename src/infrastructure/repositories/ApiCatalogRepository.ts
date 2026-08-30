@@ -197,14 +197,146 @@ export class ApiCatalogRepository implements CatalogRepositoryPort {
     return result;
   }
 
+  private _getCustomPromos(): Promotion[] {
+    try {
+      const stored = localStorage.getItem("drip_promociones_custom");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed.map(toPromotion);
+      }
+    } catch { /* ignore */ }
+    return [
+      {
+        id: 1,
+        titulo: "Envío GRATIS por 2 o más pares",
+        descripcion: "Por la compra de 2 o más pares de zapatillas, el envío por Servientrega es completamente GRATIS a todo Quito.",
+        imagenUrl: null,
+        activo: true,
+        tipo: "ENVIO_GRATIS_DOS_PARES",
+        minPares: 2,
+        creadoEn: new Date().toISOString(),
+      },
+    ];
+  }
+
+  private _saveCustomPromos(promos: Promotion[]) {
+    try {
+      localStorage.setItem("drip_promociones_custom", JSON.stringify(promos));
+    } catch { /* ignore */ }
+  }
+
   async getPromotions(): Promise<Promotion[]> {
+    let remoteList: Promotion[] = [];
     try {
       const { data } = await httpClient.get<any>("/promociones/");
       const payload = safeUnwrap<any>(data);
       const list: any[] = Array.isArray(payload) ? payload : payload?.results ?? [];
-      return list.map(toPromotion);
+      remoteList = list.map(toPromotion);
     } catch {
-      return [];
+      // API endpoint fallback
     }
+
+    const localList = this._getCustomPromos();
+    const map = new Map<number, Promotion>();
+
+    // Load defaults/locals first
+    for (const p of localList) map.set(p.id, p);
+    // Remote overrides
+    for (const p of remoteList) map.set(p.id, p);
+
+    const merged = Array.from(map.values());
+    if (remoteList.length > 0) {
+      this._saveCustomPromos(merged);
+    }
+    return merged;
+  }
+
+  async createPromotion(payload: Partial<Promotion>): Promise<Promotion> {
+    const newPromo: Promotion = {
+      id: Date.now(),
+      titulo: payload.titulo?.trim() || "Nueva Promoción",
+      descripcion: payload.descripcion?.trim() || "",
+      imagenUrl: payload.imagenUrl || null,
+      activo: payload.activo ?? true,
+      tipo: payload.tipo || "ENVIO_GRATIS_DOS_PARES",
+      minPares: payload.minPares ?? 2,
+      descuentoPorcentaje: payload.descuentoPorcentaje,
+      descuentoFijo: payload.descuentoFijo,
+      creadoEn: new Date().toISOString(),
+    };
+
+    try {
+      const { data } = await httpClient.post<any>("/promociones/", {
+        titulo: newPromo.titulo,
+        descripcion: newPromo.descripcion,
+        imagen_url: newPromo.imagenUrl,
+        activo: newPromo.activo,
+        tipo: newPromo.tipo,
+        min_pares: newPromo.minPares,
+        descuento_porcentaje: newPromo.descuentoPorcentaje,
+        descuento_fijo: newPromo.descuentoFijo,
+      });
+      const remote = toPromotion(safeUnwrap(data));
+      if (remote && remote.id) newPromo.id = remote.id;
+    } catch {
+      // Backend fallback
+    }
+
+    const current = this._getCustomPromos();
+    const updated = [newPromo, ...current.filter((p) => p.id !== newPromo.id)];
+    this._saveCustomPromos(updated);
+    return newPromo;
+  }
+
+  async updatePromotion(id: number, payload: Partial<Promotion>): Promise<Promotion> {
+    const current = this._getCustomPromos();
+    const existing = current.find((p) => p.id === id);
+    const updatedPromo: Promotion = {
+      id,
+      titulo: payload.titulo !== undefined ? payload.titulo : existing?.titulo || "Promoción",
+      descripcion: payload.descripcion !== undefined ? payload.descripcion : existing?.descripcion || "",
+      imagenUrl: payload.imagenUrl !== undefined ? payload.imagenUrl : existing?.imagenUrl || null,
+      activo: payload.activo !== undefined ? payload.activo : existing?.activo ?? true,
+      tipo: payload.tipo || existing?.tipo || "ENVIO_GRATIS_DOS_PARES",
+      minPares: payload.minPares !== undefined ? payload.minPares : existing?.minPares ?? 2,
+      descuentoPorcentaje: payload.descuentoPorcentaje !== undefined ? payload.descuentoPorcentaje : existing?.descuentoPorcentaje,
+      descuentoFijo: payload.descuentoFijo !== undefined ? payload.descuentoFijo : existing?.descuentoFijo,
+      creadoEn: existing?.creadoEn || new Date().toISOString(),
+    };
+
+    try {
+      await httpClient.put<any>(`/promociones/${id}/`, {
+        titulo: updatedPromo.titulo,
+        descripcion: updatedPromo.descripcion,
+        imagen_url: updatedPromo.imagenUrl,
+        activo: updatedPromo.activo,
+        tipo: updatedPromo.tipo,
+        min_pares: updatedPromo.minPares,
+        descuento_porcentaje: updatedPromo.descuentoPorcentaje,
+        descuento_fijo: updatedPromo.descuentoFijo,
+      }).catch(() => httpClient.patch<any>(`/promociones/${id}/`, { activo: updatedPromo.activo }));
+    } catch {
+      // Backend fallback
+    }
+
+    const newList = current.map((p) => (p.id === id ? updatedPromo : p));
+    if (!newList.some((p) => p.id === id)) newList.unshift(updatedPromo);
+    this._saveCustomPromos(newList);
+    return updatedPromo;
+  }
+
+  async deletePromotion(id: number): Promise<void> {
+    try {
+      await httpClient.delete(`/promociones/${id}/`);
+    } catch {
+      // Backend fallback
+    }
+    const current = this._getCustomPromos();
+    const updated = current.filter((p) => p.id !== id);
+    this._saveCustomPromos(updated);
+  }
+
+  async togglePromotion(id: number, activo: boolean): Promise<Promotion> {
+    return this.updatePromotion(id, { activo });
   }
 }

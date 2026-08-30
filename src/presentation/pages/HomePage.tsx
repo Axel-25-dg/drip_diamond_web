@@ -196,16 +196,23 @@ export default function HomePage() {
     let active = true;
     (async () => {
       try {
-        const [products, filters] = await Promise.all([
+        const [productsRes, filtersRes] = await Promise.allSettled([
           useCases.getProducts.execute({ page: 1, pageSize: 8, ordering: "-reciente" }),
           useCases.getCatalogFilters.execute(),
         ]);
         if (!active) return;
-        setFeatured(products.items);
-        setBrands(filters.brands);
-        setCategories(filters.categories);
-      } catch { /* offline — page still renders */ }
-      finally { if (active) setIsLoading(false); }
+        if (productsRes.status === "fulfilled") {
+          setFeatured(productsRes.value.items);
+        }
+        if (filtersRes.status === "fulfilled") {
+          setBrands(filtersRes.value.brands);
+          setCategories(filtersRes.value.categories);
+        }
+      } catch {
+        /* offline — page still renders cleanly */
+      } finally {
+        if (active) setIsLoading(false);
+      }
     })();
     return () => { active = false; };
   }, []);

@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Trash2, ArrowRight, ShoppingBag } from "lucide-react";
+import { Trash2, ArrowRight, ShoppingBag, Sparkles, Truck } from "lucide-react";
 import { useCartStore } from "@/presentation/store/cartStore";
+import { usePromotions } from "@/presentation/hooks/usePromotions";
 import { Button } from "@/presentation/components/ui/Button";
 import { Spinner } from "@/presentation/components/ui/Spinner";
 import { EmptyState } from "@/presentation/components/ui/EmptyState";
@@ -10,6 +11,7 @@ import { formatCurrency, resolveMediaUrl } from "@/presentation/utils/format";
 
 export default function CartPage() {
   const { cart, isLoading, fetchCart, removeItem } = useCartStore();
+  const { isFreeShippingPromoActive, minParesForFreeShipping } = usePromotions();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -93,7 +95,21 @@ export default function CartPage() {
             <span>Subtotal ({cart.totalItems} artículos)</span>
             <span className="font-semibold text-slate-900 dark:text-white">{formatCurrency(cart.subtotal)}</span>
           </div>
-          <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">El costo de envío se calcula en el checkout según tu zona.</p>
+
+          {isFreeShippingPromoActive && (
+            cart.totalItems >= minParesForFreeShipping ? (
+              <div className="mt-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 p-3 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+                <Sparkles className="h-4 w-4 shrink-0 text-emerald-500" />
+                <span><strong>¡Envío GRATIS activado!</strong> Calificas por llevar {minParesForFreeShipping} o más pares de zapatillas.</span>
+              </div>
+            ) : (
+              <div className="mt-3 rounded-xl bg-blue-50 dark:bg-sky-950/30 border border-blue-200 dark:border-sky-900/50 p-3 text-xs text-blue-800 dark:text-sky-300 flex items-center gap-2">
+                <Truck className="h-4 w-4 shrink-0 text-blue-500" />
+                <span><strong>¡Agrega {minParesForFreeShipping - cart.totalItems} par{minParesForFreeShipping - cart.totalItems > 1 ? "es" : ""} más para ENVÍO GRATIS!</strong> Promo especial.</span>
+              </div>
+            )
+          )}
+
           <Button size="lg" variant="secondary" fullWidth className="mt-6" onClick={() => navigate("/checkout")}>
             Continuar al pago <ArrowRight className="h-4 w-4" />
           </Button>

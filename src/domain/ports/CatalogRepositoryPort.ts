@@ -16,4 +16,8 @@ export interface CatalogRepositoryPort {
   getCategories(): Promise<Category[]>;
   getSizes(): Promise<Size[]>;
   getPromotions(): Promise<Promotion[]>;
+  createPromotion(payload: Partial<Promotion>): Promise<Promotion>;
+  updatePromotion(id: number, payload: Partial<Promotion>): Promise<Promotion>;
+  deletePromotion(id: number): Promise<void>;
+  togglePromotion(id: number, activo: boolean): Promise<Promotion>;
 }

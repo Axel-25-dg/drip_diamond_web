@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { X, Trash2, ShoppingBag } from "lucide-react";
+import { X, Trash2, ShoppingBag, Sparkles } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCartStore } from "@/presentation/store/cartStore";
+import { usePromotions } from "@/presentation/hooks/usePromotions";
 import { formatCurrency, resolveMediaUrl } from "@/presentation/utils/format";
 import { Button } from "@/presentation/components/ui/Button";
 import { Spinner } from "@/presentation/components/ui/Spinner";
@@ -10,6 +11,7 @@ import { toast } from "sonner";
 
 export function CartDrawer() {
   const { cart, isDrawerOpen, closeDrawer, removeItem, fetchCart, isLoading } = useCartStore();
+  const { isFreeShippingPromoActive, minParesForFreeShipping } = usePromotions();
 
   useEffect(() => {
     if (isDrawerOpen && !cart) fetchCart().catch(() => {});
@@ -102,6 +104,19 @@ export function CartDrawer() {
 
             {cart && cart.items.length > 0 && (
               <div className="border-t border-slate-200 dark:border-[#222732] px-5 py-4 bg-white dark:bg-[#12151c]">
+                {isFreeShippingPromoActive && (
+                  cart.totalItems >= minParesForFreeShipping ? (
+                    <div className="mb-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 p-2.5 text-[11px] font-semibold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                      <span>¡Envío GRATIS activado ({minParesForFreeShipping}+ pares)!</span>
+                    </div>
+                  ) : (
+                    <div className="mb-3 rounded-xl bg-blue-50 dark:bg-sky-950/30 border border-blue-200 dark:border-sky-900/50 p-2.5 text-[11px] font-semibold text-blue-800 dark:text-sky-300 flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5 shrink-0 text-blue-500" />
+                      <span>¡Lleva {minParesForFreeShipping - cart.totalItems} par{minParesForFreeShipping - cart.totalItems > 1 ? "es" : ""} más para Envío GRATIS!</span>
+                    </div>
+                  )
+                )}
                 <div className="mb-4 flex items-center justify-between">
                   <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">Subtotal</span>
                   <span className="text-lg font-bold text-slate-900 dark:text-white">{formatCurrency(cart.subtotal)}</span>

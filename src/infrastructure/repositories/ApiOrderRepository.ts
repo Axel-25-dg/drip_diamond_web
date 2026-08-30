@@ -220,6 +220,11 @@ export class ApiOrderRepository implements OrderRepositoryPort {
     return toOrder(safeUnwrap(data));
   }
 
+  async cancelOrder(pedidoId: number): Promise<Order> {
+    const { data } = await httpClient.post<any>(`/pedidos/${pedidoId}/cancelar/`);
+    return toOrder(safeUnwrap(data));
+  }
+
   async getActiveSellers(): Promise<Seller[]> {
     const sellersMap = new Map<string, Seller>();
     let apiRequestSucceeded = false;

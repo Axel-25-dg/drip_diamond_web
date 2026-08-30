@@ -6,6 +6,7 @@ export interface OrderRepositoryPort {
   getOrders(): Promise<Order[]>;
   getOrderById(id: number): Promise<Order>;
   uploadComprobante(pedidoId: number, archivo: File, metadata?: UploadComprobanteMetadata): Promise<Order>;
+  cancelOrder(id: number): Promise<Order>;
   getActiveSellers(): Promise<Seller[]>;
   getShippingZones(): Promise<ShippingZone[]>;
 }

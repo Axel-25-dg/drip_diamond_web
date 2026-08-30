@@ -75,13 +75,7 @@ export default function OrderDetailPage() {
     if (!confirm("¿Estás seguro de que deseas cancelar este pedido? Esta acción no se puede deshacer.")) return;
     setIsCancelling(true);
     try {
-      const { data } = await import("@/infrastructure/http/httpClient").then(m =>
-        m.httpClient.post<any>(`/pedidos/${order.id}/cancelar/`)
-      );
-      const safeUnwrap = (d: any) => d?.data ?? d;
-      const updated = await import("@/infrastructure/adapters/order.adapter").then(m =>
-        m.toOrder(safeUnwrap(data))
-      );
+      const updated = await useCases.cancelOrder.execute(order.id);
       setOrder(updated);
       toast.success("Pedido cancelado correctamente.");
     } catch (err: any) {
