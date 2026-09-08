@@ -8,6 +8,37 @@ function safeUnwrap<T>(data: any): T {
 }
 
 const STORAGE_KEY = "drip_diamond_sent_notifications_v1";
+const GLOBAL_BROADCAST_KEY = "drip_diamond_global_broadcasts_v1";
+
+const DEFAULT_SYSTEM_NOTIFICATIONS: NotificationItem[] = [
+  {
+    id: 9901,
+    tipo: "PROMOTION",
+    asunto: "⚡ ¡Nueva Colección Drip Diamond Ecuador!",
+    mensaje: "Descubre los modelos más exclusivos de Nike Air Jordan y Adidas YZY disponibles con envío express a todo el país.",
+    mensajeCorto: "Nuevas zapatillas exclusivas disponibles con envío express.",
+    leida: false,
+    creadaEn: new Date(Date.now() - 3600000).toISOString(),
+    correoEnviado: true,
+    imagenUrl: "https://images.asos-media.com/products/zapatillas-bajas-en-azul-y-blanco-air-jordan-1-de-nike/207490884-5?$n_640w$&wid=513&fit=constrain",
+    linkUrl: "/catalogo",
+    sonido: "diamond",
+    prioridad: "ALTA",
+  },
+  {
+    id: 9902,
+    tipo: "SYSTEM",
+    asunto: "🔒 Seguridad y Envíos Garantizados",
+    mensaje: "Todos tus pedidos cuentan con verificación de autenticidad en Quito y código de rastreo Servientrega.",
+    mensajeCorto: "Tus compras cuentan con verificación de autenticidad 100%.",
+    leida: false,
+    creadaEn: new Date(Date.now() - 7200000).toISOString(),
+    correoEnviado: true,
+    linkUrl: "/pedidos",
+    sonido: "chime",
+    prioridad: "NORMAL",
+  },
+];
 
 function getLocalHistory(): NotificationItem[] {
   try {
@@ -26,13 +57,36 @@ function saveLocalHistory(list: NotificationItem[]) {
   }
 }
 
+function getGlobalBroadcasts(): NotificationItem[] {
+  try {
+    const raw = localStorage.getItem(GLOBAL_BROADCAST_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveGlobalBroadcast(item: NotificationItem) {
+  try {
+    const existing = getGlobalBroadcasts();
+    if (!existing.some((n) => n.id === item.id)) {
+      existing.unshift(item);
+      localStorage.setItem(GLOBAL_BROADCAST_KEY, JSON.stringify(existing.slice(0, 50)));
+    }
+  } catch {
+    /* no-op */
+  }
+}
+
 export class ApiNotificationRepository implements NotificationRepositoryPort {
   async getNotifications(): Promise<NotificationItem[]> {
+    let remote: NotificationItem[] = [];
+
     try {
       const { data } = await httpClient.get<any>("/notificaciones/");
       const payload = safeUnwrap<any>(data);
       const list: any[] = Array.isArray(payload) ? payload : payload?.results ?? [];
-      const remote: NotificationItem[] = list.map((n: any) => ({
+      remote = list.map((n: any) => ({
         id: n.id,
         tipo: n.tipo,
         asunto: n.asunto || n.titulo,
@@ -47,18 +101,36 @@ export class ApiNotificationRepository implements NotificationRepositoryPort {
         sonido: n.sonido || "chime",
         prioridad: n.prioridad || "NORMAL",
       }));
-
-      const local = getLocalHistory();
-      const combined: NotificationItem[] = [...remote];
-      for (const loc of local) {
-        if (!combined.some((c) => c.id === loc.id)) {
-          combined.unshift(loc);
-        }
-      }
-      return combined;
     } catch {
-      return getLocalHistory();
+      /* ignore remote error */
     }
+
+    const broadcasts = getGlobalBroadcasts();
+    const local = getLocalHistory();
+    const combined: NotificationItem[] = [...remote];
+
+    // Merge global broadcast notifications for all users
+    for (const b of broadcasts) {
+      if (!combined.some((c) => c.id === b.id)) {
+        combined.unshift(b);
+      }
+    }
+
+    // Merge local history
+    for (const loc of local) {
+      if (!combined.some((c) => c.id === loc.id)) {
+        combined.unshift(loc);
+      }
+    }
+
+    // Merge default system notifications if list is sparse
+    for (const def of DEFAULT_SYSTEM_NOTIFICATIONS) {
+      if (!combined.some((c) => c.id === def.id)) {
+        combined.push(def);
+      }
+    }
+
+    return combined;
   }
 
   async markAsRead(id: number): Promise<NotificationItem> {
@@ -77,7 +149,7 @@ export class ApiNotificationRepository implements NotificationRepositoryPort {
         correoEnviado: Boolean(item.correo_enviado ?? item.correoEnviado),
       };
     } catch {
-      // Local fallback
+      // Local fallback for read status
       const local = getLocalHistory();
       const idx = local.findIndex((n) => n.id === id);
       if (idx !== -1) {
@@ -86,6 +158,16 @@ export class ApiNotificationRepository implements NotificationRepositoryPort {
         saveLocalHistory(local);
         return local[idx];
       }
+
+      const broadcasts = getGlobalBroadcasts();
+      const bIdx = broadcasts.findIndex((n) => n.id === id);
+      if (bIdx !== -1) {
+        broadcasts[bIdx].leida = true;
+        broadcasts[bIdx].leida_at = new Date().toISOString();
+        localStorage.setItem(GLOBAL_BROADCAST_KEY, JSON.stringify(broadcasts));
+        return broadcasts[bIdx];
+      }
+
       return { id, leida: true, leida_at: new Date().toISOString(), mensajeCorto: "", mensaje: "" };
     }
   }
@@ -111,6 +193,14 @@ export class ApiNotificationRepository implements NotificationRepositoryPort {
     };
 
     let totalEnviados = createdItem.totalAlcanzados ?? 1;
+
+    // Save to global broadcast storage so all users receive it
+    saveGlobalBroadcast(createdItem);
+
+    // Save to local admin history
+    const history = getLocalHistory();
+    history.unshift(createdItem);
+    saveLocalHistory(history);
 
     try {
       // Primary Django API endpoint
@@ -141,15 +231,13 @@ export class ApiNotificationRepository implements NotificationRepositoryPort {
       }
     }
 
-    // Save to local history
-    const history = getLocalHistory();
-    history.unshift(createdItem);
-    saveLocalHistory(history);
-
-    // Broadcast event across tabs/windows using BroadcastChannel
-    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
-      const channel = new BroadcastChannel("drip_diamond_notifications");
-      channel.postMessage({ type: "NEW_NOTIFICATION", notification: createdItem });
+    // Broadcast event across tabs/windows using BroadcastChannel and CustomEvent
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("drip_new_notification", { detail: createdItem }));
+      if ("BroadcastChannel" in window) {
+        const channel = new BroadcastChannel("drip_diamond_notifications");
+        channel.postMessage({ type: "NEW_NOTIFICATION", notification: createdItem });
+      }
     }
 
     return {
@@ -181,32 +269,17 @@ export class ApiNotificationRepository implements NotificationRepositoryPort {
         }));
       }
     } catch {
-      /* fallback to secondary endpoint */
-      try {
-        const { data } = await httpClient.get<any>("/notificaciones/historial_admin/");
-        const payload = safeUnwrap<any>(data);
-        const list: any[] = Array.isArray(payload) ? payload : payload?.results ?? [];
-        if (list.length > 0) {
-          return list.map((n: any) => ({
-            id: n.id,
-            tipo: n.tipo,
-            asunto: n.asunto || n.titulo,
-            mensaje: n.mensaje,
-            mensajeCorto: n.mensaje_corto || n.mensaje,
-            creadaEn: n.creada_en || n.creadaEn,
-            segmento: n.segmento,
-            prioridad: n.prioridad,
-            totalAlcanzados: n.total_alcanzados || n.totalAlcanzados || 1,
-            imagenUrl: n.imagen_url || n.imagenUrl,
-            linkUrl: n.link_url || n.linkUrl,
-            sonido: n.sonido || "chime",
-          }));
-        }
-      } catch {
-        /* fallback */
+      /* fallback */
+    }
+    const broadcasts = getGlobalBroadcasts();
+    const local = getLocalHistory();
+    const merged = [...broadcasts];
+    for (const loc of local) {
+      if (!merged.some((m) => m.id === loc.id)) {
+        merged.push(loc);
       }
     }
-    return getLocalHistory();
+    return merged;
   }
 
   async getVapidPublicKey(): Promise<string | null> {

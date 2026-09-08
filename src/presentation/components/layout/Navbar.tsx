@@ -136,18 +136,18 @@ export function Navbar() {
 
         {/* ── Actions ── */}
         <div className="flex items-center gap-0.5 sm:gap-1">
-          {/* Search (hidden on phone, visible on sm+) */}
+          {/* Search Button (visible on mobile + desktop) */}
           <button
             onClick={() => setSearchOpen((v) => !v)}
-            className="hidden sm:flex h-9 w-9 items-center justify-center rounded-xl text-gray-500 hover:bg-blue-50 hover:text-blue-600 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-sky-400 transition-colors"
+            className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-500 hover:bg-blue-50 hover:text-blue-600 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-sky-400 transition-colors"
             aria-label="Buscar"
           >
             <Search className="h-4 w-4" />
           </button>
 
-          {/* Notifications (hidden on phone, visible on sm+) */}
+          {/* Notifications Dropdown (visible on mobile + desktop) */}
           {isAuthenticated && (
-            <div className="relative hidden sm:block">
+            <div className="relative">
               <button
                 onClick={() => setShowNotifications((v) => !v)}
                 className="relative flex h-9 w-9 items-center justify-center rounded-xl text-gray-500 hover:bg-blue-50 hover:text-blue-600 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-sky-400 transition-colors"
@@ -155,21 +155,31 @@ export function Navbar() {
               >
                 <Bell className="h-4 w-4" />
                 {unreadCount > 0 && (
-                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white">
+                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white shadow-sm">
                     {unreadCount > 9 ? "9+" : unreadCount}
                   </span>
                 )}
               </button>
 
               {showNotifications && (
-                <div className="absolute right-0 top-11 z-50 w-80 rounded-2xl border border-blue-100 bg-white p-3 shadow-[0_4px_24px_rgba(37,99,235,0.12)] dark:border-slate-800 dark:bg-[#12151c] dark:shadow-slate-950/50">
+                <div className="fixed sm:absolute right-2 sm:right-0 top-16 sm:top-11 z-50 w-[calc(100vw-1rem)] max-w-[340px] sm:w-80 rounded-2xl border border-blue-100 bg-white p-3.5 shadow-2xl dark:border-slate-800 dark:bg-[#12151c] dark:shadow-slate-950/80">
                   <div className="mb-2 flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-2">
-                    <p className="text-sm font-bold text-gray-900 dark:text-white">Notificaciones</p>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-slate-400">
-                      {unreadCount} sin leer
-                    </span>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                      <Bell className="h-4 w-4 text-blue-600 dark:text-sky-400" /> Notificaciones
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-sky-400 bg-blue-50 dark:bg-slate-800 px-2 py-0.5 rounded-full">
+                        {unreadCount} sin leer
+                      </span>
+                      <button
+                        onClick={() => setShowNotifications(false)}
+                        className="text-gray-400 hover:text-gray-600 dark:hover:text-white p-0.5"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="max-h-72 space-y-2 overflow-y-auto">
+                  <div className="max-h-72 space-y-2 overflow-y-auto pr-0.5">
                     {notifications.length === 0 ? (
                       <p className="py-6 text-center text-xs text-gray-400 dark:text-slate-500">Sin notificaciones</p>
                     ) : (
@@ -177,7 +187,10 @@ export function Navbar() {
                         <button
                           key={n.id}
                           type="button"
-                          onClick={() => markRead(n.id)}
+                          onClick={() => {
+                            markRead(n.id);
+                            setShowNotifications(false);
+                          }}
                           className={cn(
                             "w-full rounded-xl border p-3 text-left transition-colors",
                             n.leida
@@ -194,7 +207,7 @@ export function Navbar() {
                           <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
                             {n.asunto || n.mensajeCorto || "Actualización"}
                           </p>
-                          <p className="mt-0.5 text-xs text-gray-500 dark:text-slate-400">
+                          <p className="mt-0.5 text-xs text-gray-500 dark:text-slate-400 line-clamp-2">
                             {n.mensaje || n.mensajeCorto || "Tienes una nueva actualización."}
                           </p>
                         </button>
@@ -346,6 +359,29 @@ export function Navbar() {
                 </span>
                 <ChevronRight className="h-4 w-4 text-gray-400 dark:text-slate-500" />
               </Link>
+
+              {isAuthenticated && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileOpen(false);
+                    setShowNotifications((v) => !v);
+                  }}
+                  className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 dark:hover:text-sky-400 transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <Bell className="h-4 w-4 text-blue-600 dark:text-sky-400" />
+                    Notificaciones
+                  </span>
+                  {unreadCount > 0 ? (
+                    <span className="rounded-full bg-blue-600 px-2 py-0.5 text-xs font-bold text-white">
+                      {unreadCount} sin leer
+                    </span>
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-gray-400 dark:text-slate-500" />
+                  )}
+                </button>
+              )}
 
               {isAuthenticated && (
                 <Link

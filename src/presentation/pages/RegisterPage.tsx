@@ -61,8 +61,8 @@ export default function RegisterPage() {
       });
 
       bruteForceGuard.reset("register-attempt");
-      toast.success("¡Cuenta creada exitosamente! Inicia sesión para continuar.");
-      navigate("/login");
+      toast.success("¡Bienvenido a Drip Diamond! Registro completado exitosamente.");
+      navigate("/", { replace: true });
     } catch (err: any) {
       bruteForceGuard.recordAttempt("register-attempt");
       toast.error(err?.message || "No se pudo completar el registro.");

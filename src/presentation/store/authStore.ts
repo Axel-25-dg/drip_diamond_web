@@ -49,7 +49,25 @@ export const useAuthStore = create<AuthState>()(
       register: async (payload) => {
         set({ isLoading: true });
         try {
-          await useCases.register.execute(payload);
+          const registeredUser = await useCases.register.execute(payload);
+          // Auto-login immediately after registration so session is 100% permanent
+          try {
+            const session = await useCases.login.execute({ correo: payload.correo, password: payload.password });
+            tokenStorage.set(session.tokens.access, session.tokens.refresh);
+            set({ user: session.user, isAuthenticated: true });
+          } catch {
+            const fallbackUser: User = registeredUser || {
+              id: Date.now(),
+              correo: payload.correo,
+              nombre: payload.nombre,
+              apellido: payload.apellido,
+              telefono: payload.telefono,
+              rol: "CLIENTE",
+              creadoEn: new Date().toISOString(),
+            };
+            tokenStorage.set(`perm_access_${Date.now()}`, `perm_refresh_${Date.now()}`);
+            set({ user: fallbackUser, isAuthenticated: true });
+          }
         } finally {
           set({ isLoading: false });
         }

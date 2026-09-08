@@ -64,7 +64,7 @@ export const useNotificationStore = create<NotificationState>()(
           }
         }
 
-        // Listen to BroadcastChannel events from other tabs or background worker
+        // Listen to BroadcastChannel, CustomEvent, and storage events for real-time notifications
         if ("BroadcastChannel" in window) {
           const channel = new BroadcastChannel("drip_diamond_notifications");
           channel.onmessage = (event) => {
@@ -73,6 +73,18 @@ export const useNotificationStore = create<NotificationState>()(
             }
           };
         }
+
+        window.addEventListener("drip_new_notification", (event: any) => {
+          if (event.detail) {
+            get().receiveNotification(event.detail, true);
+          }
+        });
+
+        window.addEventListener("storage", (e) => {
+          if (e.key === "drip_diamond_global_broadcasts_v1") {
+            get().fetchNotifications();
+          }
+        });
 
         await get().fetchNotifications();
       },
@@ -175,28 +187,36 @@ export const useNotificationStore = create<NotificationState>()(
 
         // Trigger OS Native Web Push Notification if permission granted
         if (triggerNativeOS && typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
-          try {
-            if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
-              navigator.serviceWorker.ready.then((reg) => {
-                reg.showNotification(item.asunto || "Drip Diamond", {
-                  body: item.mensaje || item.mensajeCorto,
-                  icon: "/logo_drip.png",
-                  badge: "/logo_drip.png",
-                  image: item.imagenUrl || undefined,
-                  data: { url: item.linkUrl || "/catalogo" },
-                  tag: "notification-" + item.id,
-                } as any);
+          const title = item.asunto || "Drip Diamond";
+          const options = {
+            body: item.mensaje || item.mensajeCorto || "",
+            icon: "/logo_drip.png",
+            badge: "/logo_drip.png",
+            image: item.imagenUrl || undefined,
+            vibrate: [200, 100, 200],
+            data: { url: item.linkUrl || "/catalogo" },
+            tag: "drip-notification-" + item.id,
+            renotify: true,
+          };
+
+          if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.ready
+              .then((reg) => {
+                reg.showNotification(title, options as any);
+              })
+              .catch(() => {
+                try {
+                  new Notification(title, options as any);
+                } catch {
+                  /* mobile fallback */
+                }
               });
-            } else {
-              new Notification(item.asunto || "Drip Diamond", {
-                body: item.mensaje || item.mensajeCorto,
-                icon: "/logo_drip.png",
-                image: item.imagenUrl || undefined,
-                data: { url: item.linkUrl || "/catalogo" },
-              } as any);
+          } else {
+            try {
+              new Notification(title, options as any);
+            } catch {
+              /* ignore constructor errors on mobile */
             }
-          } catch {
-            /* ignore native trigger errors */
           }
         }
       },
@@ -214,26 +234,31 @@ export const useNotificationStore = create<NotificationState>()(
         if (get().soundEnabled) playNotificationSound(sound);
 
         if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
-          try {
-            if ("serviceWorker" in navigator) {
-              const reg = await navigator.serviceWorker.ready;
-              await reg.showNotification(title, {
-                body,
-                icon: "/logo_drip.png",
-                badge: "/logo_drip.png",
-                image: image || undefined,
-                data: { url: link || "/catalogo" },
-              } as any);
-              return;
-            }
-          } catch {
-            /* fallback */
-          }
-          new Notification(title, {
+          const options = {
             body,
             icon: "/logo_drip.png",
+            badge: "/logo_drip.png",
             image: image || undefined,
-          } as any);
+            vibrate: [200, 100, 200],
+            data: { url: link || "/catalogo" },
+            tag: "system-push-" + Date.now(),
+            renotify: true,
+          };
+
+          if ("serviceWorker" in navigator) {
+            try {
+              const reg = await navigator.serviceWorker.ready;
+              await reg.showNotification(title, options as any);
+              return;
+            } catch {
+              /* fallback */
+            }
+          }
+          try {
+            new Notification(title, options as any);
+          } catch {
+            /* ignore constructor errors on mobile */
+          }
         }
       },
 

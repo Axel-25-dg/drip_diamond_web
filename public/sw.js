@@ -1,5 +1,5 @@
 // Drip Diamond Web Push Service Worker
-const CACHE_NAME = "drip-diamond-push-v1";
+const CACHE_NAME = "drip-diamond-push-v2";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -34,7 +34,7 @@ self.addEventListener("push", (event) => {
     badge: data.badge || "/logo_drip.png",
     image: data.image || undefined,
     data: data.data || { url: "/catalogo" },
-    vibrate: [100, 50, 100],
+    vibrate: [200, 100, 200],
     tag: "drip-diamond-notification-" + Date.now(),
     renotify: true,
     actions: data.actions || [
@@ -43,7 +43,24 @@ self.addEventListener("push", (event) => {
     ],
   };
 
-  event.waitUntil(self.registration.showNotification(data.title, options));
+  event.waitUntil(self.registration.showNotification(data.title || "Drip Diamond", options));
+});
+
+// Message listener from main client window
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SHOW_NOTIFICATION") {
+    const { title, options } = event.data;
+    const defaultOptions = {
+      body: "",
+      icon: "/logo_drip.png",
+      badge: "/logo_drip.png",
+      vibrate: [200, 100, 200],
+      tag: "drip-diamond-msg-" + Date.now(),
+      renotify: true,
+      ...options,
+    };
+    self.registration.showNotification(title || "Drip Diamond", defaultOptions);
+  }
 });
 
 // Click event handler for OS notification banners
