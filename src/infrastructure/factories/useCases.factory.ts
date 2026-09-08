@@ -51,6 +51,10 @@ import {
 import {
   GetNotificationsUseCase,
   MarkNotificationReadUseCase,
+  SendCustomNotificationUseCase,
+  GetAdminNotificationHistoryUseCase,
+  SubscribeWebPushUseCase,
+  GetVapidPublicKeyUseCase,
 } from "@/application/use-cases/notification.use-cases";
 import { notificationRepository } from "./repositories.factory";
 
@@ -132,4 +136,10 @@ export const useCases = {
 
   getNotifications: new GetNotificationsUseCase(notificationRepository),
   markNotificationRead: new MarkNotificationReadUseCase(notificationRepository),
+  sendCustomNotification: new SendCustomNotificationUseCase(notificationRepository),
+  getAdminNotificationHistory: new GetAdminNotificationHistoryUseCase(notificationRepository),
+  subscribeWebPush: new SubscribeWebPushUseCase(notificationRepository),
+  getVapidPublicKey: new GetVapidPublicKeyUseCase(notificationRepository),
 };
+
+

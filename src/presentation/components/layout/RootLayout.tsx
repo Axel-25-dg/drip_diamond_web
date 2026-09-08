@@ -4,6 +4,7 @@ import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
 import { CartDrawer } from "@/presentation/components/cart/CartDrawer";
 import { InfoPanelsModal } from "@/presentation/components/ui/InfoPanelsModal";
+import { NotificationPermissionBanner } from "@/presentation/components/notifications/NotificationPermissionBanner";
 
 export function RootLayout() {
   return (
@@ -15,7 +16,9 @@ export function RootLayout() {
       <Footer />
       <CartDrawer />
       <InfoPanelsModal />
+      <NotificationPermissionBanner />
       <Toaster position="top-center" richColors closeButton />
     </div>
   );
 }
+

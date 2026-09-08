@@ -1,4 +1,4 @@
-import type { NotificationItem } from "@/domain/entities/User";
+import type { CustomNotificationPayload, NotificationItem, PushSubscriptionPayload } from "@/domain/entities/User";
 import type { NotificationRepositoryPort } from "@/domain/ports/NotificationRepositoryPort";
 
 export class GetNotificationsUseCase {
@@ -14,3 +14,33 @@ export class MarkNotificationReadUseCase {
     return this.repo.markAsRead(id);
   }
 }
+
+export class SendCustomNotificationUseCase {
+  constructor(private repo: NotificationRepositoryPort) {}
+  execute(payload: CustomNotificationPayload) {
+    return this.repo.sendCustomNotification(payload);
+  }
+}
+
+export class GetAdminNotificationHistoryUseCase {
+  constructor(private repo: NotificationRepositoryPort) {}
+  execute() {
+    return this.repo.getAdminNotificationHistory();
+  }
+}
+
+export class SubscribeWebPushUseCase {
+  constructor(private repo: NotificationRepositoryPort) {}
+  execute(subscription: PushSubscriptionPayload) {
+    return this.repo.subscribeWebPush(subscription);
+  }
+}
+
+export class GetVapidPublicKeyUseCase {
+  constructor(private repo: NotificationRepositoryPort) {}
+  execute() {
+    return this.repo.getVapidPublicKey();
+  }
+}
+
+

@@ -107,7 +107,7 @@ export interface EmailCampaign {
 
 export interface NotificationItem {
   id: number;
-  tipo?: string;
+  tipo?: "PROMOTION" | "ORDER_STATUS" | "ANNOUNCEMENT" | "DISCOUNT" | "SECURITY" | "SYSTEM" | string;
   asunto?: string;
   mensajeCorto?: string;
   mensaje?: string;
@@ -117,7 +117,36 @@ export interface NotificationItem {
   creada_en?: string;
   correoEnviado?: boolean;
   correo_enviado?: boolean;
+  imagenUrl?: string;
+  linkUrl?: string;
+  sonido?: "chime" | "diamond" | "alert" | "cash" | "silent";
+  prioridad?: "NORMAL" | "ALTA" | "EXCLUSIVA";
+  segmento?: string;
+  totalAlcanzados?: number;
 }
+
+export interface CustomNotificationPayload {
+  asunto: string;
+  mensaje: string;
+  tipo: "PROMOTION" | "ORDER_STATUS" | "ANNOUNCEMENT" | "DISCOUNT" | "SECURITY" | "SYSTEM";
+  segmento: "TODOS" | "CLIENTES" | "VENDEDORES" | "CONTADORES" | "ADMINISTRADORES" | "USUARIO_ESPECIFICO";
+  usuarioEmail?: string;
+  imagenUrl?: string;
+  linkUrl?: string;
+  sonido?: "chime" | "diamond" | "alert" | "cash" | "silent";
+  prioridad?: "NORMAL" | "ALTA" | "EXCLUSIVA";
+  programarEn?: string;
+}
+
+export interface PushSubscriptionPayload {
+  endpoint: string;
+  expirationTime?: number | null;
+  keys?: {
+    p256dh: string;
+    auth: string;
+  };
+}
+
 
 export interface AdminStats {
   totalVentas: number;

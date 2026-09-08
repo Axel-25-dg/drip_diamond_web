@@ -27,6 +27,7 @@ import AdminTallasPage from "@/presentation/pages/admin/AdminTallasPage";
 import AdminOrdersPage from "@/presentation/pages/admin/AdminOrdersPage";
 import AdminSecurityPage from "@/presentation/pages/admin/AdminSecurityPage";
 import AdminPromotionsPage from "@/presentation/pages/admin/AdminPromotionsPage";
+import AdminNotificationsPage from "@/presentation/pages/admin/AdminNotificationsPage";
 
 // Contador Dashboard
 import ContadorDashboardPage from "@/presentation/pages/contador/ContadorDashboardPage";
@@ -67,6 +68,7 @@ export const router = createBrowserRouter([
         element: <ProtectedRoute allowedRoles={["administrador"]} />,
         children: [
           { path: "admin", element: <AdminDashboardPage /> },
+          { path: "admin/notificaciones", element: <AdminNotificationsPage /> },
           { path: "admin/pedidos", element: <AdminOrdersPage /> },
           { path: "admin/productos", element: <AdminProductsPage /> },
           { path: "admin/productos/nuevo", element: <AdminProductFormPage /> },
@@ -80,6 +82,7 @@ export const router = createBrowserRouter([
           { path: "admin/promociones", element: <AdminPromotionsPage /> },
         ],
       },
+
 
       // Contador Protected Routes
       {

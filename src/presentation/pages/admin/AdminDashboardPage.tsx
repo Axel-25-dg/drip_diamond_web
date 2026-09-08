@@ -6,7 +6,7 @@ import { Button } from "@/presentation/components/ui/Button";
 import { formatCurrency } from "@/presentation/utils/format";
 import {
   Package, Users, Mail, DollarSign, ShoppingBag, Clock,
-  Plus, ArrowUpRight, Tag, Layers, Ruler, TrendingUp, Zap, Shield, Sparkles,
+  Plus, ArrowUpRight, Tag, Layers, Ruler, TrendingUp, Zap, Shield, Sparkles, BellRing,
 } from "lucide-react";
 
 export default function AdminDashboardPage() {
@@ -36,14 +36,14 @@ export default function AdminDashboardPage() {
               </p>
             </div>
             <div className="flex flex-col sm:flex-row flex-wrap gap-3">
-              <Link to="/admin/productos/nuevo" className="w-full sm:w-auto sm:min-w-[180px]">
+              <Link to="/admin/notificaciones" className="w-full sm:w-auto sm:min-w-[180px]">
                 <Button variant="secondary" size="md" fullWidth>
-                  <Plus className="h-4 w-4" /> Nuevo producto
+                  <BellRing className="h-4 w-4" /> Enviar Notificación
                 </Button>
               </Link>
-              <Link to="/admin/campanas" className="w-full sm:w-auto sm:min-w-[180px]">
+              <Link to="/admin/productos/nuevo" className="w-full sm:w-auto sm:min-w-[180px]">
                 <Button variant="outline" size="md" fullWidth>
-                  <Mail className="h-4 w-4" /> Campañas
+                  <Plus className="h-4 w-4" /> Nuevo producto
                 </Button>
               </Link>
             </div>
@@ -74,6 +74,7 @@ export default function AdminDashboardPage() {
 
         <section className="mt-8 sm:mt-10 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {[
+            { to: "/admin/notificaciones", title: "Notificaciones Push", desc: "Estudio de emisión de notificaciones emergentes de sistema.", icon: BellRing, badge: "Push System" },
             { to: "/admin/pedidos", title: "Gestión de Pedidos", desc: "Avanza pedidos: Preparando → Enviado → Entregado.", icon: ShoppingBag, badge: "Despacho" },
             { to: "/admin/productos", title: "Catálogo de Productos", desc: "Crea y edita zapatillas, precios, marcas y variantes.", icon: Package, badge: "Catálogo" },
             { to: "/admin/usuarios", title: "Usuarios & Roles", desc: "Vendedores, contadores, admins y clientes.", icon: Users, badge: "Personal" },
@@ -89,6 +90,7 @@ export default function AdminDashboardPage() {
             <Link
               key={to}
               to={to}
+
               className="group flex flex-col justify-between rounded-[28px] border border-blue-100 bg-white p-6 shadow-sm dark:border-[#222732] dark:bg-[#12151c] transition-all duration-200 hover:-translate-y-1 hover:border-blue-200 dark:hover:border-slate-700"
             >
               <div>

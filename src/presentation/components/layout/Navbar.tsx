@@ -9,6 +9,7 @@ import { useAuthStore } from "@/presentation/store/authStore";
 import { useCartStore } from "@/presentation/store/cartStore";
 import { useFavoritesStore } from "@/presentation/store/favoritesStore";
 import { useThemeStore } from "@/presentation/store/themeStore";
+import { useNotificationStore } from "@/presentation/store/notificationStore";
 import { cn } from "@/presentation/utils/cn";
 
 const LINKS = [
@@ -23,19 +24,17 @@ export function Navbar() {
   const { cart, openDrawer }      = useCartStore();
   const { favorites }             = useFavoritesStore();
   const { theme, toggleTheme }   = useThemeStore();
+  const { notifications, markAsRead: markReadStore, initNotifications } = useNotificationStore();
   const [scrolled, setScrolled]   = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [query, setQuery]         = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
-  const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    useCases.getNotifications.execute()
-      .then(setNotifications)
-      .catch(() => setNotifications([]));
-  }, [isAuthenticated]);
+    initNotifications();
+  }, [isAuthenticated, initNotifications]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -52,17 +51,13 @@ export function Navbar() {
   };
 
   const markRead = async (id: number) => {
-    try {
-      await useCases.markNotificationRead.execute(id);
-      setNotifications((cur) =>
-        cur.map((n) => n.id === id ? { ...n, leida: true, leida_at: new Date().toISOString() } : n)
-      );
-    } catch { /* no-op */ }
+    await markReadStore(id);
   };
 
   const itemCount   = cart?.totalItems ?? 0;
   const rol         = user?.rol?.toLowerCase();
   const unreadCount = notifications.filter((n) => !n.leida && !n.leida_at).length;
+
 
   /* ── Role pills ── */
   const rolePill = "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors";
