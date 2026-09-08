@@ -172,6 +172,32 @@ export class ApiNotificationRepository implements NotificationRepositoryPort {
     }
   }
 
+  async markAllAsRead(): Promise<void> {
+    try {
+      await httpClient.post("/notificaciones/marcar_todas_leidas/", {});
+    } catch {
+      /* ignore */
+    }
+    const local = getLocalHistory().map((n) => ({ ...n, leida: true, leida_at: new Date().toISOString() }));
+    saveLocalHistory(local);
+
+    const broadcasts = getGlobalBroadcasts().map((n) => ({ ...n, leida: true, leida_at: new Date().toISOString() }));
+    localStorage.setItem(GLOBAL_BROADCAST_KEY, JSON.stringify(broadcasts));
+  }
+
+  async deleteNotification(id: number): Promise<void> {
+    try {
+      await httpClient.delete(`/notificaciones/${id}/`);
+    } catch {
+      /* ignore */
+    }
+    const local = getLocalHistory().filter((n) => n.id !== id);
+    saveLocalHistory(local);
+
+    const broadcasts = getGlobalBroadcasts().filter((n) => n.id !== id);
+    localStorage.setItem(GLOBAL_BROADCAST_KEY, JSON.stringify(broadcasts));
+  }
+
   async sendCustomNotification(payload: CustomNotificationPayload): Promise<{ success: boolean; totalEnviados: number; notification: NotificationItem }> {
     const newId = Date.now();
     const createdItem: NotificationItem = {

@@ -15,6 +15,20 @@ export class MarkNotificationReadUseCase {
   }
 }
 
+export class MarkAllNotificationsReadUseCase {
+  constructor(private repo: NotificationRepositoryPort) {}
+  execute(): Promise<void> {
+    return this.repo.markAllAsRead();
+  }
+}
+
+export class DeleteNotificationUseCase {
+  constructor(private repo: NotificationRepositoryPort) {}
+  execute(id: number): Promise<void> {
+    return this.repo.deleteNotification(id);
+  }
+}
+
 export class SendCustomNotificationUseCase {
   constructor(private repo: NotificationRepositoryPort) {}
   execute(payload: CustomNotificationPayload) {
@@ -42,5 +56,3 @@ export class GetVapidPublicKeyUseCase {
     return this.repo.getVapidPublicKey();
   }
 }
-
-

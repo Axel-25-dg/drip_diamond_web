@@ -28,6 +28,8 @@ interface NotificationState {
   requestPermissionAndSubscribe: () => Promise<boolean>;
   fetchNotifications: () => Promise<void>;
   markAsRead: (id: number) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
+  deleteNotification: (id: number) => Promise<void>;
   receiveNotification: (item: NotificationItem, triggerNativeOS?: boolean) => void;
   sendBroadcast: (payload: CustomNotificationPayload) => Promise<{ success: boolean; totalEnviados: number; notification: NotificationItem }>;
   closeToast: () => void;
@@ -155,6 +157,32 @@ export const useNotificationStore = create<NotificationState>()(
             notifications: s.notifications.map((n) =>
               n.id === id ? { ...n, leida: true, leida_at: new Date().toISOString() } : n
             ),
+          }));
+        } catch {
+          /* ignore */
+        }
+      },
+
+      markAllAsRead: async () => {
+        try {
+          await useCases.markAllNotificationsRead.execute();
+          set((s) => ({
+            notifications: s.notifications.map((n) => ({
+              ...n,
+              leida: true,
+              leida_at: new Date().toISOString(),
+            })),
+          }));
+        } catch {
+          /* ignore */
+        }
+      },
+
+      deleteNotification: async (id: number) => {
+        try {
+          await useCases.deleteNotification.execute(id);
+          set((s) => ({
+            notifications: s.notifications.filter((n) => n.id !== id),
           }));
         } catch {
           /* ignore */

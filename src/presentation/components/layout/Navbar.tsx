@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Search, ShoppingBag, User, X, Menu, ChevronRight,
-  Gem, LayoutDashboard, BarChart3, Briefcase, Bell, Heart, Package, Sun, Moon,
+  Gem, LayoutDashboard, BarChart3, Briefcase, Bell, Heart, Package, Sun, Moon, CheckCheck, Trash2
 } from "lucide-react";
 import { useCases } from "@/infrastructure/factories/useCases.factory";
 import { useAuthStore } from "@/presentation/store/authStore";
@@ -24,7 +24,13 @@ export function Navbar() {
   const { cart, openDrawer }      = useCartStore();
   const { favorites }             = useFavoritesStore();
   const { theme, toggleTheme }   = useThemeStore();
-  const { notifications, markAsRead: markReadStore, initNotifications } = useNotificationStore();
+  const {
+    notifications,
+    markAsRead: markReadStore,
+    markAllAsRead,
+    deleteNotification,
+    initNotifications,
+  } = useNotificationStore();
   const [scrolled, setScrolled]   = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [query, setQuery]         = useState("");
@@ -85,11 +91,11 @@ export function Navbar() {
 
           <Link to="/" className="flex items-center gap-2 sm:gap-3 select-none shrink-0">
             <img src="/logo_drip.png" alt="Logo Drip Diamond" className="h-9 sm:h-11 w-auto object-contain shrink-0" />
-            <div className="leading-none">
+            <div className="hidden sm:flex flex-col leading-none">
               <span className="font-display text-sm sm:text-base font-extrabold tracking-tight text-gray-900 dark:text-white">
                 <span className="text-blue-600 dark:text-sky-400">DIAMOND</span>
               </span>
-              <span className="hidden xs:block mt-0.5 text-[8px] sm:text-[9px] tracking-[0.2em] font-semibold uppercase text-gray-400 dark:text-slate-400">
+              <span className="mt-0.5 text-[8px] sm:text-[9px] tracking-[0.2em] font-semibold uppercase text-gray-400 dark:text-slate-400">
                 Calidad Sneakers
               </span>
             </div>
@@ -162,55 +168,78 @@ export function Navbar() {
               </button>
 
               {showNotifications && (
-                <div className="fixed sm:absolute right-2 sm:right-0 top-16 sm:top-11 z-50 w-[calc(100vw-1rem)] max-w-[340px] sm:w-80 rounded-2xl border border-blue-100 bg-white p-3.5 shadow-2xl dark:border-slate-800 dark:bg-[#12151c] dark:shadow-slate-950/80">
-                  <div className="mb-2 flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-2">
+                <div className="fixed sm:absolute right-2 sm:right-0 top-16 sm:top-11 z-50 w-[calc(100vw-1rem)] max-w-[350px] sm:w-84 rounded-2xl border border-blue-100 bg-white p-3.5 shadow-2xl dark:border-slate-800 dark:bg-[#12151c] dark:shadow-slate-950/80">
+                  <div className="mb-2.5 flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-2">
                     <p className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
                       <Bell className="h-4 w-4 text-blue-600 dark:text-sky-400" /> Notificaciones
                     </p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-sky-400 bg-blue-50 dark:bg-slate-800 px-2 py-0.5 rounded-full">
-                        {unreadCount} sin leer
-                      </span>
+                    <div className="flex items-center gap-1.5">
+                      {unreadCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => markAllAsRead()}
+                          className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2 py-1 text-[10px] font-bold text-blue-600 hover:bg-blue-100 dark:bg-slate-800 dark:text-sky-400 dark:hover:bg-slate-700 transition-colors"
+                          title="Marcar todas como leídas"
+                        >
+                          <CheckCheck className="h-3 w-3" />
+                          <span>Leídas</span>
+                        </button>
+                      )}
                       <button
                         onClick={() => setShowNotifications(false)}
-                        className="text-gray-400 hover:text-gray-600 dark:hover:text-white p-0.5"
+                        className="text-gray-400 hover:text-gray-600 dark:hover:text-white p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800"
                       >
                         <X className="h-4 w-4" />
                       </button>
                     </div>
                   </div>
+
                   <div className="max-h-72 space-y-2 overflow-y-auto pr-0.5">
                     {notifications.length === 0 ? (
                       <p className="py-6 text-center text-xs text-gray-400 dark:text-slate-500">Sin notificaciones</p>
                     ) : (
-                      notifications.slice(0, 6).map((n) => (
-                        <button
-                          key={n.id}
-                          type="button"
-                          onClick={() => {
-                            markRead(n.id);
-                            setShowNotifications(false);
-                          }}
-                          className={cn(
-                            "w-full rounded-xl border p-3 text-left transition-colors",
-                            n.leida
-                              ? "border-gray-100 bg-gray-50 hover:bg-gray-100 dark:border-slate-800 dark:bg-slate-900/60 dark:hover:bg-slate-800/80"
-                              : "border-blue-100 bg-blue-50 hover:bg-blue-100 dark:border-slate-700 dark:bg-slate-800/90 dark:hover:bg-slate-700"
-                          )}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-slate-400">
-                              {n.tipo || "NOTIFICACIÓN"}
+                      notifications.slice(0, 8).map((n) => (
+                        <div key={n.id} className="group relative flex items-center">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              markRead(n.id);
+                              setShowNotifications(false);
+                            }}
+                            className={cn(
+                              "w-full rounded-xl border p-3 text-left transition-colors pr-9",
+                              n.leida
+                                ? "border-gray-100 bg-gray-50 hover:bg-gray-100 dark:border-slate-800 dark:bg-slate-900/60 dark:hover:bg-slate-800/80"
+                                : "border-blue-100 bg-blue-50 hover:bg-blue-100 dark:border-slate-700 dark:bg-slate-800/90 dark:hover:bg-slate-700"
+                            )}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-slate-400">
+                                {n.tipo || "NOTIFICACIÓN"}
+                              </p>
+                              {!n.leida && <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0" />}
+                            </div>
+                            <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white leading-tight">
+                              {n.asunto || n.mensajeCorto || "Actualización"}
                             </p>
-                            {!n.leida && <span className="h-2 w-2 rounded-full bg-blue-500" />}
-                          </div>
-                          <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
-                            {n.asunto || n.mensajeCorto || "Actualización"}
-                          </p>
-                          <p className="mt-0.5 text-xs text-gray-500 dark:text-slate-400 line-clamp-2">
-                            {n.mensaje || n.mensajeCorto || "Tienes una nueva actualización."}
-                          </p>
-                        </button>
+                            <p className="mt-0.5 text-xs text-gray-500 dark:text-slate-400 line-clamp-2">
+                              {n.mensaje || n.mensajeCorto || "Tienes una nueva actualización."}
+                            </p>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteNotification(n.id);
+                            }}
+                            className="absolute right-2 top-2.5 p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400 rounded-lg hover:bg-gray-200/60 dark:hover:bg-slate-800 transition-colors opacity-80 sm:opacity-0 sm:group-hover:opacity-100"
+                            title="Eliminar notificación"
+                            aria-label="Eliminar notificación"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       ))
                     )}
                   </div>

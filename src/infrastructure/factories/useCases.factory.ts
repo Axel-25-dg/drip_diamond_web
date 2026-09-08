@@ -52,6 +52,8 @@ import {
 import {
   GetNotificationsUseCase,
   MarkNotificationReadUseCase,
+  MarkAllNotificationsReadUseCase,
+  DeleteNotificationUseCase,
   SendCustomNotificationUseCase,
   GetAdminNotificationHistoryUseCase,
   SubscribeWebPushUseCase,
@@ -138,6 +140,8 @@ export const useCases = {
 
   getNotifications: new GetNotificationsUseCase(notificationRepository),
   markNotificationRead: new MarkNotificationReadUseCase(notificationRepository),
+  markAllNotificationsRead: new MarkAllNotificationsReadUseCase(notificationRepository),
+  deleteNotification: new DeleteNotificationUseCase(notificationRepository),
   sendCustomNotification: new SendCustomNotificationUseCase(notificationRepository),
   getAdminNotificationHistory: new GetAdminNotificationHistoryUseCase(notificationRepository),
   subscribeWebPush: new SubscribeWebPushUseCase(notificationRepository),
