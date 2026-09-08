@@ -9,6 +9,8 @@ function safeUnwrap<T>(data: any): T {
 
 const STORAGE_KEY = "drip_diamond_sent_notifications_v1";
 const GLOBAL_BROADCAST_KEY = "drip_diamond_global_broadcasts_v1";
+const DELETED_NOTIFS_KEY = "drip_diamond_deleted_notifications_v1";
+const READ_NOTIFS_KEY = "drip_diamond_read_notifications_v1";
 
 const DEFAULT_SYSTEM_NOTIFICATIONS: NotificationItem[] = [
   {
@@ -39,6 +41,44 @@ const DEFAULT_SYSTEM_NOTIFICATIONS: NotificationItem[] = [
     prioridad: "NORMAL",
   },
 ];
+
+function getDeletedIds(): Set<number> {
+  try {
+    const raw = localStorage.getItem(DELETED_NOTIFS_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function addDeletedId(id: number) {
+  try {
+    const set = getDeletedIds();
+    set.add(id);
+    localStorage.setItem(DELETED_NOTIFS_KEY, JSON.stringify(Array.from(set)));
+  } catch {
+    /* no-op */
+  }
+}
+
+function getReadIds(): Record<number, string> {
+  try {
+    const raw = localStorage.getItem(READ_NOTIFS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function addReadId(id: number) {
+  try {
+    const map = getReadIds();
+    map[id] = new Date().toISOString();
+    localStorage.setItem(READ_NOTIFS_KEY, JSON.stringify(map));
+  } catch {
+    /* no-op */
+  }
+}
 
 function getLocalHistory(): NotificationItem[] {
   try {
@@ -130,46 +170,47 @@ export class ApiNotificationRepository implements NotificationRepositoryPort {
       }
     }
 
-    return combined;
+    const deletedSet = getDeletedIds();
+    const readMap = getReadIds();
+
+    // 1. Filter out deleted notifications PERMANENTLY
+    const filtered = combined.filter((item) => !deletedSet.has(item.id));
+
+    // 2. Apply persisted read status PERMANENTLY
+    return filtered.map((item) => {
+      if (readMap[item.id]) {
+        return { ...item, leida: true, leida_at: readMap[item.id] };
+      }
+      return item;
+    });
   }
 
   async markAsRead(id: number): Promise<NotificationItem> {
+    addReadId(id);
     try {
-      const { data } = await httpClient.patch<any>(`/notificaciones/${id}/marcar_leida/`, {});
-      const item = safeUnwrap<any>(data) ?? { id };
-      return {
-        id: item.id ?? id,
-        tipo: item.tipo,
-        asunto: item.asunto || item.titulo,
-        mensajeCorto: item.mensaje_corto || item.mensaje || "",
-        mensaje: item.mensaje || item.mensaje_corto || "",
-        leida: true,
-        leida_at: item.leida_at || new Date().toISOString(),
-        creadaEn: item.creada_en || item.creadaEn,
-        correoEnviado: Boolean(item.correo_enviado ?? item.correoEnviado),
-      };
+      await httpClient.patch<any>(`/notificaciones/${id}/marcar_leida/`, {});
     } catch {
-      // Local fallback for read status
-      const local = getLocalHistory();
-      const idx = local.findIndex((n) => n.id === id);
-      if (idx !== -1) {
-        local[idx].leida = true;
-        local[idx].leida_at = new Date().toISOString();
-        saveLocalHistory(local);
-        return local[idx];
-      }
-
-      const broadcasts = getGlobalBroadcasts();
-      const bIdx = broadcasts.findIndex((n) => n.id === id);
-      if (bIdx !== -1) {
-        broadcasts[bIdx].leida = true;
-        broadcasts[bIdx].leida_at = new Date().toISOString();
-        localStorage.setItem(GLOBAL_BROADCAST_KEY, JSON.stringify(broadcasts));
-        return broadcasts[bIdx];
-      }
-
-      return { id, leida: true, leida_at: new Date().toISOString(), mensajeCorto: "", mensaje: "" };
+      /* ignore */
     }
+    const local = getLocalHistory();
+    const idx = local.findIndex((n) => n.id === id);
+    if (idx !== -1) {
+      local[idx].leida = true;
+      local[idx].leida_at = new Date().toISOString();
+      saveLocalHistory(local);
+      return local[idx];
+    }
+
+    const broadcasts = getGlobalBroadcasts();
+    const bIdx = broadcasts.findIndex((n) => n.id === id);
+    if (bIdx !== -1) {
+      broadcasts[bIdx].leida = true;
+      broadcasts[bIdx].leida_at = new Date().toISOString();
+      localStorage.setItem(GLOBAL_BROADCAST_KEY, JSON.stringify(broadcasts));
+      return broadcasts[bIdx];
+    }
+
+    return { id, leida: true, leida_at: new Date().toISOString(), mensajeCorto: "", mensaje: "" };
   }
 
   async markAllAsRead(): Promise<void> {
@@ -178,6 +219,9 @@ export class ApiNotificationRepository implements NotificationRepositoryPort {
     } catch {
       /* ignore */
     }
+    const current = await this.getNotifications();
+    current.forEach((n) => addReadId(n.id));
+
     const local = getLocalHistory().map((n) => ({ ...n, leida: true, leida_at: new Date().toISOString() }));
     saveLocalHistory(local);
 
@@ -186,6 +230,7 @@ export class ApiNotificationRepository implements NotificationRepositoryPort {
   }
 
   async deleteNotification(id: number): Promise<void> {
+    addDeletedId(id);
     try {
       await httpClient.delete(`/notificaciones/${id}/`);
     } catch {
@@ -305,7 +350,9 @@ export class ApiNotificationRepository implements NotificationRepositoryPort {
         merged.push(loc);
       }
     }
-    return merged;
+
+    const deletedSet = getDeletedIds();
+    return merged.filter((item) => !deletedSet.has(item.id));
   }
 
   async getVapidPublicKey(): Promise<string | null> {

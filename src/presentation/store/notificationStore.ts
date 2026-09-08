@@ -151,39 +151,39 @@ export const useNotificationStore = create<NotificationState>()(
       },
 
       markAsRead: async (id: number) => {
+        set((s) => ({
+          notifications: s.notifications.map((n) =>
+            n.id === id ? { ...n, leida: true, leida_at: new Date().toISOString() } : n
+          ),
+        }));
         try {
           await useCases.markNotificationRead.execute(id);
-          set((s) => ({
-            notifications: s.notifications.map((n) =>
-              n.id === id ? { ...n, leida: true, leida_at: new Date().toISOString() } : n
-            ),
-          }));
         } catch {
           /* ignore */
         }
       },
 
       markAllAsRead: async () => {
+        set((s) => ({
+          notifications: s.notifications.map((n) => ({
+            ...n,
+            leida: true,
+            leida_at: new Date().toISOString(),
+          })),
+        }));
         try {
           await useCases.markAllNotificationsRead.execute();
-          set((s) => ({
-            notifications: s.notifications.map((n) => ({
-              ...n,
-              leida: true,
-              leida_at: new Date().toISOString(),
-            })),
-          }));
         } catch {
           /* ignore */
         }
       },
 
       deleteNotification: async (id: number) => {
+        set((s) => ({
+          notifications: s.notifications.filter((n) => n.id !== id),
+        }));
         try {
           await useCases.deleteNotification.execute(id);
-          set((s) => ({
-            notifications: s.notifications.filter((n) => n.id !== id),
-          }));
         } catch {
           /* ignore */
         }
