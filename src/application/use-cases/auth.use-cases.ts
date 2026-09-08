@@ -1,5 +1,5 @@
 import type { AuthRepositoryPort } from "@/domain/ports/AuthRepositoryPort";
-import type { LoginPayload, RegisterPayload, UpdateProfilePayload } from "@/domain/entities/User";
+import type { GoogleLoginPayload, LoginPayload, RegisterPayload, UpdateProfilePayload } from "@/domain/entities/User";
 
 export class LoginUseCase {
   constructor(private repo: AuthRepositoryPort) {}
@@ -7,6 +7,14 @@ export class LoginUseCase {
     return this.repo.login(payload);
   }
 }
+
+export class LoginWithGoogleUseCase {
+  constructor(private repo: AuthRepositoryPort) {}
+  execute(payload: GoogleLoginPayload) {
+    return this.repo.loginWithGoogle(payload);
+  }
+}
+
 
 export class RegisterUseCase {
   constructor(private repo: AuthRepositoryPort) {}

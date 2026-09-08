@@ -70,6 +70,16 @@ export interface LoginPayload {
   password: string;
 }
 
+export interface GoogleLoginPayload {
+  credential?: string;
+  email: string;
+  nombre?: string;
+  apellido?: string;
+  fotoUrl?: string;
+  googleId?: string;
+}
+
+
 export interface UpdateProfilePayload {
   nombre?: string;
   apellido?: string;

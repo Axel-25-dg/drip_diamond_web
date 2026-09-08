@@ -11,6 +11,7 @@ import {
 } from "@/application/use-cases/catalog.use-cases";
 import {
   LoginUseCase,
+  LoginWithGoogleUseCase,
   RegisterUseCase,
   LogoutUseCase,
   GetProfileUseCase,
@@ -69,6 +70,7 @@ export const useCases = {
   togglePromotion: new TogglePromotionUseCase(catalogRepository),
 
   login: new LoginUseCase(authRepository),
+  loginWithGoogle: new LoginWithGoogleUseCase(authRepository),
   register: new RegisterUseCase(authRepository),
   logout: new LogoutUseCase(authRepository),
   getProfile: new GetProfileUseCase(authRepository),

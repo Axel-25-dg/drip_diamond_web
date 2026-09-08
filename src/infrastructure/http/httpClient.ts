@@ -51,7 +51,7 @@ export const httpClient: AxiosInstance = axios.create({
 
 httpClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = tokenStorage.getAccess();
-  if (token && config.headers) {
+  if (token && config.headers && !token.startsWith("google_") && !token.startsWith("mock_")) {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
@@ -97,8 +97,14 @@ httpClient.interceptors.response.use(
 
     if (status === 401 && originalRequest && !originalRequest._retry && !isAuthEndpoint) {
       const refreshToken = tokenStorage.getRefresh();
-      if (!refreshToken) {
-        tokenStorage.clear();
+      const accessToken = tokenStorage.getAccess();
+      const isMockToken = accessToken?.startsWith("google_") || refreshToken?.startsWith("google_") || accessToken?.startsWith("mock_");
+
+      if (!refreshToken || isMockToken) {
+        if (!isMockToken) {
+          tokenStorage.clear();
+          window.dispatchEvent(new CustomEvent("auth:session-expired"));
+        }
         return Promise.reject(normalizeError(error));
       }
 

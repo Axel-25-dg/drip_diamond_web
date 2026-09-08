@@ -1,5 +1,6 @@
 import type {
   AuthSession,
+  GoogleLoginPayload,
   LoginPayload,
   RegisterPayload,
   UpdateProfilePayload,
@@ -8,6 +9,7 @@ import type {
 
 export interface AuthRepositoryPort {
   login(payload: LoginPayload): Promise<AuthSession>;
+  loginWithGoogle(payload: GoogleLoginPayload): Promise<AuthSession>;
   logout(refreshToken: string): Promise<void>;
   register(payload: RegisterPayload): Promise<User>;
   refreshToken(refreshToken: string): Promise<{ access: string }>;
@@ -19,3 +21,4 @@ export interface AuthRepositoryPort {
   confirmPasswordReset(resetToken: string, nuevaPassword: string): Promise<void>;
   checkUsernameAvailable(username: string): Promise<boolean>;
 }
+

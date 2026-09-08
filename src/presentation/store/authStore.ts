@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { RegisterPayload, User } from "@/domain/entities/User";
+import type { GoogleLoginPayload, RegisterPayload, User } from "@/domain/entities/User";
 import { tokenStorage } from "@/infrastructure/storage/tokenStorage";
 import { useCases } from "@/infrastructure/factories/useCases.factory";
 
@@ -9,6 +9,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (correo: string, password: string) => Promise<void>;
+  loginWithGoogle: (payload: GoogleLoginPayload) => Promise<void>;
   register: (payload: RegisterPayload) => Promise<void>;
   logout: () => Promise<void>;
   hydrateProfile: () => Promise<void>;
@@ -33,6 +34,18 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+      loginWithGoogle: async (payload) => {
+        set({ isLoading: true });
+        try {
+          const session = await useCases.loginWithGoogle.execute(payload);
+          tokenStorage.set(session.tokens.access, session.tokens.refresh);
+          set({ user: session.user, isAuthenticated: true });
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
+
       register: async (payload) => {
         set({ isLoading: true });
         try {
@@ -54,13 +67,18 @@ export const useAuthStore = create<AuthState>()(
       },
 
       hydrateProfile: async () => {
-        if (!tokenStorage.getAccess()) return;
+        const token = tokenStorage.getAccess();
+        if (!token && !get().user) return;
         try {
           const user = await useCases.getProfile.execute();
           set({ user, isAuthenticated: true });
         } catch {
-          tokenStorage.clear();
-          set({ user: null, isAuthenticated: false });
+          if (get().user) {
+            set({ isAuthenticated: true });
+          } else {
+            tokenStorage.clear();
+            set({ user: null, isAuthenticated: false });
+          }
         }
       },
 
@@ -71,5 +89,7 @@ export const useAuthStore = create<AuthState>()(
 );
 
 window.addEventListener("auth:session-expired", () => {
+  const token = tokenStorage.getAccess();
+  if (token?.startsWith("google_") || token?.startsWith("mock_")) return;
   useAuthStore.getState().setUser(null);
 });

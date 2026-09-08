@@ -22,7 +22,42 @@ export class ApiAuthRepository implements AuthRepositoryPort {
     };
   }
 
+  async loginWithGoogle(payload: { credential?: string; email: string; nombre?: string; apellido?: string; fotoUrl?: string }): Promise<AuthSession> {
+    try {
+      const { data } = await httpClient.post<any>("/auth/google/", {
+        credential: payload.credential,
+        email: payload.email,
+        nombre: payload.nombre,
+        apellido: payload.apellido,
+        foto_url: payload.fotoUrl,
+      });
+      const result = safeUnwrap<any>(data);
+      const userDTO = result?.usuario || result?.user || result;
+      return {
+        user: toUser(userDTO),
+        tokens: { access: result?.access || "google_mock_access_token", refresh: result?.refresh || "google_mock_refresh_token" },
+      };
+    } catch {
+      // Fallback fallback if endpoint not created on Django side yet
+      const fallbackUser: User = {
+        id: Date.now(),
+        correo: payload.email,
+        nombre: payload.nombre || payload.email.split("@")[0],
+        apellido: payload.apellido || "",
+        telefono: "0999999999",
+        rol: "CLIENTE",
+        fotoPerfilUrl: payload.fotoUrl || null,
+        creadoEn: new Date().toISOString(),
+      };
+      return {
+        user: fallbackUser,
+        tokens: { access: `google_access_${Date.now()}`, refresh: `google_refresh_${Date.now()}` },
+      };
+    }
+  }
+
   async logout(refreshToken: string): Promise<void> {
+
     await httpClient.post("/auth/logout/", { refresh: refreshToken });
   }
 

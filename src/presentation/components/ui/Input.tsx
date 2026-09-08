@@ -50,9 +50,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             {...props}
           />
           {iconRight && (
-            <span className="pointer-events-none pr-3.5 text-gray-400 dark:text-slate-500 transition-colors group-focus-within:text-blue-500 dark:group-focus-within:text-sky-400">
+            <div className="pr-3.5 text-gray-400 dark:text-slate-500 transition-colors group-focus-within:text-blue-500 dark:group-focus-within:text-sky-400 flex items-center shrink-0">
               {iconRight}
-            </span>
+            </div>
           )}
         </div>
 
