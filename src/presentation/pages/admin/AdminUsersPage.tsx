@@ -206,53 +206,54 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-slate-200 dark:border-[#222732] bg-white dark:bg-[#12151c] p-6 text-slate-900 dark:text-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#222732] pb-4">
-              <h3 className="font-display text-xl font-bold text-slate-900 dark:text-white">
-                {editingUser ? "Editar Usuario" : "Crear Nuevo Usuario"}
-              </h3>
-              <button onClick={() => setShowModal(false)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><X className="h-4 w-4" /></button>
-            </div>
-            <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div><label className={labelCls}>Nombre *</label><input required value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Juan" className={inputCls} /></div>
-                <div><label className={labelCls}>Apellido *</label><input required value={apellido} onChange={(e) => setApellido(e.target.value)} placeholder="Pérez" className={inputCls} /></div>
-              </div>
-              {!editingUser ? (
-                <div><label className={labelCls}>Correo *</label><input required type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} placeholder="email@ejemplo.com" className={inputCls} /></div>
-              ) : (
-                <div>
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Correo (no editable)</label>
-                  <div className="mt-1 flex h-11 w-full items-center rounded-xl border border-slate-100 dark:border-[#222732] bg-slate-50 dark:bg-[#171a22] px-4 text-sm text-slate-400">{editingUser.correo}</div>
-                </div>
-              )}
-              <div><label className={labelCls}>Teléfono</label><input value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="09XXXXXXXX" className={inputCls} /></div>
-              {!editingUser && (
-                <div><label className={labelCls}>Contraseña *</label><input required type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className={inputCls} /></div>
-              )}
-              <div>
-                <label className={labelCls}>Rol *</label>
-                <select value={rol} onChange={(e) => setRol(e.target.value as any)}
-                  className="mt-1 h-11 w-full rounded-xl border border-slate-200 dark:border-[#222732] bg-slate-50 dark:bg-[#171a22] px-4 text-sm font-semibold text-slate-900 dark:text-white outline-none focus:border-sky-500">
-                  <option value="VENDEDOR">Vendedor ($4.00 por par)</option>
-                  <option value="CONTADOR">Contador (Verificación y entregas)</option>
-                  <option value="ADMINISTRADOR">Administrador (Acceso total)</option>
-                  <option value="CLIENTE">Cliente (Comprador)</option>
-                </select>
-              </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <Button type="button" variant="ghost" onClick={() => setShowModal(false)}>Cancelar</Button>
-                <Button type="submit" variant="secondary" isLoading={isSubmitting}>
-                  {editingUser ? "Guardar cambios" : "Crear usuario"}
-                </Button>
-              </div>
-            </form>
+      {/* Modal — always in DOM, toggled with CSS to avoid insertBefore crash */}
+      <div className={showModal ? "fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" : "hidden"}>
+        <div className="w-full max-w-md rounded-2xl border border-slate-200 dark:border-[#222732] bg-white dark:bg-[#12151c] p-6 text-slate-900 dark:text-white shadow-2xl">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#222732] pb-4">
+            <h3 className="font-display text-xl font-bold text-slate-900 dark:text-white">
+              {editingUser ? "Editar Usuario" : "Crear Nuevo Usuario"}
+            </h3>
+            <button onClick={() => setShowModal(false)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><X className="h-4 w-4" /></button>
           </div>
+          <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className={labelCls}>Nombre *</label><input required value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Juan" className={inputCls} /></div>
+              <div><label className={labelCls}>Apellido *</label><input required value={apellido} onChange={(e) => setApellido(e.target.value)} placeholder="Pérez" className={inputCls} /></div>
+            </div>
+            {/* Correo field — always render both, hide one with CSS */}
+            <div className={!editingUser ? "block" : "hidden"}>
+              <label className={labelCls}>Correo *</label>
+              <input type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} placeholder="email@ejemplo.com" className={inputCls} />
+            </div>
+            <div className={editingUser ? "block" : "hidden"}>
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Correo (no editable)</label>
+              <div className="mt-1 flex h-11 w-full items-center rounded-xl border border-slate-100 dark:border-[#222732] bg-slate-50 dark:bg-[#171a22] px-4 text-sm text-slate-400">{editingUser?.correo}</div>
+            </div>
+            <div><label className={labelCls}>Teléfono</label><input value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="09XXXXXXXX" className={inputCls} /></div>
+            {/* Password field — always render, hide when editing */}
+            <div className={!editingUser ? "block" : "hidden"}>
+              <label className={labelCls}>Contraseña *</label>
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Rol *</label>
+              <select value={rol} onChange={(e) => setRol(e.target.value as any)}
+                className="mt-1 h-11 w-full rounded-xl border border-slate-200 dark:border-[#222732] bg-slate-50 dark:bg-[#171a22] px-4 text-sm font-semibold text-slate-900 dark:text-white outline-none focus:border-sky-500">
+                <option value="VENDEDOR">Vendedor ($4.00 por par)</option>
+                <option value="CONTADOR">Contador (Verificación y entregas)</option>
+                <option value="ADMINISTRADOR">Administrador (Acceso total)</option>
+                <option value="CLIENTE">Cliente (Comprador)</option>
+              </select>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="ghost" onClick={() => setShowModal(false)}>Cancelar</Button>
+              <Button type="submit" variant="secondary" isLoading={isSubmitting}>
+                {editingUser ? "Guardar cambios" : "Crear usuario"}
+              </Button>
+            </div>
+          </form>
         </div>
-      )}
+      </div>
     </div>
   );
 }
