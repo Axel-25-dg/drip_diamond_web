@@ -273,7 +273,8 @@ export class ApiAdminRepository implements AdminRepositoryPort {
     const jsonHeaders = { headers: { "Content-Type": "application/json" } };
     const baseName = payload.correo.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "").substring(0, 15);
     const uniqueUsername = `${baseName}_${Math.floor(1000 + Math.random() * 9000)}`;
-    const rolLower = (payload.rol || "vendedor").toLowerCase();
+    const rolLower = (payload.rol || "cliente").toLowerCase();
+    const rolUpper = (payload.rol || "CLIENTE").toUpperCase();
 
     const body = {
       username: uniqueUsername,
@@ -296,27 +297,35 @@ export class ApiAdminRepository implements AdminRepositoryPort {
     let responseData: any = null;
     let lastError: any = null;
 
-    try {
-      const { data } = await httpClient.post<any>("/usuarios/registro/", body, jsonHeaders);
-      responseData = safeUnwrap<any>(data);
-    } catch (err1: any) {
-      lastError = err1;
+    // Try role-specific endpoints first so the rol is set correctly
+    if (payload.rol === "VENDEDOR") {
       try {
-        const { data } = await httpClient.post<any>("/usuarios/", body, jsonHeaders);
+        const { data } = await httpClient.post<any>("/usuarios/vendedores/crear/", body, jsonHeaders);
         responseData = safeUnwrap<any>(data);
-      } catch (err2: any) {
-        lastError = err2;
-        if (payload.rol === "VENDEDOR") {
-          try {
-            const { data } = await httpClient.post<any>("/usuarios/vendedores/crear/", body, jsonHeaders);
-            responseData = safeUnwrap<any>(data);
-          } catch (err3: any) { lastError = err3; }
-        } else if (payload.rol === "CONTADOR") {
-          try {
-            const { data } = await httpClient.post<any>("/usuarios/contadores/crear/", body, jsonHeaders);
-            responseData = safeUnwrap<any>(data);
-          } catch (err3: any) { lastError = err3; }
-        }
+      } catch (err: any) { lastError = err; }
+    } else if (payload.rol === "CONTADOR") {
+      try {
+        const { data } = await httpClient.post<any>("/usuarios/contadores/crear/", body, jsonHeaders);
+        responseData = safeUnwrap<any>(data);
+      } catch (err: any) { lastError = err; }
+    } else if (payload.rol === "ADMINISTRADOR") {
+      try {
+        const { data } = await httpClient.post<any>("/usuarios/admins/crear/", body, jsonHeaders);
+        responseData = safeUnwrap<any>(data);
+      } catch (err: any) { lastError = err; }
+    }
+
+    // Fallback: generic registro endpoint
+    if (!responseData) {
+      try {
+        const { data } = await httpClient.post<any>("/usuarios/registro/", body, jsonHeaders);
+        responseData = safeUnwrap<any>(data);
+      } catch (err1: any) {
+        lastError = err1;
+        try {
+          const { data } = await httpClient.post<any>("/usuarios/", { ...body, rol: rolUpper, role: rolUpper }, jsonHeaders);
+          responseData = safeUnwrap<any>(data);
+        } catch (err2: any) { lastError = err2; }
       }
     }
 
@@ -325,8 +334,16 @@ export class ApiAdminRepository implements AdminRepositoryPort {
     }
 
     const u = responseData?.usuario || responseData?.user || responseData || {};
+    const createdId: number = u.id || Date.now();
+
+    // After creation, if the role still doesn't match, patch it
+    const returnedRol = normalizeUserRole(u.rol || u.role || u.tipo || "");
+    if (createdId && returnedRol !== rolUpper && payload.rol !== "CLIENTE") {
+      try { await this.updateUser(createdId, { rol: payload.rol }); } catch { /* best effort */ }
+    }
+
     return {
-      id: u.id || Date.now(),
+      id: createdId,
       nombre: u.nombre || u.primer_nombre || payload.nombre,
       apellido: u.apellido || u.primer_apellido || payload.apellido,
       correo: u.correo || u.email || payload.correo,
@@ -361,24 +378,61 @@ export class ApiAdminRepository implements AdminRepositoryPort {
 
     let responseData: any = null;
     const jsonHeaders = { headers: { "Content-Type": "application/json" } };
+    let lastErr: any = null;
 
-    try {
-      const { data } = await httpClient.patch<any>(`/usuarios/${id}/`, body, jsonHeaders);
-      responseData = safeUnwrap<any>(data);
-    } catch (err: any) {
-      try {
-        const upperBody = { ...body, rol: rolUpper, role: rolUpper, tipo: rolUpper };
-        const { data } = await httpClient.patch<any>(`/usuarios/${id}/`, upperBody, jsonHeaders);
-        responseData = safeUnwrap<any>(data);
-      } catch {
-        try {
-          const { data } = await httpClient.put<any>(`/usuarios/${id}/`, body, jsonHeaders);
-          responseData = safeUnwrap<any>(data);
-        } catch (finalErr: any) {
-          throw err || finalErr;
+    // 1) Try dedicated cambiar-rol endpoint if only updating role
+    if (rolRaw !== undefined) {
+      for (const rolVal of [rolLower, rolUpper]) {
+        if (responseData) break;
+        for (const endpoint of [
+          `/usuarios/${id}/cambiar-rol/`,
+          `/usuarios/${id}/asignar-rol/`,
+          `/usuarios/${id}/rol/`,
+        ]) {
+          try {
+            const { data } = await httpClient.post<any>(endpoint, { rol: rolVal, role: rolVal }, jsonHeaders);
+            responseData = safeUnwrap<any>(data);
+            break;
+          } catch (e: any) { lastErr = e; }
         }
       }
     }
+
+    // 2) Try PATCH with JSON (lower then upper rol)
+    if (!responseData) {
+      try {
+        const { data } = await httpClient.patch<any>(`/usuarios/${id}/`, body, jsonHeaders);
+        responseData = safeUnwrap<any>(data);
+      } catch (err: any) {
+        lastErr = err;
+        // 3) Try PATCH with uppercase rol
+        try {
+          const upperBody = { ...body, rol: rolUpper, role: rolUpper, tipo: rolUpper };
+          const { data } = await httpClient.patch<any>(`/usuarios/${id}/`, upperBody, jsonHeaders);
+          responseData = safeUnwrap<any>(data);
+        } catch (err2: any) {
+          lastErr = err2;
+          // 4) Try multipart/form-data (some Django endpoints reject JSON)
+          try {
+            const formData = new FormData();
+            Object.entries({ ...body, rol: rolUpper, role: rolUpper }).forEach(([k, v]) => {
+              if (v !== undefined) formData.append(k, String(v));
+            });
+            const { data } = await httpClient.patch<any>(`/usuarios/${id}/`, formData);
+            responseData = safeUnwrap<any>(data);
+          } catch (err3: any) {
+            lastErr = err3;
+            // 5) Final fallback: PUT
+            try {
+              const { data } = await httpClient.put<any>(`/usuarios/${id}/`, body, jsonHeaders);
+              responseData = safeUnwrap<any>(data);
+            } catch (err4: any) { lastErr = err4; }
+          }
+        }
+      }
+    }
+
+    if (!responseData) throw lastErr || new Error("No se pudo actualizar el usuario.");
 
     const u = responseData || {};
     return {
