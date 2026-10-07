@@ -183,7 +183,7 @@ export function toCategory(dto: CategoryDTO): Category {
     nombre: dto.nombre,
     descripcion: dto.descripcion ?? null,
     subcategoria: dto.subcategoria ?? null,
-    imagenUrl: dto.imagen_url ?? null,
+    imagenUrl: dto.imagen || dto.imagen_url || (dto as any).imagenUrl || null,
   };
 }
 

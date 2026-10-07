@@ -7,6 +7,7 @@ import {
 import { useCases } from "@/infrastructure/factories/useCases.factory";
 import type { ProductSummary, Brand, Category } from "@/domain/entities/Product";
 import { resolveMediaUrl, formatCurrency } from "@/presentation/utils/format";
+import { ReviewsSection } from "@/presentation/components/reviews/ReviewsSection";
 
 /* ─── Static data ──────────────────────────────────────────── */
 const SHOES_DEMO = [
@@ -21,30 +22,25 @@ const MARQUEE_WORDS = [
   "Ediciones limitadas","Estilo urbano","100% Verificados",
 ];
 
-const CATEGORY_IMAGE_MAP: Record<string, string> = {
-  casual: "/categoria_e_imagenes/casual.webp",
-  urbano: "/categoria_e_imagenes/urbano.webp",
-  urbano_uy: "/categoria_e_imagenes/urbano.webp",
-  runing: "/categoria_e_imagenes/runing.webp",
-  running: "/categoria_e_imagenes/runing.webp",
-  jordan: "/categoria_e_imagenes/jordan.jpg",
-};
-
 const HERO_SHOES = [
   "/zapatillas/jordan_11.png",
   "/zapatillas/adidas_bad.png",
   "/zapatillas/puma_zap.png",
 ];
 
-function getCategoryImage(category: Category): string | null {
-  const normalized = category.nombre?.toLowerCase().replace(/\s+/g, "") ?? "";
-  if (!normalized) return null;
-  if (normalized in CATEGORY_IMAGE_MAP) return CATEGORY_IMAGE_MAP[normalized as keyof typeof CATEGORY_IMAGE_MAP];
-  if (normalized.includes("casual")) return CATEGORY_IMAGE_MAP.casual;
-  if (normalized.includes("urbano") || normalized.includes("urban")) return CATEGORY_IMAGE_MAP.urbano;
-  if (normalized.includes("run") || normalized.includes("jog")) return CATEGORY_IMAGE_MAP.runing;
-  if (normalized.includes("jordan")) return CATEGORY_IMAGE_MAP.jordan;
-  return null;
+function getCategoryDisplayImage(category: Category, idx: number = 0): string {
+  // 1. Imagen subida por el usuario al crear/editar la categoría
+  const userImage = resolveMediaUrl(category.imagenUrl);
+  if (userImage) return userImage;
+
+  // 2. Si es jordan y no tiene imagen subida, usar jordan.jpg de respaldo
+  const normalized = category.nombre?.toLowerCase() ?? "";
+  if (normalized.includes("jordan")) {
+    return "/categoria_e_imagenes/jordan.jpg";
+  }
+
+  // 3. Fallback visual SVG
+  return `/zapatillas/shoe-${(idx % 4) + 1}.svg`;
 }
 
 const BENEFITS = [
@@ -357,9 +353,12 @@ export default function HomePage() {
                   className={`group relative flex min-h-[320px] flex-col justify-end overflow-hidden rounded-3xl border border-blue-100 dark:border-[#222732] bg-blue-50 dark:bg-[#12151c] ${isUrbano ? "md:col-span-2 lg:col-span-2" : ""}`}
                 >
                 <img
-                  src={getCategoryImage(c) ?? resolveMediaUrl(c.imagenUrl) ?? `/zapatillas/shoe-${(idx % 4) + 1}.svg`}
+                  src={getCategoryDisplayImage(c, idx)}
                   alt={c.nombre}
                   className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = `/zapatillas/shoe-${(idx % 4) + 1}.svg`;
+                  }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-gray-900/20 to-transparent" />
                 <div className="relative z-10 p-5">
@@ -493,6 +492,11 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ══════════════════════════════════════════════════════════
+          RESEÑAS & CALIFICACIONES (PÚBLICAS)
+      ══════════════════════════════════════════════════════════ */}
+      <ReviewsSection />
 
       {/* ══════════════════════════════════════════════════════════
           BRANDS

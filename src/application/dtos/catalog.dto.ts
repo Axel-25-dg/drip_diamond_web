@@ -65,6 +65,7 @@ export interface CategoryDTO {
   nombre: string;
   descripcion?: string | null;
   subcategoria?: string | null;
+  imagen?: string | null;
   imagen_url?: string | null;
 }
 
