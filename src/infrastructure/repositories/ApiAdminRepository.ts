@@ -274,7 +274,6 @@ export class ApiAdminRepository implements AdminRepositoryPort {
     const baseName = payload.correo.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "").substring(0, 15);
     const uniqueUsername = `${baseName}_${Math.floor(1000 + Math.random() * 9000)}`;
     const rolLower = (payload.rol || "cliente").toLowerCase();
-    const rolUpper = (payload.rol || "CLIENTE").toUpperCase();
 
     const body = {
       username: uniqueUsername,
@@ -297,35 +296,34 @@ export class ApiAdminRepository implements AdminRepositoryPort {
     let responseData: any = null;
     let lastError: any = null;
 
-    // Try role-specific endpoints first so the rol is set correctly
-    if (payload.rol === "VENDEDOR") {
-      try {
-        const { data } = await httpClient.post<any>("/usuarios/vendedores/crear/", body, jsonHeaders);
-        responseData = safeUnwrap<any>(data);
-      } catch (err: any) { lastError = err; }
-    } else if (payload.rol === "CONTADOR") {
-      try {
-        const { data } = await httpClient.post<any>("/usuarios/contadores/crear/", body, jsonHeaders);
-        responseData = safeUnwrap<any>(data);
-      } catch (err: any) { lastError = err; }
-    } else if (payload.rol === "ADMINISTRADOR") {
-      try {
-        const { data } = await httpClient.post<any>("/usuarios/admins/crear/", body, jsonHeaders);
-        responseData = safeUnwrap<any>(data);
-      } catch (err: any) { lastError = err; }
-    }
+    // Exact endpoints from tienda/urls.py
+    const endpointMap: Record<string, string> = {
+      VENDEDOR:      "/usuarios/vendedores/crear/",
+      CONTADOR:      "/usuarios/contadores/crear/",
+      CLIENTE:       "/usuarios/registro/",
+      ADMINISTRADOR: "/usuarios/",   // router endpoint — requires admin auth
+    };
 
-    // Fallback: generic registro endpoint
-    if (!responseData) {
-      try {
-        const { data } = await httpClient.post<any>("/usuarios/registro/", body, jsonHeaders);
-        responseData = safeUnwrap<any>(data);
-      } catch (err1: any) {
-        lastError = err1;
+    const primaryEndpoint = endpointMap[payload.rol] || "/usuarios/registro/";
+
+    try {
+      const { data } = await httpClient.post<any>(primaryEndpoint, body, jsonHeaders);
+      responseData = safeUnwrap<any>(data);
+    } catch (err1: any) {
+      lastError = err1;
+      // Fallback: generic registration
+      if (primaryEndpoint !== "/usuarios/registro/") {
         try {
-          const { data } = await httpClient.post<any>("/usuarios/", { ...body, rol: rolUpper, role: rolUpper }, jsonHeaders);
+          const { data } = await httpClient.post<any>("/usuarios/registro/", body, jsonHeaders);
           responseData = safeUnwrap<any>(data);
         } catch (err2: any) { lastError = err2; }
+      }
+      // Last resort: router base endpoint
+      if (!responseData) {
+        try {
+          const { data } = await httpClient.post<any>("/usuarios/", body, jsonHeaders);
+          responseData = safeUnwrap<any>(data);
+        } catch (err3: any) { lastError = err3; }
       }
     }
 
@@ -335,11 +333,12 @@ export class ApiAdminRepository implements AdminRepositoryPort {
 
     const u = responseData?.usuario || responseData?.user || responseData || {};
     const createdId: number = u.id || Date.now();
-
-    // After creation, if the role still doesn't match, patch it
     const returnedRol = normalizeUserRole(u.rol || u.role || u.tipo || "");
-    if (createdId && returnedRol !== rolUpper && payload.rol !== "CLIENTE") {
-      try { await this.updateUser(createdId, { rol: payload.rol }); } catch { /* best effort */ }
+
+    // If the returned role doesn't match (e.g. registro/ always creates CLIENTE),
+    // patch the role separately using FormData to avoid 415
+    if (u.id && returnedRol !== payload.rol && payload.rol !== "CLIENTE") {
+      try { await this.updateUser(u.id, { rol: payload.rol }); } catch { /* best effort */ }
     }
 
     return {
@@ -348,7 +347,7 @@ export class ApiAdminRepository implements AdminRepositoryPort {
       apellido: u.apellido || u.primer_apellido || payload.apellido,
       correo: u.correo || u.email || payload.correo,
       telefono: u.telefono || payload.telefono || "",
-      rol: normalizeUserRole(u.rol || u.role || u.tipo || payload.rol),
+      rol: payload.rol,   // trust what we sent
       username: u.username || uniqueUsername,
     };
   }
@@ -358,76 +357,61 @@ export class ApiAdminRepository implements AdminRepositoryPort {
     const rolLower = rolRaw ? rolRaw.toLowerCase() : undefined;
     const rolUpper = rolRaw ? rolRaw.toUpperCase() : undefined;
 
-    const body: Record<string, any> = {};
-    if (payload.nombre !== undefined) {
-      body.nombre = payload.nombre;
-      body.primer_nombre = payload.nombre;
-    }
-    if (payload.apellido !== undefined) {
-      body.apellido = payload.apellido;
-      body.primer_apellido = payload.apellido;
-    }
-    if (payload.telefono !== undefined) {
-      body.telefono = payload.telefono;
-    }
-    if (rolRaw !== undefined) {
-      body.rol = rolLower;
-      body.role = rolLower;
-      body.tipo = rolLower;
-    }
+    // Build FormData — avoids 415 Content-Type errors on UsuarioViewSet
+    const buildFormData = (useUpperRol: boolean) => {
+      const fd = new FormData();
+      if (payload.nombre !== undefined) {
+        fd.append("nombre", payload.nombre);
+        fd.append("primer_nombre", payload.nombre);
+      }
+      if (payload.apellido !== undefined) {
+        fd.append("apellido", payload.apellido);
+        fd.append("primer_apellido", payload.apellido);
+      }
+      if (payload.telefono !== undefined) fd.append("telefono", payload.telefono);
+      if (rolRaw !== undefined) {
+        const rolVal = useUpperRol ? (rolUpper ?? rolRaw) : (rolLower ?? rolRaw);
+        fd.append("rol", rolVal);
+        fd.append("role", rolVal);
+        fd.append("tipo", rolVal);
+      }
+      return fd;
+    };
+
+    // Also build JSON body as fallback
+    const jsonBody: Record<string, any> = {};
+    if (payload.nombre !== undefined) { jsonBody.nombre = payload.nombre; jsonBody.primer_nombre = payload.nombre; }
+    if (payload.apellido !== undefined) { jsonBody.apellido = payload.apellido; jsonBody.primer_apellido = payload.apellido; }
+    if (payload.telefono !== undefined) jsonBody.telefono = payload.telefono;
+    if (rolRaw !== undefined) { jsonBody.rol = rolLower; jsonBody.role = rolLower; jsonBody.tipo = rolLower; }
+    const jsonHeaders = { headers: { "Content-Type": "application/json" } };
 
     let responseData: any = null;
-    const jsonHeaders = { headers: { "Content-Type": "application/json" } };
     let lastErr: any = null;
 
-    // 1) Try dedicated cambiar-rol endpoint if only updating role
-    if (rolRaw !== undefined) {
-      for (const rolVal of [rolLower, rolUpper]) {
-        if (responseData) break;
-        for (const endpoint of [
-          `/usuarios/${id}/cambiar-rol/`,
-          `/usuarios/${id}/asignar-rol/`,
-          `/usuarios/${id}/rol/`,
-        ]) {
-          try {
-            const { data } = await httpClient.post<any>(endpoint, { rol: rolVal, role: rolVal }, jsonHeaders);
-            responseData = safeUnwrap<any>(data);
-            break;
-          } catch (e: any) { lastErr = e; }
-        }
-      }
-    }
-
-    // 2) Try PATCH with JSON (lower then upper rol)
-    if (!responseData) {
+    // Strategy 1: PATCH with FormData (lowercase rol) — avoids 415
+    try {
+      const { data } = await httpClient.patch<any>(`/usuarios/${id}/`, buildFormData(false));
+      responseData = safeUnwrap<any>(data);
+    } catch (err1: any) {
+      lastErr = err1;
+      // Strategy 2: PATCH with FormData (uppercase rol)
       try {
-        const { data } = await httpClient.patch<any>(`/usuarios/${id}/`, body, jsonHeaders);
+        const { data } = await httpClient.patch<any>(`/usuarios/${id}/`, buildFormData(true));
         responseData = safeUnwrap<any>(data);
-      } catch (err: any) {
-        lastErr = err;
-        // 3) Try PATCH with uppercase rol
+      } catch (err2: any) {
+        lastErr = err2;
+        // Strategy 3: PATCH with JSON
         try {
-          const upperBody = { ...body, rol: rolUpper, role: rolUpper, tipo: rolUpper };
-          const { data } = await httpClient.patch<any>(`/usuarios/${id}/`, upperBody, jsonHeaders);
+          const { data } = await httpClient.patch<any>(`/usuarios/${id}/`, jsonBody, jsonHeaders);
           responseData = safeUnwrap<any>(data);
-        } catch (err2: any) {
-          lastErr = err2;
-          // 4) Try multipart/form-data (some Django endpoints reject JSON)
+        } catch (err3: any) {
+          lastErr = err3;
+          // Strategy 4: PUT with FormData
           try {
-            const formData = new FormData();
-            Object.entries({ ...body, rol: rolUpper, role: rolUpper }).forEach(([k, v]) => {
-              if (v !== undefined) formData.append(k, String(v));
-            });
-            const { data } = await httpClient.patch<any>(`/usuarios/${id}/`, formData);
+            const { data } = await httpClient.put<any>(`/usuarios/${id}/`, buildFormData(true));
             responseData = safeUnwrap<any>(data);
-          } catch (err3: any) {
-            lastErr = err3;
-            // 5) Final fallback: PUT
-            try {
-              const { data } = await httpClient.put<any>(`/usuarios/${id}/`, body, jsonHeaders);
-              responseData = safeUnwrap<any>(data);
-            } catch (err4: any) { lastErr = err4; }
-          }
+          } catch (err4: any) { lastErr = err4; }
         }
       }
     }
