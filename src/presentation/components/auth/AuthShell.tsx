@@ -104,11 +104,9 @@ export function AuthShell({ title, subtitle, children }: {
             <h1 className="font-display text-3xl font-extrabold tracking-tight mb-2 text-slate-900 dark:text-white">
               {title}
             </h1>
-            {subtitle && (
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">
-                {subtitle}
-              </p>
-            )}
+            <p className={subtitle ? "text-sm text-slate-500 dark:text-slate-400 mb-6 leading-relaxed" : "hidden"}>
+              {subtitle}
+            </p>
             <div>{children}</div>
           </div>
 

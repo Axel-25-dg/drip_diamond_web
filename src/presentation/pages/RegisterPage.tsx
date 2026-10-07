@@ -221,9 +221,7 @@ export default function RegisterPage() {
               .
             </label>
           </div>
-          {errors.acceptTerms && (
-            <p className="text-[11px] font-semibold text-red-500">{errors.acceptTerms.message}</p>
-          )}
+          <p className={errors.acceptTerms ? "text-[11px] font-semibold text-red-500" : "hidden"}>{errors.acceptTerms?.message}</p>
 
           <Button
             type="submit"

@@ -56,8 +56,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           )}
         </div>
 
-        {hint  && !error && <span className="text-[11px] text-gray-500 dark:text-slate-400 leading-relaxed">{hint}</span>}
-        {error &&           <span className="text-[11px] font-semibold text-red-600 leading-relaxed">{error}</span>}
+        <span className={hint && !error ? "text-[11px] text-gray-500 dark:text-slate-400 leading-relaxed" : "hidden"}>{hint}</span>
+        <span className={error ? "text-[11px] font-semibold text-red-600 leading-relaxed" : "hidden"}>{error}</span>
       </div>
     );
   }
