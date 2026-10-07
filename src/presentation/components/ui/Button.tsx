@@ -56,6 +56,8 @@ const sizes: Record<Size, string> = {
   xl: "h-14 px-9   text-base   gap-3   rounded-[14px]",
 };
 
+const solidVariants: Variant[] = ["secondary", "sky", "primary"];
+
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = "primary", size = "md", isLoading, fullWidth, disabled, children, ...props }, ref) => (
     <button
@@ -73,21 +75,25 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       )}
       {...props}
     >
-      {/* Shine sweep en variantes sólidas */}
-      {(variant === "secondary" || variant === "sky" || variant === "primary") && (
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-0 hover:opacity-100 transition-opacity duration-500"
-          style={{
-            background:
-              "linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.22) 50%, transparent 70%)",
-            backgroundSize: "200% 100%",
-            animation: "shine 3s linear infinite",
-          }}
-        />
-      )}
+      {/* Shine sweep — always in DOM for solid variants, hidden via opacity when variant doesn't match */}
+      <span
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute inset-0 transition-opacity duration-500",
+          solidVariants.includes(variant) ? "opacity-0 hover:opacity-100" : "opacity-0 pointer-events-none"
+        )}
+        style={{
+          background:
+            "linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.22) 50%, transparent 70%)",
+          backgroundSize: "200% 100%",
+          animation: "shine 3s linear infinite",
+        }}
+      />
       <span className="relative z-10 inline-flex items-center justify-center gap-[inherit]">
-        {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+        {/* Loader — always in DOM, hidden when not loading to prevent insertBefore crash */}
+        <span className={isLoading ? "inline-flex" : "hidden"} aria-hidden={!isLoading}>
+          <Loader2 className="h-4 w-4 animate-spin" />
+        </span>
         {children}
       </span>
     </button>

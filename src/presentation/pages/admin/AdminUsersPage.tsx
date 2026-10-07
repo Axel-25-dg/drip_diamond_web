@@ -152,57 +152,58 @@ export default function AdminUsersPage() {
 
         {/* Table */}
         <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 dark:border-[#222732] bg-white dark:bg-[#12151c] shadow-sm">
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center gap-3 p-16 text-center">
-              <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-slate-200 dark:border-slate-800 border-t-sky-500" />
-              <p className="text-sm font-medium text-slate-400">Cargando usuarios...</p>
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-4 p-16 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-50 dark:bg-slate-800 text-sky-500">
-                <Users className="h-7 w-7" />
-              </div>
-              <div>
-                <p className="font-display text-xl font-bold text-slate-800 dark:text-white">No hay usuarios</p>
-                <p className="mt-1 text-sm text-slate-400">Crea el primer usuario desde el botón de arriba.</p>
-              </div>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-slate-100 dark:border-[#222732] bg-slate-50 dark:bg-[#171a22] text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  <tr>
-                    <th className="px-6 py-3.5">Usuario</th>
-                    <th className="px-6 py-3.5">Correo</th>
-                    <th className="px-6 py-3.5">Teléfono</th>
-                    <th className="px-6 py-3.5">Rol</th>
-                    <th className="px-6 py-3.5 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-[#222732]">
-                  {filtered.map((u) => (
-                    <tr key={u.id} className="transition-colors hover:bg-slate-50/60 dark:hover:bg-[#171a22]/60">
-                      <td className="px-6 py-4 font-semibold text-slate-900 dark:text-white">{u.nombre} {u.apellido}</td>
-                      <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{u.correo}</td>
-                      <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{u.telefono || "—"}</td>
-                      <td className="px-6 py-4">{roleBadge(u.rol)}</td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => openEditModal(u)}>
-                            <Pencil className="h-3.5 w-3.5" /> Editar
-                          </Button>
-                          <button onClick={() => handleDeleteUser(u)}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/40 dark:hover:text-red-400 transition-colors">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+        {/* Loading state — always in DOM */}
+        <div className={isLoading ? "flex flex-col items-center justify-center gap-3 p-16 text-center" : "hidden"}>
+          <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-slate-200 dark:border-slate-800 border-t-sky-500" />
+          <p className="text-sm font-medium text-slate-400">Cargando usuarios...</p>
+        </div>
+
+        {/* Empty state — always in DOM */}
+        <div className={!isLoading && filtered.length === 0 ? "flex flex-col items-center justify-center gap-4 p-16 text-center" : "hidden"}>
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-50 dark:bg-slate-800 text-sky-500">
+            <Users className="h-7 w-7" />
+          </div>
+          <div>
+            <p className="font-display text-xl font-bold text-slate-800 dark:text-white">No hay usuarios</p>
+            <p className="mt-1 text-sm text-slate-400">Crea el primer usuario desde el botón de arriba.</p>
+          </div>
+        </div>
+
+        {/* Table — always in DOM */}
+        <div className={!isLoading && filtered.length > 0 ? "overflow-x-auto" : "hidden"}>
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-slate-100 dark:border-[#222732] bg-slate-50 dark:bg-[#171a22] text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <tr>
+                <th className="px-6 py-3.5">Usuario</th>
+                <th className="px-6 py-3.5">Correo</th>
+                <th className="px-6 py-3.5">Teléfono</th>
+                <th className="px-6 py-3.5">Rol</th>
+                <th className="px-6 py-3.5 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-[#222732]">
+              {filtered.map((u) => (
+                <tr key={u.id} className="transition-colors hover:bg-slate-50/60 dark:hover:bg-[#171a22]/60">
+                  <td className="px-6 py-4 font-semibold text-slate-900 dark:text-white">{u.nombre} {u.apellido}</td>
+                  <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{u.correo}</td>
+                  <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{u.telefono || "—"}</td>
+                  <td className="px-6 py-4">{roleBadge(u.rol)}</td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => openEditModal(u)}>
+                        <Pencil className="h-3.5 w-3.5" /> Editar
+                      </Button>
+                      <button onClick={() => handleDeleteUser(u)}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/40 dark:hover:text-red-400 transition-colors">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         </div>
       </div>
 
