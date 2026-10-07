@@ -4,6 +4,8 @@ import { router } from "@/presentation/router";
 import { useAuthStore } from "@/presentation/store/authStore";
 import { useThemeStore } from "@/presentation/store/themeStore";
 
+import { Analytics } from "@vercel/analytics/react";
+
 function App() {
   const hydrateProfile = useAuthStore((s) => s.hydrateProfile);
   const theme = useThemeStore((s) => s.theme);
@@ -21,7 +23,12 @@ function App() {
     hydrateProfile();
   }, [hydrateProfile]);
 
-  return <RouterProvider router={router} future={{ v7_startTransition: true }} />;
+  return (
+    <>
+      <RouterProvider router={router} future={{ v7_startTransition: true }} />
+      <Analytics />
+    </>
+  );
 }
 
 export default App;
