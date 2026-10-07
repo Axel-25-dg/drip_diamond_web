@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Star, MessageSquarePlus, ShieldCheck, Quote } from "lucide-react";
 import { useReviewStore } from "@/presentation/store/reviewStore";
 import { CreateReviewModal } from "./CreateReviewModal";
@@ -10,6 +10,10 @@ export function ReviewsSection() {
 
   const avg = getAverageRating();
   const totalCount = reviews.length;
+
+  React.useEffect(() => {
+    useReviewStore.getState().fetchReviews();
+  }, []);
 
   return (
     <section className="py-20 relative overflow-hidden bg-slate-50/70 dark:bg-[#0c0e14] border-y border-blue-100/60 dark:border-[#1e2330]">
@@ -78,6 +82,13 @@ export function ReviewsSection() {
         </div>
 
         {/* Reviews Grid */}
+        {reviews.length === 0 ? (
+          <div className="mt-10 rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#12151c] p-12 text-center">
+            <Star className="mx-auto h-10 w-10 text-slate-300 dark:text-slate-600 mb-3" />
+            <p className="font-semibold text-slate-500 dark:text-slate-400">Aún no hay reseñas.</p>
+            <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">¡Sé el primero en compartir tu experiencia!</p>
+          </div>
+        ) : (
         <div className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
           {reviews.map((rev) => {
             const initials = rev.usuarioNombre
@@ -170,6 +181,7 @@ export function ReviewsSection() {
             );
           })}
         </div>
+        )}
       </div>
 
       <CreateReviewModal

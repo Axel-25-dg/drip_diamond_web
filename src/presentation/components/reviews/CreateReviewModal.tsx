@@ -3,7 +3,6 @@ import { Star, X, CheckCircle2, Sparkles } from "lucide-react";
 import { useAuthStore } from "@/presentation/store/authStore";
 import { useReviewStore } from "@/presentation/store/reviewStore";
 import { toast } from "sonner";
-import { resolveMediaUrl } from "@/presentation/utils/format";
 
 interface CreateReviewModalProps {
   isOpen: boolean;
@@ -22,8 +21,7 @@ export function CreateReviewModal({ isOpen, onClose }: CreateReviewModalProps) {
   const user = useAuthStore((s) => s.user);
   const addReview = useReviewStore((s) => s.addReview);
 
-  const initialName = user ? `${user.nombre} ${user.apellido || ""}`.trim() : "";
-  const [nombre, setNombre] = useState(initialName);
+
   const [calificacion, setCalificacion] = useState(5);
   const [hoverRating, setHoverRating] = useState<number | null>(null);
   const [titulo, setTitulo] = useState("");
@@ -33,12 +31,8 @@ export function CreateReviewModal({ isOpen, onClose }: CreateReviewModalProps) {
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nombre.trim()) {
-      toast.error("Por favor ingresa tu nombre");
-      return;
-    }
     if (!titulo.trim()) {
       toast.error("Por favor ingresa un título para tu reseña");
       return;
@@ -47,27 +41,26 @@ export function CreateReviewModal({ isOpen, onClose }: CreateReviewModalProps) {
       toast.error("Por favor escribe tu opinión o reseña");
       return;
     }
+    if (!user) {
+      toast.error("Debes iniciar sesión para dejar una reseña");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
-      addReview({
-        usuarioNombre: nombre.trim(),
-        usuarioAvatar: user?.fotoPerfilUrl ? resolveMediaUrl(user.fotoPerfilUrl) : null,
+      await addReview({
         calificacion,
         titulo: titulo.trim(),
         comentario: comentario.trim(),
-        productoRecomendado: producto.trim() || undefined,
-        verificado: true,
       });
 
       toast.success("¡Tu reseña ha sido publicada con éxito en la portada!");
       onClose();
-      // Reset form
       setTitulo("");
       setComentario("");
       setProducto("");
     } catch {
-      toast.error("Ocurrió un error al guardar tu reseña");
+      toast.error("Ocurrió un error al guardar tu reseña. Intenta de nuevo.");
     } finally {
       setIsSubmitting(false);
     }
@@ -135,21 +128,6 @@ export function CreateReviewModal({ isOpen, onClose }: CreateReviewModalProps) {
             <p className="mt-2 text-xs font-semibold text-blue-600 dark:text-sky-400">
               {RATING_LABELS[activeRating] || "Selecciona tus estrellas"}
             </p>
-          </div>
-
-          {/* Name input */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-              Tu nombre completo <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              placeholder="Ej. Carlos Mendoza"
-              className="mt-1.5 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#171a22] px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-blue-500 dark:focus:border-sky-400"
-            />
           </div>
 
           {/* Title input */}

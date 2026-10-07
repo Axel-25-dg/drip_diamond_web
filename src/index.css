@@ -387,7 +387,7 @@
   .input-premium:focus  {
     border-color: var(--input-border-focus);
     box-shadow: var(--ring-focus);
-    background: #ffffff;
+    background: var(--input-bg);
   }
 
   /* ── Skeleton ── */
